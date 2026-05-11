@@ -3,493 +3,1062 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preframe — stage the prompt, review the cut</title>
-  <meta name="description" content="Preframe is a Hudson-powered creative workspace for staging prompts, reviewing cuts, and rendering product videos before the final frame.">
+  <title>Preframe - Hudson demo player</title>
+  <meta name="description" content="Preframe is a Hudson-powered creative workspace for staging media demos, review loops, and effect passes before the final frame.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; }
 
     :root {
-      --bg:      #0a0b0e;
-      --canvas:  #11141a;
-      --panel:   #181c25;
-      --text:    #e8eef4;
-      --muted:   #8893a3;
-      --accent:  #22d3ee;
-      --accent-dim: rgba(34, 211, 238, 0.12);
-      --border:  #232932;
-      --serif:   'EB Garamond', Georgia, serif;
-      --mono:    'JetBrains Mono', 'Menlo', 'Monaco', monospace;
+      --bg: #0b0c0b;
+      --paper: #f5f0e4;
+      --paper-soft: #cec6b6;
+      --muted: #8d938b;
+      --line: rgba(245, 240, 228, 0.16);
+      --line-strong: rgba(245, 240, 228, 0.29);
+      --panel: rgba(18, 20, 18, 0.92);
+      --panel-soft: rgba(245, 240, 228, 0.035);
+      --cyan: #43d8d3;
+      --green: #9ee493;
+      --amber: #f4c466;
+      --rose: #ff91ad;
+      --shadow: rgba(0, 0, 0, 0.42);
+      --serif: 'EB Garamond', Georgia, serif;
+      --mono: 'JetBrains Mono', Menlo, Monaco, monospace;
     }
 
     html {
       color-scheme: only dark;
       background: var(--bg);
-      color: var(--text);
+      color: var(--paper);
       font-family: var(--serif);
-      font-size: 18px;
-      line-height: 1.6;
+      line-height: 1.5;
       -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
 
     body {
-      background-image:
-        linear-gradient(hsla(190, 80%, 55%, 0.025) 1px, transparent 1px),
-        linear-gradient(90deg, hsla(190, 80%, 55%, 0.025) 1px, transparent 1px);
-      background-size: 32px 32px;
       min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(245, 240, 228, 0.034) 1px, transparent 1px),
+        linear-gradient(rgba(245, 240, 228, 0.028) 1px, transparent 1px),
+        radial-gradient(circle at 62% 0%, rgba(67, 216, 211, 0.12), transparent 30rem),
+        radial-gradient(circle at 0% 85%, rgba(158, 228, 147, 0.08), transparent 28rem),
+        var(--bg);
+      background-size: 44px 44px, 44px 44px, auto, auto, auto;
       overflow-x: hidden;
     }
 
-    .wrap {
-      max-width: 64rem;
-      margin: 0 auto;
-      padding: 0 2rem;
+    a {
+      color: inherit;
+      text-decoration: none;
     }
 
-    nav {
-      padding: 1.5rem 0;
+    button,
+    input {
+      font: inherit;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 1.25rem;
+    }
+
+    .frame {
+      min-height: calc(100vh - 2.5rem);
+      border: 1px solid var(--line);
+      background: rgba(11, 12, 11, 0.76);
+      box-shadow: 0 28px 80px var(--shadow);
+    }
+
+    .topbar {
+      min-height: 4.1rem;
+      border-bottom: 1px solid var(--line);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid var(--border);
+      gap: 1rem;
+      padding: 0.85rem clamp(1rem, 3vw, 2rem);
     }
 
-    .nav-brand {
-      font-family: var(--mono);
-      font-size: 0.85rem;
-      color: var(--text);
-      text-decoration: none;
-      letter-spacing: -0.01em;
-    }
-    .nav-brand .dim { color: var(--muted); }
-
-    .nav-links {
-      display: flex;
-      gap: 1.5rem;
-      list-style: none;
-    }
-    .nav-links a {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      color: var(--muted);
-      text-decoration: none;
-      transition: color 0.15s;
-    }
-    .nav-links a:hover { color: var(--accent); }
-
-    .hero {
-      padding: 6rem 0 5rem;
-    }
-
-    .eyebrow {
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      color: var(--accent);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 1.25rem;
-    }
-
-    .hero h1 {
-      font-size: clamp(2.4rem, 5vw, 3.75rem);
-      font-weight: 500;
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-      max-width: 20ch;
-    }
-
-    .hero-sub {
-      font-size: 1.2rem;
-      color: var(--muted);
-      max-width: 56ch;
-      margin-bottom: 3rem;
-    }
-    .hero-sub strong {
-      color: var(--text);
-      font-weight: 500;
-    }
-
-    .terminal {
-      background: var(--canvas);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      overflow: hidden;
-      width: 100%;
-      max-width: 44rem;
-    }
-
-    .terminal-bar {
+    .brand {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 0.65rem 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--border);
-    }
-    .terminal-title {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-left: auto;
-    }
-
-    .terminal-body {
-      padding: 1.2rem 1.5rem;
-      font-family: var(--mono);
-      font-size: 0.82rem;
-      line-height: 2;
-      overflow-x: auto;
-    }
-    .prompt { color: var(--muted); user-select: none; }
-    .cmd    { color: var(--text); white-space: nowrap; }
-    .out    { color: var(--muted); padding-left: 1.2rem; white-space: nowrap; }
-    .out .ok { color: var(--accent); }
-
-    section {
-      padding: 4.5rem 0;
-      border-top: 1px solid var(--border);
-    }
-
-    .label {
-      font-family: var(--mono);
-      font-size: 0.68rem;
-      color: var(--accent);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-bottom: 0.9rem;
-    }
-
-    h2 {
-      font-size: clamp(1.6rem, 3vw, 2.25rem);
-      font-weight: 500;
-      margin-bottom: 0.75rem;
-      line-height: 1.2;
-    }
-
-    .lead {
-      font-size: 1.05rem;
-      color: var(--muted);
-      max-width: 55ch;
-      margin-bottom: 2.75rem;
-    }
-
-    .loop-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(15rem, 0.65fr);
-      gap: 1.75rem;
-      align-items: start;
+      gap: 0.75rem;
       min-width: 0;
     }
 
-    .loop-frame {
-      background: var(--canvas);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 1.5rem;
-      font-family: var(--mono);
-      font-size: 0.78rem;
-      line-height: 1.85;
-      color: var(--muted);
-    }
-    .loop-frame .step {
+    .mark {
+      width: 2rem;
+      height: 2rem;
+      border: 1px solid var(--line-strong);
+      background: #10120f;
+      padding: 3px;
       display: grid;
-      grid-template-columns: 1.4rem 1fr;
-      gap: 0.75rem;
-      padding: 0.55rem 0;
-      border-bottom: 1px dashed var(--border);
-    }
-    .loop-frame .step:last-child { border-bottom: none; }
-    .loop-frame .step-mark {
-      color: var(--accent);
-    }
-    .loop-frame .step-text strong {
-      color: var(--text);
-      font-weight: 500;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 2px;
+      flex: 0 0 auto;
     }
 
-    .loop-copy {
-      padding-top: 0.2rem;
-    }
-    .loop-copy p {
-      font-size: 0.96rem;
-      color: var(--muted);
-      line-height: 1.55;
-      margin-bottom: 1rem;
-    }
-    .loop-copy p strong {
-      color: var(--text);
-      font-weight: 500;
+    .mark span {
+      min-width: 0;
+      min-height: 0;
+      background: rgba(245, 240, 228, 0.12);
     }
 
-    .cards {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
-    }
-    @media (max-width: 700px) {
-      .cards { grid-template-columns: 1fr; }
-      .loop-grid { grid-template-columns: 1fr; }
-      .wrap { padding: 0 1.25rem; }
-      .hero h1 { font-size: 2.25rem; }
-      .terminal-body { font-size: 0.72rem; }
-      nav { align-items: flex-start; gap: 1rem; flex-direction: column; }
+    .mark span:nth-child(1),
+    .mark span:nth-child(2),
+    .mark span:nth-child(3),
+    .mark span:nth-child(4),
+    .mark span:nth-child(5),
+    .mark span:nth-child(6),
+    .mark span:nth-child(10),
+    .mark span:nth-child(11),
+    .mark span:nth-child(13),
+    .mark span:nth-child(15),
+    .mark span:nth-child(16),
+    .mark span:nth-child(20),
+    .mark span:nth-child(21),
+    .mark span:nth-child(22),
+    .mark span:nth-child(23),
+    .mark span:nth-child(24),
+    .mark span:nth-child(25) {
+      background: var(--cyan);
     }
 
-    .card {
-      background: var(--canvas);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 1.5rem;
-    }
-    .card-name {
+    .brand-name {
       font-family: var(--mono);
-      font-size: 0.82rem;
-      color: var(--accent);
-      margin-bottom: 0.6rem;
-    }
-    .card-desc {
-      font-size: 0.95rem;
-      color: var(--muted);
-      line-height: 1.55;
+      font-size: 0.86rem;
+      white-space: nowrap;
     }
 
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-      max-width: 50rem;
+    .brand-name span {
+      color: var(--muted);
     }
-    .step-block {
+
+    .nav {
       display: flex;
-      gap: 1.75rem;
+      align-items: center;
+      gap: 1.1rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      white-space: nowrap;
     }
-    .step-n {
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      color: var(--paper);
+      outline: none;
+    }
+
+    .hero {
+      min-height: calc(100vh - 6.6rem);
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    .hudson-window {
+      margin: clamp(1rem, 3vw, 2rem);
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      min-height: 34rem;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    .window-head {
+      min-height: 3.55rem;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 1rem;
+      color: var(--muted);
       font-family: var(--mono);
       font-size: 0.7rem;
-      color: var(--accent);
-      flex-shrink: 0;
-      padding-top: 0.25rem;
-      width: 1.5rem;
     }
-    .step-block h3 {
-      font-size: 1rem;
+
+    .traffic {
+      display: flex;
+      gap: 0.38rem;
+    }
+
+    .traffic span {
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--line-strong);
+    }
+
+    .traffic span:nth-child(2) { background: var(--green); }
+    .traffic span:nth-child(3) { background: var(--amber); }
+
+    .workspace {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 11rem minmax(0, 1fr) minmax(15rem, 0.36fr);
+    }
+
+    .sidebar,
+    .inspector {
+      min-width: 0;
+      border-right: 1px solid var(--line);
+      padding: 1rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      background: rgba(245, 240, 228, 0.022);
+    }
+
+    .inspector {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+      overflow: auto;
+    }
+
+    .rail-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.9rem;
+      color: var(--paper-soft);
+    }
+
+    .rail-list {
+      display: grid;
+      gap: 0.48rem;
+    }
+
+    .rail-item,
+    .demo-button,
+    .meter-row {
+      border: 1px solid var(--line);
+      padding: 0.56rem;
+      background: rgba(245, 240, 228, 0.018);
+    }
+
+    .rail-item.active {
+      color: #07100d;
+      border-color: var(--green);
+      background: var(--green);
+    }
+
+    .player-area {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .tabs {
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      min-width: 0;
+      overflow-x: auto;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+    }
+
+    .view-button {
+      border: 0;
+      color: var(--muted);
+      background: transparent;
+      padding: 0.78rem 0.95rem;
+      border-right: 1px solid var(--line);
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+
+    .view-button:hover,
+    .view-button:focus-visible {
+      color: var(--paper);
+      outline: none;
+    }
+
+    .view-button[aria-pressed="true"] {
+      color: var(--cyan);
+      background: rgba(67, 216, 211, 0.06);
+    }
+
+    .player-stage {
+      min-width: 0;
+      min-height: 0;
+      padding: clamp(0.85rem, 2vw, 1.25rem);
+      display: grid;
+      align-content: center;
+      gap: 1rem;
+    }
+
+    .player-card {
+      border: 1px solid var(--line-strong);
+      background: rgba(245, 240, 228, 0.018);
+      padding: clamp(0.55rem, 1vw, 0.75rem);
+      display: grid;
+      gap: 0.65rem;
+    }
+
+    .video-shell {
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(120deg, rgba(67, 216, 211, 0.08), transparent 36%),
+        #0a0c0b;
+      padding: 0.45rem;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      display: block;
+      background: #030403;
+      object-fit: contain;
+      border: 1px solid rgba(245, 240, 228, 0.12);
+    }
+
+    .view-panel {
+      min-height: 5.8rem;
+      border: 1px solid var(--line);
+      padding: 0.75rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      background: rgba(11, 12, 11, 0.56);
+    }
+
+    .watch-view,
+    .review-view,
+    .effects-view {
+      display: grid;
+      gap: 0.7rem;
+    }
+
+    .timeline {
+      height: 0.42rem;
+      background: rgba(245, 240, 228, 0.09);
+      position: relative;
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--progress, 48%);
+      background: var(--cyan);
+    }
+
+    .timeline span {
+      position: absolute;
+      top: 50%;
+      width: 0.58rem;
+      height: 0.58rem;
+      transform: translate(-50%, -50%);
+      border: 1px solid #07100d;
+      background: var(--paper);
+    }
+
+    .timeline span:nth-child(1) { left: 18%; }
+    .timeline span:nth-child(2) { left: 48%; background: var(--cyan); }
+    .timeline span:nth-child(3) { left: 82%; background: var(--green); }
+
+    .view-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.55rem;
+    }
+
+    .view-pill {
+      border: 1px solid var(--line);
+      color: var(--paper-soft);
+      padding: 0.36rem 0.5rem;
+      background: rgba(245, 240, 228, 0.025);
+    }
+
+    .review-view {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .review-note {
+      border-left: 2px solid var(--cyan);
+      padding-left: 0.65rem;
+      min-width: 0;
+    }
+
+    .review-note strong,
+    .effect-pass strong {
+      display: block;
+      color: var(--paper);
       font-weight: 500;
       margin-bottom: 0.25rem;
     }
-    .step-block p {
-      font-size: 0.95rem;
-      color: var(--muted);
-      line-height: 1.55;
+
+    .effects-view {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    code {
-      font-family: var(--mono);
-      font-size: 0.82em;
-      color: var(--accent);
-      background: var(--panel);
-      padding: 0.1em 0.35em;
-      border-radius: 2px;
+    .effect-pass {
+      border: 1px solid var(--line);
+      padding: 0.55rem;
+      background: rgba(245, 240, 228, 0.025);
     }
 
-    .reqs {
-      list-style: none;
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
+    .effect-pass.active {
+      border-color: var(--green);
+      background: rgba(158, 228, 147, 0.08);
     }
-    .reqs li {
-      font-family: var(--mono);
-      font-size: 0.82rem;
+
+    .player-meta {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: start;
+    }
+
+    .player-meta h1 {
+      font-size: clamp(2.4rem, 5vw, 5rem);
+      font-weight: 500;
+      line-height: 0.98;
+      max-width: 12ch;
+    }
+
+    .player-meta p {
+      margin-top: 0.8rem;
+      color: var(--paper-soft);
+      font-size: clamp(1rem, 1.7vw, 1.22rem);
+      max-width: 42rem;
+    }
+
+    .status-card {
+      min-width: 13rem;
+      border: 1px solid var(--line);
+      padding: 0.75rem;
       color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      display: grid;
+      gap: 0.45rem;
+      background: rgba(245, 240, 228, 0.024);
     }
-    .reqs li::before {
-      content: '—';
-      color: var(--accent);
-    }
-    .reqs li strong {
-      color: var(--text);
+
+    .status-card strong {
+      color: var(--paper);
       font-weight: 500;
     }
 
-    footer {
-      padding: 2.5rem 0 3rem;
-      border-top: 1px solid var(--border);
+    .demo-list {
+      display: grid;
+      gap: 0.55rem;
     }
-    .footer-row {
+
+    .demo-button {
+      width: 100%;
+      text-align: left;
+      cursor: pointer;
+      color: var(--muted);
+      background: rgba(245, 240, 228, 0.018);
+      transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+    }
+
+    .demo-button:hover,
+    .demo-button:focus-visible {
+      border-color: var(--line-strong);
+      color: var(--paper);
+      outline: none;
+    }
+
+    .demo-button[aria-pressed="true"] {
+      color: var(--paper);
+      border-color: var(--cyan);
+      background: rgba(67, 216, 211, 0.085);
+    }
+
+    .demo-button span {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 0.75rem;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
     }
-    .footer-row p {
+
+    .demo-button strong {
+      color: inherit;
+      font-weight: 500;
+    }
+
+    .badge {
+      color: #07100d;
+      background: var(--paper);
+      padding: 0.12rem 0.34rem;
+      font-size: 0.58rem;
+      font-style: normal;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .badge.effect {
+      background: var(--green);
+    }
+
+    .demo-button p {
+      color: var(--muted);
+      font-size: 0.63rem;
+      line-height: 1.45;
+    }
+
+    .meter {
+      display: grid;
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+
+    .meter-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .meter-row strong {
+      color: var(--paper);
+      font-weight: 500;
+    }
+
+    .window-foot {
+      min-height: 3rem;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.8rem 1rem;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+    }
+
+    .copy-band {
+      border-top: 1px solid var(--line);
+      padding: clamp(1.4rem, 4vw, 2.6rem);
+      display: grid;
+      grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
+      gap: clamp(1.2rem, 4vw, 3rem);
+      align-items: start;
+    }
+
+    .eyebrow {
+      color: var(--green);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+    }
+
+    .copy-band h2 {
+      font-size: clamp(2rem, 4vw, 4rem);
+      font-weight: 500;
+      line-height: 1;
+      max-width: 12ch;
+    }
+
+    .copy-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+    }
+
+    .copy-note {
+      border-left: 1px solid var(--line-strong);
+      padding-left: 1rem;
+    }
+
+    .copy-note strong {
+      display: block;
+      color: var(--paper);
       font-family: var(--mono);
       font-size: 0.72rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .copy-note p {
       color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.55;
     }
-    .footer-row a {
-      color: var(--accent);
-      text-decoration: none;
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 1.2rem;
     }
-    .footer-row a:hover { text-decoration: underline; }
+
+    .button-link {
+      border: 1px solid var(--line-strong);
+      min-height: 2.6rem;
+      padding: 0.76rem 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+
+    .button-link.primary {
+      color: #07100d;
+      border-color: var(--paper);
+      background: var(--paper);
+    }
+
+    .button-link:hover,
+    .button-link:focus-visible {
+      color: #07100d;
+      border-color: var(--cyan);
+      background: var(--cyan);
+      outline: none;
+    }
+
+    .footer {
+      border-top: 1px solid var(--line);
+      min-height: 3.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem clamp(1rem, 3vw, 2rem);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.68rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: 9.5rem minmax(0, 1fr);
+      }
+
+      .inspector {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .demo-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .meter {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        padding: 0;
+      }
+
+      .frame {
+        min-height: 100vh;
+        border-left: 0;
+        border-right: 0;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .nav {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .hudson-window {
+        margin: 0;
+        border-left: 0;
+        border-right: 0;
+        min-height: auto;
+      }
+
+      .window-head,
+      .window-foot,
+      .player-meta,
+      .footer {
+        align-items: flex-start;
+        grid-template-columns: 1fr;
+        flex-direction: column;
+      }
+
+      .workspace,
+      .copy-band,
+      .copy-grid,
+      .demo-list,
+      .meter {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .rail-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .rail-item {
+        min-height: 2.35rem;
+      }
+
+      .review-view,
+      .effects-view {
+        grid-template-columns: 1fr;
+      }
+
+      .player-stage {
+        padding: 0.85rem;
+      }
+
+      .player-meta h1 {
+        font-size: clamp(2.5rem, 15vw, 4rem);
+      }
+    }
+
+    @media (max-width: 460px) {
+      .rail-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .tabs {
+        font-size: 0.62rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <main class="page">
+    <div class="frame">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <span class="mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </span>
+          <span class="brand-name">preframe<span>.dev</span></span>
+        </a>
+        <nav class="nav" aria-label="Site">
+          <a href="#player">Player</a>
+          <a href="#loop">Loop</a>
+          <a href="/concepts/">Concepts</a>
+          <a href="https://github.com/arach/preframe">GitHub</a>
+        </nav>
+      </header>
 
-    <nav>
-      <a class="nav-brand" href="/">preframe<span class="dim">.dev</span></a>
-      <ul class="nav-links">
-        <li><a href="#loop">The loop</a></li>
-        <li><a href="#stack">Stack</a></li>
-        <li><a href="https://github.com/arach/preframe">GitHub</a></li>
-      </ul>
-    </nav>
+      <section class="hero" id="player">
+        <div class="hudson-window" aria-label="Hudson demo player">
+          <div class="window-head">
+            <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+            <span>preframe / hudson demo player</span>
+            <span data-current-status>effects bench ready</span>
+          </div>
 
-    <div class="hero">
-      <p class="eyebrow">Prompt staging · review loops · rendered frames</p>
-      <h1>Preframe.</h1>
-      <p class="hero-sub">A Hudson-powered creative workspace for staging prompts, reviewing cuts, and rendering product videos before the final frame. Mark up a take; the agent rewrites the source. Works for <strong>Remotion</strong> compositions, <strong>Hyperframe</strong> motion graphics, music tracks, and animated logos.</p>
+          <div class="workspace">
+            <aside class="sidebar">
+              <div class="rail-label"><span>apps</span><span>shell</span></div>
+              <div class="rail-list">
+                <span class="rail-item active">Player</span>
+                <span class="rail-item">Sources</span>
+                <span class="rail-item">Effects</span>
+                <span class="rail-item">Render</span>
+              </div>
+            </aside>
 
-      <div class="terminal">
-        <div class="terminal-bar">
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <div class="dot"></div>
-          <span class="terminal-title">quick start</span>
+              <div class="player-area">
+              <div class="tabs" aria-label="Open workspace tabs">
+                <button class="view-button" type="button" data-view-target="watch" aria-pressed="true">Watch</button>
+                <button class="view-button" type="button" data-view-target="review" aria-pressed="false">Review</button>
+                <button class="view-button" type="button" data-view-target="effects" aria-pressed="false">Effects</button>
+              </div>
+
+              <div class="player-stage">
+                <div class="player-card">
+                  <div class="video-shell">
+                    <video
+                      data-demo-video
+                      controls
+                      playsinline
+                      preload="metadata"
+                      poster="media/mira-control-lanes-poster.png"
+                      src="media/mira-control-lanes-demo.mp4">
+                      <source src="media/mira-control-lanes-demo.mp4" type="video/mp4">
+                    </video>
+                  </div>
+                  <div class="view-panel" data-view-panel></div>
+                </div>
+
+                <div class="player-meta">
+                  <div>
+                    <p class="eyebrow" data-current-kind>Mira demo</p>
+                    <h1 data-current-title>Your cut, before the cut.</h1>
+                    <p data-current-description>Preframe stages source clips, motion prompts, and output loops inside Hudson before the timeline ever opens. The homepage is a player first: demos today, effects passes next.</p>
+                    <div class="actions">
+                      <a class="button-link primary" href="https://github.com/arach/preframe">View on GitHub</a>
+                      <a class="button-link" href="#loop">Inspect the loop</a>
+                    </div>
+                  </div>
+                  <div class="status-card">
+                    <span>current slot</span>
+                    <strong data-current-slot>demo-player</strong>
+                    <span>source</span>
+                    <strong data-current-source>Mira control lanes</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="inspector">
+              <div class="rail-label"><span>playlist</span><span>native video</span></div>
+              <div class="demo-list" data-demo-list></div>
+              <div class="meter" aria-label="Workspace status">
+                <div class="meter-row"><span>demos</span><strong>3</strong></div>
+                <div class="meter-row"><span>effects</span><strong>3</strong></div>
+                <div class="meter-row"><span>next source</span><strong>Talkie</strong></div>
+              </div>
+            </aside>
+          </div>
+
+          <div class="window-foot">
+            <span>Hudson shell -> player embed -> effects pass -> review loop</span>
+            <span>read-only landing preview</span>
+          </div>
         </div>
-        <div class="terminal-body">
-          <div><span class="prompt">$ </span><span class="cmd">git clone github.com/arach/preframe && cd preframe</span></div>
-          <div><span class="prompt">$ </span><span class="cmd">bun install && bun run dev</span></div>
-          <div class="out"># <span class="ok">▲ Next.js 16</span> · catalog studio on :3100</div>
-          <div><span class="prompt">$ </span><span class="cmd">bun run studio</span></div>
-          <div class="out"># <span class="ok">remotion studio</span> · live preview + render queue</div>
+
+        <div class="copy-band" id="loop">
+          <div>
+            <p class="eyebrow">Demo media, then effect passes</p>
+            <h2>The player is the landing page.</h2>
+          </div>
+          <div class="copy-grid">
+            <div class="copy-note">
+              <strong>Use our footage first</strong>
+              <p>The page runs local Preframe/Mira/Hudson clips today. It is structured so a Talkie walkthrough can become the next main source clip without changing the page design.</p>
+            </div>
+            <div class="copy-note">
+              <strong>Make effects comparable</strong>
+              <p>The effects bench wants one consistent base video, then multiple treatments. That makes grain, glass, scan, lattice, and render styles easy to judge.</p>
+            </div>
+            <div class="copy-note">
+              <strong>Keep Hudson visible</strong>
+              <p>The shell is the frame around the media work: sources, player, effects, render queue. The embed stays a real video player, not a fake app demo.</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <footer class="footer">
+        <span>preframe.dev</span>
+        <span>Hudson-powered creative workspace for the loop before the final frame</span>
+      </footer>
     </div>
+  </main>
 
-    <section id="loop">
-      <p class="label">The revise loop</p>
-      <h2>One take, then iterate.</h2>
-      <p class="lead">Preframe treats the composition as text, not the timeline. Reviewers leave notes on a finished video; the model uses those notes to rewrite the Remotion source; the studio renders a new take.</p>
+  <script>
+    const demos = [
+      {
+        id: 'mira-control',
+        label: 'Mira control lanes',
+        badge: 'demo',
+        title: 'Your cut, before the cut.',
+        kind: 'Mira demo',
+        slot: 'demo-player',
+        source: 'Mira control lanes',
+        status: 'demo source loaded',
+        src: 'media/mira-control-lanes-demo.mp4',
+        poster: 'media/mira-control-lanes-poster.png',
+        description: 'A local Mira demo clip inside the Hudson frame. This is the current homepage proof: the landing can be a player for actual work, not just product copy.'
+      },
+      {
+        id: 'mira-produced',
+        label: 'Produced reference',
+        badge: 'demo',
+        title: 'A reference take you can inspect.',
+        kind: 'Mira demo',
+        slot: 'review-source',
+        source: 'Produced reference',
+        status: 'reference take ready',
+        src: 'media/mira-produced-reference.mp4',
+        poster: 'media/mira-final-poster.png',
+        description: 'A finished reference take for comparing source, review notes, and render treatments before we settle on the final frame.'
+      },
+      {
+        id: 'mira-intro',
+        label: 'Intro first cut',
+        badge: 'demo',
+        title: 'One take, then iterate.',
+        kind: 'Render demo',
+        slot: 'render-queue',
+        source: 'Mira intro first cut',
+        status: 'first cut staged',
+        src: 'media/mira-intro-first-cut.mp4',
+        poster: 'media/mira-produced-contact-sheet.png',
+        description: 'A short first cut that makes the review loop concrete: stage the source, watch the take, mark it up, render again.'
+      },
+      {
+        id: 'glass-grade',
+        label: 'Hudson glass grade',
+        badge: 'effect',
+        title: 'Effects need a stable subject.',
+        kind: 'Effects bench',
+        slot: 'effects-bench',
+        source: 'Hudson glass grade',
+        status: 'effect pass ready',
+        src: 'media/hudson-glass-graded.mp4',
+        poster: 'media/hudson-glass-graded-poster.jpg',
+        description: 'A compact Hudson effects pass. This is the direction for the next iteration: same source clip, multiple treatment passes.'
+      },
+      {
+        id: 'glass-fx',
+        label: 'Hudson glass FX',
+        badge: 'effect',
+        title: 'Treatment passes, side by side.',
+        kind: 'Effects bench',
+        slot: 'effects-bench',
+        source: 'Hudson glass FX',
+        status: 'effect pass ready',
+        src: 'media/hudson-glass-fx.mp4',
+        poster: 'media/hudson-glass-fx-poster.jpg',
+        description: 'A more active glass and FX pass. Useful as a reference for what the Talkie walkthrough could become once captured.'
+      },
+      {
+        id: 'lattice-born',
+        label: 'Lattice grid born',
+        badge: 'effect',
+        title: 'A frame system becoming visible.',
+        kind: 'Effects bench',
+        slot: 'effects-bench',
+        source: 'Lattice grid born',
+        status: 'effect pass ready',
+        src: 'media/lattices-grid-born.mp4',
+        poster: 'media/lattices-grid-born-poster.jpg',
+        description: 'A small lattice intro pass that keeps the Hudson/Preframe frame language alive without overwhelming the actual player.'
+      }
+    ];
 
-      <div class="loop-grid">
-        <div class="loop-frame">
-          <div class="step">
-            <span class="step-mark">►</span>
-            <span class="step-text"><strong>00:14</strong> &nbsp; hold this beat 1s longer — the cut is rushing the punchline</span>
-          </div>
-          <div class="step">
-            <span class="step-mark">▭</span>
-            <span class="step-text">crop tighter on the dashboard frame · zoom 1.5×</span>
-          </div>
-          <div class="step">
-            <span class="step-mark">~</span>
-            <span class="step-text">soften the music bed under the VO — it's fighting the words</span>
-          </div>
-          <div class="step">
-            <span class="step-mark">+</span>
-            <span class="step-text">add an outro card with the release date</span>
-          </div>
-          <div class="step">
-            <span class="step-mark">↻</span>
-            <span class="step-text"><strong>revise-brief</strong> &nbsp;→&nbsp; <strong>revise-render</strong></span>
+    const video = document.querySelector('[data-demo-video]');
+    const list = document.querySelector('[data-demo-list]');
+    const viewButtons = Array.from(document.querySelectorAll('[data-view-target]'));
+    const viewPanel = document.querySelector('[data-view-panel]');
+    const fields = {
+      kind: document.querySelector('[data-current-kind]'),
+      title: document.querySelector('[data-current-title]'),
+      description: document.querySelector('[data-current-description]'),
+      status: document.querySelector('[data-current-status]'),
+      slot: document.querySelector('[data-current-slot]'),
+      source: document.querySelector('[data-current-source]')
+    };
+
+    const views = {
+      watch: `
+        <div class="watch-view">
+          <div class="timeline" aria-label="Playback timeline"><span></span><span></span><span></span></div>
+          <div class="view-row">
+            <span class="view-pill">take-04</span>
+            <span class="view-pill">source / wip / final</span>
+            <span class="view-pill">native controls</span>
           </div>
         </div>
-        <div class="loop-copy">
-          <p>Notes are <strong>timestamped</strong>, <strong>rect-anchored</strong>, or <strong>general feedback</strong>. The model sees all three plus the composition source.</p>
-          <p>Two stages: <code>revise-brief</code> proposes a small plan you can confirm. <code>revise-render</code> rewrites the composition and queues a new render.</p>
+      `,
+      review: `
+        <div class="review-view">
+          <div class="review-note"><strong>00:14</strong>Hold this beat one second longer.</div>
+          <div class="review-note"><strong>00:18</strong>Soften the transition into the UI detail.</div>
+          <div class="review-note"><strong>general</strong>Keep the player readable before any AI actions exist.</div>
         </div>
-      </div>
-    </section>
+      `,
+      effects: `
+        <div class="effects-view">
+          <div class="effect-pass active"><strong>glass</strong>active treatment</div>
+          <div class="effect-pass"><strong>grain</strong>reference pass</div>
+          <div class="effect-pass"><strong>scan</strong>timed pulse</div>
+          <div class="effect-pass"><strong>lattice</strong>frame language</div>
+        </div>
+      `
+    };
 
-    <section>
-      <p class="label">What it is</p>
-      <h2>Three parts.</h2>
-      <p class="lead">The catalog studio is where you work. The revise loop wires it to the source.</p>
+    function setView(view) {
+      viewPanel.innerHTML = views[view] || views.watch;
+      viewButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.viewTarget === view));
+      });
+    }
 
-      <div class="cards">
-        <div class="card">
-          <p class="card-name">Catalog</p>
-          <p class="card-desc">Captures, music tracks, animated logos, and rendered Hyperframes — indexed together with scenes, transcripts, vision tags, and storyboard frames.</p>
-        </div>
-        <div class="card">
-          <p class="card-name">Reviewer</p>
-          <p class="card-desc">Annotate frames with rects, zooms, and feedback. Leave the same kind of feedback on music tracks and motion graphics. Everything serializes into the brief.</p>
-        </div>
-        <div class="card">
-          <p class="card-name">Composer</p>
-          <p class="card-desc">Two engines: <strong>Remotion</strong> for programmatic video, <strong>Hyperframes</strong> for single-file motion graphics. Plus music generation from a prompt and animated logos from an SVG drop.</p>
-        </div>
-      </div>
-    </section>
+    function renderList(activeId) {
+      list.innerHTML = demos.map((demo) => `
+        <button class="demo-button" type="button" data-demo-id="${demo.id}" aria-pressed="${demo.id === activeId}">
+          <span><strong>${demo.label}</strong><em class="badge ${demo.badge === 'effect' ? 'effect' : ''}">${demo.badge}</em></span>
+          <p>${demo.badge === 'effect' ? 'Effect treatment for the bench.' : 'Local product demo source.'}</p>
+        </button>
+      `).join('');
+    }
 
-    <section>
-      <p class="label">Four moves</p>
-      <h2>The cycle.</h2>
+    function setDemo(id) {
+      const demo = demos.find((item) => item.id === id) || demos[0];
+      const wasPlaying = !video.paused;
+      video.pause();
+      video.src = demo.src;
+      if (demo.poster) {
+        video.poster = demo.poster;
+      } else {
+        video.removeAttribute('poster');
+      }
+      video.load();
+      if (wasPlaying) {
+        video.play().catch(() => {});
+      }
+      fields.kind.textContent = demo.kind;
+      fields.title.textContent = demo.title;
+      fields.description.textContent = demo.description;
+      fields.status.textContent = demo.status;
+      fields.slot.textContent = demo.slot;
+      fields.source.textContent = demo.source;
+      renderList(demo.id);
+    }
 
-      <div class="steps">
-        <div class="step-block">
-          <span class="step-n">01</span>
-          <div>
-            <h3>Capture</h3>
-            <p>Drop a screen recording in <code>public/inbox/</code> or render a fresh composition with <code>bun run studio</code>. The catalog scanner picks it up on next build.</p>
-          </div>
-        </div>
-        <div class="step-block">
-          <span class="step-n">02</span>
-          <div>
-            <h3>Review</h3>
-            <p>Open the take in the catalog detail view or the full-screen review modal. Drop annotations on the frames that need changes. Leave general notes for anything that isn't a single moment.</p>
-          </div>
-        </div>
-        <div class="step-block">
-          <span class="step-n">03</span>
-          <div>
-            <h3>Revise</h3>
-            <p>Submit the notes. The brief stage proposes a change plan; you confirm or edit. The render stage rewrites the composition and queues a new job.</p>
-          </div>
-        </div>
-        <div class="step-block">
-          <span class="step-n">04</span>
-          <div>
-            <h3>Ship</h3>
-            <p>Compare takes side-by-side. The catalog stages live moves: <code>source</code> → <code>wip</code> → <code>final</code>. Hand off the final MP4 or the source TSX — they always agree.</p>
-          </div>
-        </div>
-      </div>
-    </section>
+    list.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-demo-id]');
+      if (button) setDemo(button.dataset.demoId);
+    });
 
-    <section id="stack">
-      <p class="label">Stack</p>
-      <h2>What's under it.</h2>
-      <ul class="reqs">
-        <li><strong>Remotion</strong> &nbsp;·&nbsp; programmatic video as React</li>
-        <li><strong>Hyperframes</strong> &nbsp;·&nbsp; single-file HTML/CSS/JS motion graphics</li>
-        <li><strong>Hudson</strong> &nbsp;·&nbsp; chrome, slots, app shell, and the media player</li>
-        <li><strong>Next.js 16</strong> &nbsp;·&nbsp; the catalog studio runtime</li>
-        <li><strong>Bun</strong> &nbsp;·&nbsp; install, scripts, render workers</li>
-        <li><strong>Anthropic + AI SDK</strong> &nbsp;·&nbsp; the agent runs against your model of choice</li>
-      </ul>
-    </section>
+    viewButtons.forEach((button) => {
+      button.addEventListener('click', () => setView(button.dataset.viewTarget));
+    });
 
-    <footer>
-      <div class="footer-row">
-        <p>Prompt-staged video composition · <a href="https://github.com/arach/preframe">github.com/arach/preframe</a></p>
-        <p><a href="https://hudsonkit.com">Built on Hudson</a></p>
-      </div>
-    </footer>
-
-  </div>
+    renderList(demos[0].id);
+    setView('watch');
+  </script>
 </body>
 </html>
