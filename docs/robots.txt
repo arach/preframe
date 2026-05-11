@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://preframe.dev/sitemap.xml
