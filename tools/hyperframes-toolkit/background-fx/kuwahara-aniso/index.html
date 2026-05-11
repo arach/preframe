@@ -1,0 +1,134 @@
+<!-- hyperframes-registry-item: kuwahara-aniso -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; z-index: 0; }
+      #fx-canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 1; }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="kuwahara-aniso" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+      <div id="driver" class="clip" data-start="0" data-duration="8" data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
+    </div>
+    <script>
+      (function() {
+        var root = document.getElementById('root');
+        var video = document.getElementById('bg-video');
+        video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+        var canvas = document.getElementById('fx-canvas');
+        var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+        window.__timelines = window.__timelines || {};
+        if (!gl) {
+          console.warn('kuwahara-aniso: WebGL not available');
+          window.__timelines['kuwahara-aniso'] = gsap.timeline({ paused: true });
+          return;
+        }
+        gl.viewport(0, 0, 1920, 1080);
+
+        var vertSrc = 'attribute vec2 a_pos; varying vec2 v_uv; void main(){v_uv = a_pos * 0.5 + 0.5; v_uv.y = 1.0 - v_uv.y; gl_Position = vec4(a_pos, 0.0, 1.0);}';
+
+        var fragSrc =
+          'precision mediump float;' +
+          'varying vec2 v_uv;' +
+          'uniform sampler2D u_video;' +
+          'uniform float u_time;' +
+          'uniform vec2 u_resolution;' +
+          'void main() {' +
+          '  vec2 texel = 1.0 / u_resolution;' +
+          '  float r = 5.0 + sin(u_time * 0.2) * 0.5;' +
+          '  float n = 9.0;' +
+          // Quadrant 0: top-left (-x, -y)
+          '  vec3 sum0 = vec3(0.0); vec3 sq0 = vec3(0.0);' +
+          '  vec3 sum1 = vec3(0.0); vec3 sq1 = vec3(0.0);' +
+          '  vec3 sum2 = vec3(0.0); vec3 sq2 = vec3(0.0);' +
+          '  vec3 sum3 = vec3(0.0); vec3 sq3 = vec3(0.0);' +
+          '  for (int i = 0; i <= 2; i++) {' +
+          '    for (int j = 0; j <= 2; j++) {' +
+          '      vec2 off = vec2(float(i), float(j)) * texel * r / 2.0;' +
+          '      vec3 s0 = texture2D(u_video, clamp(v_uv + vec2(-off.x, -off.y), 0.0, 1.0)).rgb;' +
+          '      vec3 s1 = texture2D(u_video, clamp(v_uv + vec2( off.x, -off.y), 0.0, 1.0)).rgb;' +
+          '      vec3 s2 = texture2D(u_video, clamp(v_uv + vec2(-off.x,  off.y), 0.0, 1.0)).rgb;' +
+          '      vec3 s3 = texture2D(u_video, clamp(v_uv + vec2( off.x,  off.y), 0.0, 1.0)).rgb;' +
+          '      sum0 += s0; sq0 += s0*s0;' +
+          '      sum1 += s1; sq1 += s1*s1;' +
+          '      sum2 += s2; sq2 += s2*s2;' +
+          '      sum3 += s3; sq3 += s3*s3;' +
+          '    }' +
+          '  }' +
+          '  vec3 m0 = sum0/n; vec3 m1 = sum1/n; vec3 m2 = sum2/n; vec3 m3 = sum3/n;' +
+          '  float v0 = dot(sq0/n - m0*m0, vec3(1.0));' +
+          '  float v1 = dot(sq1/n - m1*m1, vec3(1.0));' +
+          '  float v2 = dot(sq2/n - m2*m2, vec3(1.0));' +
+          '  float v3 = dot(sq3/n - m3*m3, vec3(1.0));' +
+          '  vec3 result = m0; float minV = v0;' +
+          '  if (v1 < minV) { minV = v1; result = m1; }' +
+          '  if (v2 < minV) { minV = v2; result = m2; }' +
+          '  if (v3 < minV) { result = m3; }' +
+          '  gl_FragColor = vec4(result, 1.0);' +
+          '}';
+
+        var quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+        function compileShader(src, type) {
+          var s = gl.createShader(type);
+          gl.shaderSource(s, src); gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('kuwahara-aniso shader:', gl.getShaderInfoLog(s));
+          return s;
+        }
+        function mkProg(fSrc) {
+          var p = gl.createProgram();
+          gl.attachShader(p, compileShader(vertSrc, gl.VERTEX_SHADER));
+          gl.attachShader(p, compileShader(fSrc, gl.FRAGMENT_SHADER));
+          gl.linkProgram(p);
+          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error('kuwahara-aniso link:', gl.getProgramInfoLog(p));
+          return p;
+        }
+
+        var prog = mkProg(fragSrc);
+        var videoTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+
+        function draw(t) {
+          if (video.readyState >= 2) {
+            gl.bindTexture(gl.TEXTURE_2D, videoTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+          }
+          gl.useProgram(prog);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, videoTex);
+          gl.uniform1i(gl.getUniformLocation(prog, 'u_video'), 0);
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), t);
+          gl.uniform2f(gl.getUniformLocation(prog, 'u_resolution'), 1920.0, 1080.0);
+          var pos = gl.getAttribLocation(prog, 'a_pos');
+          gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+          gl.enableVertexAttribArray(pos);
+          gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        draw(0);
+        var tl = gsap.timeline({ paused: true, onUpdate: function(){ draw(tl.time() * (window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0)); } });
+        tl.to({ t: 0 }, { t: 8, duration: 8, ease: 'none' }, 0);
+        window.__timelines['kuwahara-aniso'] = tl;
+      })();
+    </script>
+  </body>
+</html>

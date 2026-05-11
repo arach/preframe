@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    /* 8 horizontal bands — each shifts independently */
+    .band {
+      position: absolute; left: 0; right: 0;
+      height: 135px; /* 1080 / 8 */
+      overflow: hidden;
+    }
+
+    /* RGB split channels inside each band */
+    .band::before, .band::after {
+      content: ''; position: absolute; inset: 0;
+      mix-blend-mode: screen; opacity: 0;
+    }
+    .band::before { background: rgba(255,0,0,0.3); }
+    .band::after  { background: rgba(0,0,255,0.3); }
+
+    /* Noise block artifact — appears on drop */
+    .block {
+      position: absolute;
+      background: rgba(255,255,255,0.12);
+      opacity: 0;
+    }
+
+    /* Horizontal tear lines */
+    .tear {
+      position: absolute; left: 0; right: 0; height: 1px;
+      background: rgba(255,255,255,0.5); opacity: 0;
+    }
+
+    #grid-lines {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        repeating-linear-gradient(to right, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 107px),
+        repeating-linear-gradient(to bottom, rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px, transparent 1px, transparent 107px);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="grid-lines"></div>
+
+  <script>
+    const NUM_BANDS = 8;
+    const bands = [];
+
+    for (let i = 0; i < NUM_BANDS; i++) {
+      const el = document.createElement('div');
+      el.className = 'band';
+      el.style.top = (i * 135) + 'px';
+      document.body.appendChild(el);
+      bands.push(el);
+    }
+
+    // Noise blocks
+    const blocks = [];
+    for (let i = 0; i < 20; i++) {
+      const b = document.createElement('div');
+      b.className = 'block';
+      b.style.width  = (20 + Math.random() * 160) + 'px';
+      b.style.height = (8  + Math.random() * 40) + 'px';
+      b.style.left   = Math.random() * 1720 + 'px';
+      b.style.top    = Math.random() * 1040 + 'px';
+      document.body.appendChild(b);
+      blocks.push(b);
+    }
+
+    // Tear lines
+    const tears = [];
+    for (let i = 0; i < 6; i++) {
+      const t = document.createElement('div');
+      t.className = 'tear';
+      t.style.top = Math.random() * 100 + '%';
+      document.body.appendChild(t);
+      tears.push(t);
+    }
+
+    const gridLines = document.getElementById('grid-lines');
+    let lastBeat = 0;
+    let lastDrop = 0;
+
+    function glitch(intensity) {
+      // Shift each band by a random amount — bigger = more chaos
+      bands.forEach(band => {
+        const shift = (Math.random() - 0.5) * intensity * 60;
+        gsap.to(band, {
+          x: shift, duration: 0.04,
+          onComplete: () => gsap.to(band, { x: 0, duration: 0.12, ease: 'power2.out' })
+        });
+      });
+
+      // Show grid lines briefly
+      gsap.to(gridLines, { opacity: intensity * 0.8, duration: 0.04, yoyo: true, repeat: 1 });
+    }
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false } = data;
+      const now = Date.now();
+
+      if (drop && now - lastDrop > 250) {
+        lastDrop = now;
+
+        // Full glitch cascade
+        glitch(1.0);
+
+        // Block artifacts
+        gsap.to(blocks, {
+          opacity: () => Math.random() * 0.8,
+          duration: 0.03,
+          stagger: { amount: 0.04, from: 'random' },
+          onComplete: () => gsap.to(blocks, { opacity: 0, duration: 0.2, stagger: { amount: 0.1 } })
+        });
+
+        // Tear lines
+        gsap.to(tears, {
+          opacity: 1, duration: 0.02,
+          stagger: { amount: 0.06 },
+          onComplete: () => gsap.to(tears, { opacity: 0, duration: 0.15 })
+        });
+
+        // Chromatic on bands via pseudo-elements (drive via CSS var)
+        bands.forEach(b => {
+          gsap.to(b, { '--chroma': 1, duration: 0.03 });
+          gsap.to(b, { '--chroma': 0, duration: 0.3, delay: 0.05 });
+        });
+
+      } else if (beat && now - lastBeat > 120) {
+        lastBeat = now;
+        // Subtle per-beat glitch — 2-3 bands only
+        const subset = bands.filter(() => Math.random() > 0.6);
+        subset.forEach(band => {
+          const shift = (Math.random() - 0.5) * amplitude * 20;
+          gsap.to(band, { x: shift, duration: 0.04,
+            onComplete: () => gsap.to(band, { x: 0, duration: 0.1 }) });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

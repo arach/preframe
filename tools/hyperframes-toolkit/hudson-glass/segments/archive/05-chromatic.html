@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+      @font-face {
+        font-family: 'JetBrains Mono';
+        src: local('JetBrainsMonoNerdFont-Regular'), local('JetBrains Mono Regular');
+        font-weight: 400;
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        src: local('JetBrainsMonoNerdFont-Bold'), local('JetBrains Mono Bold');
+        font-weight: 600;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0a0c10; }
+      #root { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+
+      .backdrop-wrap { position: absolute; inset: 0; overflow: hidden; }
+      .backdrop { width: 100%; height: 100%; object-fit: cover; }
+
+      /* Chromatic aberration layers */
+      .ca-layer {
+        position: absolute; inset: 0;
+        background: inherit;
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+      #ca-r {
+        background-color: rgba(255, 20, 60, 0.10);
+        opacity: 0;
+        transform: translateX(0px) scale(1);
+      }
+      #ca-g {
+        background-color: rgba(0, 255, 100, 0.04);
+        opacity: 0;
+        transform: translateX(0px) scale(1);
+      }
+      #ca-b {
+        background-color: rgba(0, 80, 255, 0.10);
+        opacity: 0;
+        transform: translateX(0px) scale(1);
+      }
+
+      /* Radial gradient — strongest at corners */
+      #ca-radial {
+        position: absolute; inset: 0; z-index: 32; pointer-events: none;
+        background: radial-gradient(ellipse 120% 120% at 50% 50%,
+          transparent 30%,
+          rgba(0,100,255,0.06) 60%,
+          rgba(255,50,80,0.08) 80%,
+          rgba(0,0,0,0.30) 100%
+        );
+        opacity: 0;
+      }
+
+      /* Segment label */
+      .ca-label {
+        position: absolute; left: 80px; top: 50%;
+        transform: translateY(-50%);
+        z-index: 40; opacity: 0;
+      }
+      .ca-label .lbl {
+        font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.30em;
+        color: rgba(255,255,255,0.25); text-transform: uppercase; margin-bottom: 10px;
+      }
+      .ca-label .big {
+        font-family: 'JetBrains Mono', monospace; font-size: 72px; font-weight: 600;
+        letter-spacing: -0.02em; color: #fff; line-height: 1;
+      }
+      .ca-label .bar {
+        width: 40px; height: 2px; background: rgba(255,255,255,0.18); margin-top: 14px;
+      }
+
+      .seg-bar {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+        background: rgba(10,12,16,0.70); backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; padding: 0 40px; gap: 24px;
+        z-index: 40; opacity: 0;
+      }
+      .seg-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.20em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
+      .seg-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.30em; color: rgba(255,255,255,0.75); text-transform: uppercase; }
+      .seg-line { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+      .seg-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.25); letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="8"
+         data-width="1920" data-height="1080">
+
+      <div class="backdrop-wrap">
+        <img id="backdrop" class="backdrop" data-start="0" data-duration="8"
+             src="../inventory/images/hudson-glass-backdrop.png" style="opacity:0.82" >
+      </div>
+
+      <div id="ca-r" class="ca-layer"></div>
+      <div id="ca-g" class="ca-layer"></div>
+      <div id="ca-b" class="ca-layer"></div>
+      <div id="ca-radial"></div>
+
+      <div class="ca-label" id="ca-lbl">
+        <div class="lbl">Segment 05</div>
+        <div class="big">CHROMATIC</div>
+        <div class="bar"></div>
+      </div>
+
+      <div class="seg-bar" data-start="0" data-duration="8">
+        <div class="seg-num">05</div>
+        <div class="seg-name">CHROMATIC</div>
+        <div class="seg-line"></div>
+        <div class="seg-desc">Radial aberration · RGB channel split · Spectral fringing</div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // CA builds in — R/B channels offset from center
+      tl.fromTo("#ca-r", { opacity: 0, x: -16, scale: 1.01 },
+        { opacity: 1, x: 0, scale: 1, duration: 0.8, ease: "power2.out" }, 0.1);
+      tl.fromTo("#ca-b", { opacity: 0, x: 14, scale: 1.01 },
+        { opacity: 1, x: 0, scale: 1, duration: 0.8, ease: "power2.out" }, 0.15);
+      tl.fromTo("#ca-g", { opacity: 0 },
+        { opacity: 1, duration: 0.6, ease: "power2.out" }, 0.3);
+      tl.fromTo("#ca-radial", { opacity: 0 },
+        { opacity: 1, duration: 1.0, ease: "power2.out" }, 0.4);
+      tl.fromTo("#ca-lbl", { opacity: 0, x: -16 },
+        { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 0.3);
+      tl.fromTo(".seg-bar", { opacity: 0 },
+        { opacity: 1, duration: 0.5 }, 0.8);
+
+      // CA pulses: breathe effect
+      tl.to("#ca-r", { x: 4, scale: 1.005, duration: 1.2, ease: "sine.inOut" }, 2.0);
+      tl.to("#ca-r", { x: -6, scale: 1.008, duration: 1.2, ease: "sine.inOut" }, 3.2);
+      tl.to("#ca-b", { x: -4, scale: 1.005, duration: 1.2, ease: "sine.inOut" }, 2.0);
+      tl.to("#ca-b", { x: 6, scale: 1.008, duration: 1.2, ease: "sine.inOut" }, 3.2);
+
+      // Out
+      tl.to(".seg-bar", { opacity: 0, duration: 0.5 }, 7.0);
+      tl.to("#ca-lbl", { opacity: 0, duration: 0.4 }, 7.2);
+      tl.to("#ca-r, #ca-g, #ca-b, #ca-radial", { opacity: 0, duration: 0.6 }, 7.3);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

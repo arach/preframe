@@ -1,0 +1,127 @@
+<!-- hyperframes-registry-item: halo-glow -->
+<!-- shared: ../../shared/base.css -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+      [data-composition-id="halo-glow"] {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #bg-video {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+        z-index: 0;
+      }
+
+      /* Primary radial glow — center-weighted, screen blend */
+      #glow-overlay {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse 55% 45% at 50% 50%,
+          rgba(120, 180, 255, 0.35) 0%,
+          rgba(80, 140, 255, 0.15) 30%,
+          transparent 70%
+        );
+        mix-blend-mode: screen;
+        z-index: 1;
+        transform-origin: center center;
+      }
+
+      /* Outer ring — breathes out of phase with overlay */
+      #glow-ring {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse 72% 62% at 50% 50%,
+          rgba(100, 160, 255, 0.10) 0%,
+          rgba(60, 120, 255, 0.05) 45%,
+          transparent 72%
+        );
+        mix-blend-mode: screen;
+        z-index: 1;
+        transform-origin: center center;
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="halo-glow"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="bg-video" muted playsinline></video>
+
+      <div id="glow-overlay"></div>
+      <div id="glow-ring"></div>
+
+      <div id="ui-layer"></div>
+
+      <div
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+      ></div>
+    </div>
+
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        document.getElementById('bg-video').src =
+          root.dataset.videoSrc || '../../assets/sample.mp4';
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+
+        // Primary glow: one full round-trip over 8s (4s out, 4s back)
+        tl.fromTo(
+          '#glow-overlay',
+          { scale: 1.0, opacity: 0.7 },
+          { scale: 1.12, opacity: 1.0, duration: 4, ease: 'sine.inOut', yoyo: true, repeat: 1 },
+          0
+        );
+
+        // Ring: phase-shifted by 1s for organic breathing feel
+        tl.fromTo(
+          '#glow-ring',
+          { scale: 0.95, opacity: 0.5 },
+          { scale: 1.18, opacity: 0.9, duration: 4, ease: 'sine.inOut', yoyo: true, repeat: 1 },
+          1
+        );
+
+        window.__timelines['halo-glow'] = tl;
+      })();
+
+        // Parameter control bridge
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

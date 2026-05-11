@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0a0c10; }
+      #root { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .backdrop { width: 100%; height: 100%; object-fit: cover; }
+
+      /* RGB channel splits — subtler than before */
+      .glitch-layer { position: absolute; inset: 0; pointer-events: none; }
+      #gl-r { background: rgba(255, 0, 50, 0.06); opacity: 0; }
+      #gl-b { background: rgba(0, 150, 255, 0.06); opacity: 0; }
+
+      /* CRT scanlines */
+      #scanlines {
+        position: absolute; inset: 0; z-index: 30; pointer-events: none;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent, transparent 3px,
+          rgba(0,0,0,0.10) 3px,
+          rgba(0,0,0,0.10) 4px
+        );
+        opacity: 0;
+      }
+
+      /* Label */
+      #gt-wrap {
+        position: absolute; left: 64px; top: 44%;
+        transform: translateY(-50%);
+        z-index: 40; opacity: 0;
+      }
+      .gt-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.30em; color: rgba(255,255,255,0.25); text-transform: uppercase; margin-bottom: 8px; }
+      .gt-word { font-family: 'JetBrains Mono', monospace; font-size: 80px; font-weight: 600; letter-spacing: -0.02em; color: #fff; line-height: 1; }
+      .gt-bar { width: 40px; height: 2px; background: rgba(255,255,255,0.18); margin-top: 14px; }
+
+      .seg-bar {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+        background: rgba(10,12,16,0.88); backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; padding: 0 40px; gap: 24px;
+        z-index: 50; opacity: 0;
+      }
+      .seg-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.20em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
+      .seg-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.30em; color: rgba(255,255,255,0.80); text-transform: uppercase; }
+      .seg-line { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+      .seg-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.25); letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="6" data-width="1920" data-height="1080">
+      <img id="backdrop" class="clip" data-start="0" data-duration="6"
+           src="/inventory/images/hudson-glass-backdrop.png" style="opacity:0.90" />
+      <div id="gl-r" class="glitch-layer"></div>
+      <div id="gl-b" class="glitch-layer"></div>
+      <div id="scanlines" class="clip" data-start="0" data-duration="6"></div>
+      <div id="gt-wrap">
+        <div class="gt-label">Segment 07</div>
+        <div class="gt-word">GLITCH</div>
+        <div class="gt-bar"></div>
+      </div>
+      <div class="seg-bar clip" data-start="0" data-duration="6">
+        <div class="seg-num">07</div>
+        <div class="seg-name">GLITCH</div>
+        <div class="seg-line"></div>
+        <div class="seg-desc">RGB split · Scanlines · Digital artifacts</div>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.fromTo("#gt-wrap", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power3.out" }, 0.3);
+      tl.fromTo("#gl-r", { opacity: 0, x: -5 }, { opacity: 1, x: 0, duration: 0.08, ease: "none" }, 0.1);
+      tl.fromTo("#gl-b", { opacity: 0, x: 4 }, { opacity: 1, x: 0, duration: 0.08, ease: "none" }, 0.15);
+      tl.fromTo("#scanlines", { opacity: 0 }, { opacity: 0.8, duration: 0.3 }, 0.2);
+      tl.fromTo(".seg-bar", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.6);
+
+      // Controlled glitch pulses — image only, never caption bar
+      function glitch(time, dur) {
+        dur = dur || 0.18;
+        tl.fromTo("#gl-r", { x: -6, opacity: 0.7 }, { x: 0, opacity: 0, duration: dur, ease: "power4.in" }, time);
+        tl.fromTo("#gl-b", { x: 7, opacity: 0.8 }, { x: 0, opacity: 0, duration: dur, ease: "power4.in" }, time);
+        tl.fromTo("#gt-wrap", { x: -4 }, { x: 0, duration: dur, ease: "power4.in" }, time);
+        tl.fromTo("#backdrop", { x: 2 }, { x: 0, duration: dur, ease: "power4.in" }, time);
+      }
+      glitch(0.9, 0.22);
+      glitch(1.7, 0.15);
+      glitch(2.4, 0.20);
+      glitch(3.1, 0.14);
+      glitch(3.8, 0.18);
+      glitch(4.4, 0.12);
+      glitch(5.0, 0.16);
+
+      tl.to(".seg-bar", { opacity: 0, duration: 0.6 }, 5.0);
+      tl.to("#gt-wrap", { opacity: 0, duration: 0.4 }, 5.1);
+      tl.to("#gl-r, #gl-b, #scanlines", { opacity: 0, duration: 0.4 }, 5.2);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

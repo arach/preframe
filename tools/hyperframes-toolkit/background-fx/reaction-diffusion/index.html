@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; z-index: 0; }
+      #fx-canvas {
+        position: absolute; inset: 0; width: 1920px; height: 1080px;
+        pointer-events: none; z-index: 1; mix-blend-mode: screen;
+      }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="reaction-diffusion" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+      <div class="clip" data-start="0" data-duration="8" data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
+    </div>
+
+    <script>
+    (function () {
+      var root  = document.getElementById('root');
+      var video = document.getElementById('bg-video');
+      video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+      video.load();
+
+      var canvas = document.getElementById('fx-canvas');
+      var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+
+      window.__timelines = window.__timelines || {};
+
+      if (!gl) {
+        window.__timelines['reaction-diffusion'] = gsap.timeline({ paused: true });
+        return;
+      }
+
+      var SIM_W = 512, SIM_H = 288;
+
+      var vertSrc =
+        'attribute vec2 a_pos; varying vec2 v_uv;' +
+        'void main(){v_uv=a_pos*0.5+0.5; v_uv.y=1.0-v_uv.y; gl_Position=vec4(a_pos,0,1);}';
+
+      // Gray-Scott simulation pass
+      var simFrag =
+        'precision mediump float;' +
+        'uniform sampler2D u_state;' +
+        'uniform vec2 u_texel;' +
+        'const float F=0.055,k=0.062,dA=1.0,dB=0.5,dt=1.2;' +
+        'void main(){' +
+        '  vec2 uv=gl_FragCoord.xy*u_texel;' +
+        '  vec4 c=texture2D(u_state,uv);' +
+        '  vec4 n=texture2D(u_state,uv+vec2(0,u_texel.y));' +
+        '  vec4 s=texture2D(u_state,uv-vec2(0,u_texel.y));' +
+        '  vec4 e=texture2D(u_state,uv+vec2(u_texel.x,0));' +
+        '  vec4 w=texture2D(u_state,uv-vec2(u_texel.x,0));' +
+        '  float A=c.r,B=c.g;' +
+        '  float lapA=n.r+s.r+e.r+w.r-4.0*A;' +
+        '  float lapB=n.g+s.g+e.g+w.g-4.0*B;' +
+        '  float rxn=A*B*B;' +
+        '  float nA=clamp(A+dt*(dA*lapA-rxn+F*(1.0-A)),0.0,1.0);' +
+        '  float nB=clamp(B+dt*(dB*lapB+rxn-(F+k)*B),0.0,1.0);' +
+        '  gl_FragColor=vec4(nA,nB,0.0,1.0);' +
+        '}';
+
+      // Display pass — colorize B channel over video colors
+      var dispFrag =
+        'precision mediump float;' +
+        'varying vec2 v_uv;' +
+        'uniform sampler2D u_state;' +
+        'void main(){' +
+        '  float B=texture2D(u_state,v_uv).g;' +
+        '  float r=1.0-B;' +
+        '  vec3 col=mix(vec3(0.0,0.6,1.0),vec3(1.0,0.15,0.8),smoothstep(0.0,0.5,B));' +
+        '  col=mix(col,vec3(1.0),smoothstep(0.5,0.9,B));' +
+        '  gl_FragColor=vec4(col*B*0.85,B*0.85);' +
+        '}';
+
+      function compileShader(src, type) {
+        var s = gl.createShader(type);
+        gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('rd shader:', gl.getShaderInfoLog(s));
+        return s;
+      }
+      function mkProg(fSrc) {
+        var p = gl.createProgram();
+        gl.attachShader(p, compileShader(vertSrc, gl.VERTEX_SHADER));
+        gl.attachShader(p, compileShader(fSrc, gl.FRAGMENT_SHADER));
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error('rd link:', gl.getProgramInfoLog(p));
+        return p;
+      }
+
+      var quadBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+      function bindQuad(prog) {
+        var pos = gl.getAttribLocation(prog, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+      }
+
+      var progSim  = mkProg(simFrag);
+      var progDisp = mkProg(dispFrag);
+
+      function makeTarget(w, h) {
+        var tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        var fb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return { tex: tex, fb: fb };
+      }
+
+      var ping = makeTarget(SIM_W, SIM_H);
+      var pong = makeTarget(SIM_W, SIM_H);
+
+      // Seed: fill with A=1,B=0 then stamp multiple seed patches
+      function seedState() {
+        // Fill both with A=1,B=0
+        [ping, pong].forEach(function (t) {
+          gl.bindFramebuffer(gl.FRAMEBUFFER, t.fb);
+          gl.viewport(0, 0, SIM_W, SIM_H);
+          gl.clearColor(1.0, 0.0, 0.0, 1.0);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+        });
+        // Stamp 5 seed patches spread across the field
+        var patches = [
+          [256, 144], [128, 72], [384, 72], [128, 216], [384, 216]
+        ];
+        patches.forEach(function (p) {
+          var x = p[0] - 6, y = p[1] - 6;
+          // Write A=0.5,B=0.25 directly via pixel upload
+          var seedData = new Uint8Array(12 * 12 * 4);
+          for (var i = 0; i < 12 * 12; i++) {
+            seedData[i*4+0] = 128; // A=0.5
+            seedData[i*4+1] = 64;  // B=0.25
+            seedData[i*4+2] = 0;
+            seedData[i*4+3] = 255;
+          }
+          gl.bindFramebuffer(gl.FRAMEBUFFER, ping.fb);
+          gl.viewport(0, 0, SIM_W, SIM_H);
+          gl.bindTexture(gl.TEXTURE_2D, ping.tex);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, x, y, 12, 12, gl.RGBA, gl.UNSIGNED_BYTE, seedData);
+        });
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, 1920, 1080);
+      }
+
+      seedState();
+
+      function simStep() {
+        gl.viewport(0, 0, SIM_W, SIM_H);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, pong.fb);
+        gl.useProgram(progSim);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, ping.tex);
+        gl.uniform1i(gl.getUniformLocation(progSim, 'u_state'), 0);
+        gl.uniform2f(gl.getUniformLocation(progSim, 'u_texel'), 1.0/SIM_W, 1.0/SIM_H);
+        bindQuad(progSim);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        var tmp = ping; ping = pong; pong = tmp;
+      }
+
+      function renderDisplay() {
+        gl.viewport(0, 0, 1920, 1080);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.useProgram(progDisp);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, ping.tex);
+        gl.uniform1i(gl.getUniformLocation(progDisp, 'u_state'), 0);
+        bindQuad(progDisp);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      // Pre-warm: run 600 steps so Turing patterns are already visible at t=0
+      for (var i = 0; i < 600; i++) simStep();
+      renderDisplay();
+
+      // Per-seek: run 16 more steps to keep patterns evolving
+      var STEPS_PER_UPDATE = 16;
+
+      var tl = gsap.timeline({
+        paused: true,
+        onUpdate: function () {
+          for (var i = 0; i < STEPS_PER_UPDATE; i++) simStep();
+          renderDisplay();
+        }
+      });
+      tl.to({ _: 0 }, { _: 1, duration: 8, ease: 'none' }, 0);
+      window.__timelines['reaction-diffusion'] = tl;
+    })();
+
+        // Parameter control bridge
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

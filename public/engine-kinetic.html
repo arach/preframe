@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kinetic Type — Preframe</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: ui-monospace, monospace; }
+    #video-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45; }
+
+    #stage { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+    /* Slam word */
+    .word {
+      position: absolute;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
+      white-space: nowrap;
+      opacity: 0;
+      transform-origin: center;
+    }
+    .word.accent { color: #4ade80; }
+    .word.ghost  { color: rgba(255,255,255,0.08); font-size: 420px; }
+
+    /* BPM counter */
+    #bpm {
+      position: absolute; top: 28px; right: 32px;
+      font-size: 11px; color: rgba(74,222,128,0.5);
+      letter-spacing: 0.15em; text-transform: uppercase;
+    }
+
+    /* Beat bar — bottom pulse strip */
+    #beat-bar {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+      background: rgba(74,222,128,0.3); transform: scaleX(0); transform-origin: left;
+    }
+
+    #controls {
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 14px 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+      display: flex; align-items: center; gap: 12px;
+    }
+    #controls select, #controls button {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.8); border-radius: 4px; padding: 6px 10px;
+      font-size: 11px; font-family: inherit; cursor: pointer; outline: none;
+    }
+    #controls select:hover, #controls button:hover { border-color: rgba(74,222,128,0.4); }
+    #play-btn { color: rgba(74,222,128,0.9); border-color: rgba(74,222,128,0.3); min-width: 60px; }
+    label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; }
+    #beat-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(74,222,128,0.3); }
+    #beat-dot.on { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+  </style>
+</head>
+<body>
+
+<video id="video-bg" src="/out/lattices-gesture-recording-loop-v6.mp4" loop playsinline muted></video>
+<div id="stage"></div>
+<div id="bpm">— BPM</div>
+<div id="beat-bar"></div>
+<audio id="audio" crossorigin="anonymous"></audio>
+
+<div id="controls">
+  <button id="play-btn">▶ Play</button>
+  <div id="beat-dot"></div>
+  <label>Track</label>
+  <select id="track-select"></select>
+</div>
+
+<script>
+const video   = document.getElementById('video-bg');
+const stage   = document.getElementById('stage');
+const audioEl = document.getElementById('audio');
+const playBtn = document.getElementById('play-btn');
+const trackSel= document.getElementById('track-select');
+const beatDot = document.getElementById('beat-dot');
+const bpmEl   = document.getElementById('bpm');
+const beatBar = document.getElementById('beat-bar');
+
+// ── Word banks ────────────────────────────────────────────────────────────────
+const DROP_WORDS  = ['DROP','SLAM','HIT','NOW','BREAK','SNAP','CUT'];
+const BEAT_WORDS  = ['BEAT','MOVE','PUSH','GO','RUN','LOCK','FEEL'];
+const AMBIENT     = ['MOTION','PRE','FRAMES','SIGNAL','LATTICE','LOOP'];
+const NUMBERS     = ['01','02','03','04','>>','//','--'];
+
+let trackName = '';
+
+// ── Word spawner ──────────────────────────────────────────────────────────────
+function pickRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function spawnWord(text, opts = {}) {
+  const {
+    size    = 80 + Math.random() * 120,
+    x       = Math.random() * 70 + 5,     // % from left
+    y       = Math.random() * 60 + 15,    // % from top
+    accent  = false,
+    fromDir = ['left','right','top','bottom'][Math.floor(Math.random() * 4)],
+    dur     = 0.12,
+    hold    = 0.4 + Math.random() * 0.6,
+    rotate  = (Math.random() - 0.5) * 6,
+  } = opts;
+
+  const el = document.createElement('div');
+  el.className = 'word' + (accent ? ' accent' : '');
+  el.textContent = text;
+  el.style.fontSize = size + 'px';
+  el.style.left = x + '%';
+  el.style.top  = y + '%';
+  stage.appendChild(el);
+
+  // Entry from direction
+  const offsets = { left: [-300,0], right: [300,0], top: [0,-200], bottom: [0,200] };
+  const [ox, oy] = offsets[fromDir];
+
+  gsap.fromTo(el,
+    { x: ox, y: oy, opacity: 0, rotation: rotate * 3, scale: 0.7 },
+    {
+      x: 0, y: 0, opacity: 1, rotation: rotate, scale: 1,
+      duration: dur, ease: 'power4.out',
+      onComplete() {
+        gsap.to(el, {
+          opacity: 0, scale: 0.95, duration: 0.15, delay: hold,
+          onComplete: () => el.remove()
+        });
+      }
+    }
+  );
+}
+
+function slamDrop(amp) {
+  // Giant word center-slam
+  const el = document.createElement('div');
+  el.className = 'word accent';
+  el.textContent = pickRand(DROP_WORDS);
+  el.style.fontSize = '280px';
+  el.style.left = '50%';
+  el.style.top  = '45%';
+  el.style.transform = 'translate(-50%, -50%)';
+  stage.appendChild(el);
+
+  gsap.fromTo(el,
+    { scale: 3, opacity: 0, rotation: (Math.random() - 0.5) * 8 },
+    { scale: 1, opacity: 1, duration: 0.08, ease: 'power4.out',
+      onComplete() {
+        gsap.to(el, { scale: 0.9, opacity: 0, duration: 0.35, delay: 0.4, ease: 'power2.in', onComplete: () => el.remove() });
+      }
+    }
+  );
+
+  // Flanking smaller words
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => spawnWord(pickRand(NUMBERS), { size: 40 + Math.random() * 60, accent: Math.random() > 0.5 }), i * 50);
+  }
+}
+
+// ── BPM tracking ──────────────────────────────────────────────────────────────
+const beatTimes = [];
+function recordBeat() {
+  const now = Date.now();
+  beatTimes.push(now);
+  if (beatTimes.length > 8) beatTimes.shift();
+  if (beatTimes.length >= 4) {
+    const gaps = beatTimes.slice(1).map((t, i) => t - beatTimes[i]);
+    const avgGap = gaps.reduce((a, b) => a + b) / gaps.length;
+    bpmEl.textContent = Math.round(60000 / avgGap) + ' BPM';
+  }
+}
+
+// ── Web Audio ─────────────────────────────────────────────────────────────────
+let audioCtx, analyser, source, freqData;
+let playing = false, beatThreshold = 0.35, prevAmp = 0, lastBeat = 0, lastDrop = 0;
+let beatCount = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.78;
+  source = audioCtx.createMediaElementSource(audioEl);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  freqData = new Uint8Array(analyser.frequencyBinCount);
+}
+
+function energy(lo, hi) {
+  let s = 0;
+  for (let i = lo; i < hi && i < freqData.length; i++) s += freqData[i];
+  return s / ((hi - lo) * 255);
+}
+
+// ── Ghost watermark (background large text) ───────────────────────────────────
+function maybeSpawnGhost() {
+  if (Math.random() > 0.04) return;
+  const el = document.createElement('div');
+  el.className = 'word ghost';
+  el.textContent = pickRand([...AMBIENT, trackName.split(' ')[0] || 'MOTION']);
+  el.style.left = (Math.random() * 60 - 10) + '%';
+  el.style.top  = (Math.random() * 60 + 10) + '%';
+  el.style.fontSize = (300 + Math.random() * 200) + 'px';
+  stage.appendChild(el);
+  gsap.fromTo(el, { opacity: 0 }, { opacity: 1, duration: 2, yoyo: true, repeat: 1, ease: 'power1.inOut', onComplete: () => el.remove() });
+}
+
+// ── Render loop ───────────────────────────────────────────────────────────────
+function tick() {
+  requestAnimationFrame(tick);
+  if (!playing || !analyser) return;
+
+  analyser.getByteFrequencyData(freqData);
+  const bass = energy(1, 6), amp = energy(0, freqData.length);
+  beatThreshold += (amp * 1.45 - beatThreshold) * 0.02;
+  const now = Date.now();
+  const beat = bass > beatThreshold && now - lastBeat > 200;
+  const drop = amp > 0.52 && prevAmp < 0.22 && now - lastDrop > 500;
+  prevAmp = amp;
+
+  if (drop) {
+    lastDrop = now;
+    slamDrop(amp);
+    gsap.fromTo(beatBar, { scaleX: 0 }, { scaleX: 1, duration: 0.08, yoyo: true, repeat: 5 });
+  } else if (beat) {
+    lastBeat = now; beatCount++;
+    recordBeat();
+    beatDot.classList.add('on'); setTimeout(() => beatDot.classList.remove('on'), 80);
+    gsap.fromTo(beatBar, { scaleX: 0 }, { scaleX: 1, duration: 0.06, ease: 'power2.out' })
+
+    // Every beat: spawn 1-2 words
+    spawnWord(pickRand(BEAT_WORDS), { accent: Math.random() > 0.7 });
+    if (Math.random() > 0.5) spawnWord(pickRand(NUMBERS), { size: 40 + Math.random() * 50 });
+
+    // Every 4th beat: larger ambient word
+    if (beatCount % 4 === 0) spawnWord(pickRand(AMBIENT), { size: 120 + Math.random() * 80, accent: false, hold: 1.2 });
+  }
+
+  maybeSpawnGhost();
+}
+tick();
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+const _urlTrack = new URLSearchParams(location.search).get('track');
+fetch('/catalog-data.json').then(r => r.json()).then(d => {
+  (d.audioAssets || []).forEach(a => {
+    const o = document.createElement('option');
+    o.value = '/' + a.path;
+    o.textContent = a.songTitle || a.id;
+    if (_urlTrack) {
+      if (a.id === _urlTrack || a.path.includes(_urlTrack)) o.selected = true;
+    } else {
+      if (a.id.includes('ref-adrian-quesada') || a.id.includes('47-jaar') || a.id.includes('dark-808') || a.id.includes('03-dark')) o.selected = true;
+    }
+    trackSel.appendChild(o);
+  });
+  if (d.audioAssets?.length) { audioEl.src = trackSel.value; trackName = trackSel.options[trackSel.selectedIndex].text.toUpperCase(); }
+});
+
+playBtn.addEventListener('click', () => {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  playing = !playing;
+  playing ? (audioEl.play(), video.play()) : (audioEl.pause(), video.pause());
+  playBtn.textContent = playing ? '⏸ Pause' : '▶ Play';
+});
+trackSel.addEventListener('change', () => {
+  trackName = trackSel.options[trackSel.selectedIndex].text.toUpperCase();
+  audioEl.src = trackSel.value; if (playing) audioEl.play();
+});
+</script>
+</body>
+</html>

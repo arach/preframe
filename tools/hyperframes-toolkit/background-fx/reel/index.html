@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&display=block");
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+      [data-composition-id="reel"] {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        position: relative;
+        background: #000;
+      }
+
+      /* Title card */
+      #title-card {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        z-index: 50;
+      }
+      #title-main {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 120px;
+        letter-spacing: 0.12em;
+        color: #fff;
+        line-height: 1;
+        opacity: 0;
+      }
+      #title-sub {
+        font-family: 'Space Mono', monospace;
+        font-size: 18px;
+        font-weight: 400;
+        letter-spacing: 0.2em;
+        color: rgba(255,255,255,0.45);
+        margin-top: 28px;
+        opacity: 0;
+      }
+      #title-tag {
+        font-family: 'Space Mono', monospace;
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 0.35em;
+        color: rgba(255,255,255,0.2);
+        margin-top: 24px;
+        opacity: 0;
+      }
+
+      /* Bottom gradient — always visible */
+      .bottom-gradient {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        height: 220px;
+        background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
+        pointer-events: none;
+        z-index: 15;
+      }
+
+      /* Labels */
+      .fx-label {
+        position: absolute;
+        left: 72px;
+        bottom: 72px;
+        z-index: 20;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .label-inner {
+        display: flex;
+        align-items: stretch;
+        gap: 16px;
+      }
+      .label-line {
+        width: 2px;
+        background: rgba(255,255,255,0.5);
+        border-radius: 1px;
+        flex-shrink: 0;
+        min-height: 44px;
+      }
+      .label-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .label-category {
+        font-family: 'Space Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.35em;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.45);
+      }
+      .label-name {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 36px;
+        letter-spacing: 0.1em;
+        color: rgba(255,255,255,0.92);
+        line-height: 1;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.6);
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="reel"
+      data-start="0"
+      data-duration="104"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Audio -->
+      <audio id="music" src="../../inventory/music/brooklyn-beats.mp3" preload="auto"></audio>
+
+      <!-- Title card -->
+      <div id="title-card" class="clip" data-start="0" data-duration="4" data-track-index="0">
+        <div id="title-main">BACKGROUND FX</div>
+        <div id="title-sub">A showcase of 30 effects for video presentations</div>
+        <div id="title-tag">hyperframes-toolkit</div>
+      </div>
+
+      <!-- Effect sub-compositions -->
+      <div class="clip" data-composition-src="../film-grade/index.html"        data-start="4"   data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../bloom-halation/index.html"    data-start="9"   data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../golden-hour/index.html"       data-start="14"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../orton-effect/index.html"      data-start="19"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../infrared/index.html"          data-start="24"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../long-exposure/index.html"     data-start="29"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../fog-depth/index.html"         data-start="34"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../rain-glass/index.html"        data-start="39"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../tilt-shift/index.html"        data-start="44"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../parallax-depth/index.html"    data-start="49"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../cyanotype/index.html"         data-start="54"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../daguerreotype/index.html"     data-start="59"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../duotone/index.html"           data-start="64"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../holographic/index.html"       data-start="69"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../dark-neon/index.html"         data-start="74"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../bleach-bypass/index.html"     data-start="79"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../chromatic-flow/index.html"    data-start="84"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../fluid-tint/index.html"        data-start="89"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../particle-field/index.html"    data-start="94"  data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+      <div class="clip" data-composition-src="../reaction-diffusion/index.html" data-start="99" data-duration="5" data-track-index="1" style="position:absolute;inset:0;width:1920px;height:1080px;"></div>
+
+      <!-- Bottom gradient (permanent) -->
+      <div class="bottom-gradient"></div>
+
+      <!-- Labels (track-index 20) -->
+      <div class="fx-label label-01 clip" data-start="4"   data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Film Grade</div><div class="label-name">FILM GRADE</div></div></div></div>
+      <div class="fx-label label-02 clip" data-start="9"   data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Atmospheric Light</div><div class="label-name">BLOOM & HALATION</div></div></div></div>
+      <div class="fx-label label-03 clip" data-start="14"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Film Grade</div><div class="label-name">GOLDEN HOUR</div></div></div></div>
+      <div class="fx-label label-04 clip" data-start="19"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Fine Art</div><div class="label-name">ORTON EFFECT</div></div></div></div>
+      <div class="fx-label label-05 clip" data-start="24"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Fine Art</div><div class="label-name">INFRARED</div></div></div></div>
+      <div class="fx-label label-06 clip" data-start="29"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Fine Art</div><div class="label-name">LONG EXPOSURE</div></div></div></div>
+      <div class="fx-label label-07 clip" data-start="34"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Atmospheric Light</div><div class="label-name">FOG DEPTH</div></div></div></div>
+      <div class="fx-label label-08 clip" data-start="39"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Atmospheric Light</div><div class="label-name">RAIN ON GLASS</div></div></div></div>
+      <div class="fx-label label-09 clip" data-start="44"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Lens & Depth</div><div class="label-name">TILT SHIFT</div></div></div></div>
+      <div class="fx-label label-10 clip" data-start="49"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Lens & Depth</div><div class="label-name">PARALLAX DEPTH</div></div></div></div>
+      <div class="fx-label label-11 clip" data-start="54"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Historic Process</div><div class="label-name">CYANOTYPE</div></div></div></div>
+      <div class="fx-label label-12 clip" data-start="59"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Historic Process</div><div class="label-name">DAGUERREOTYPE</div></div></div></div>
+      <div class="fx-label label-13 clip" data-start="64"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Color Grade</div><div class="label-name">DUOTONE</div></div></div></div>
+      <div class="fx-label label-14 clip" data-start="69"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Color Grade</div><div class="label-name">HOLOGRAPHIC</div></div></div></div>
+      <div class="fx-label label-15 clip" data-start="74"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Color Grade</div><div class="label-name">DARK NEON</div></div></div></div>
+      <div class="fx-label label-16 clip" data-start="79"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Color Grade</div><div class="label-name">BLEACH BYPASS</div></div></div></div>
+      <div class="fx-label label-17 clip" data-start="84"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Light & Optics</div><div class="label-name">CHROMATIC FLOW</div></div></div></div>
+      <div class="fx-label label-18 clip" data-start="89"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Generative</div><div class="label-name">FLUID TINT</div></div></div></div>
+      <div class="fx-label label-19 clip" data-start="94"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Generative</div><div class="label-name">PARTICLE FIELD</div></div></div></div>
+      <div class="fx-label label-20 clip" data-start="99"  data-duration="5" data-track-index="20"><div class="label-inner"><div class="label-line"></div><div class="label-text"><div class="label-category">Generative</div><div class="label-name">REACTION DIFFUSION</div></div></div></div>
+
+      <!-- UI layer -->
+      <div id="ui-layer"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var audioProxy = { vol: 1 };
+      var musicStarted = false;
+
+      var tl = gsap.timeline({
+        paused: true,
+        onUpdate: function () {
+          var t = tl.time();
+          var audio = document.getElementById('music');
+          if (!audio) return;
+          // Start music on first play
+          if (t > 0.05 && !musicStarted) {
+            musicStarted = true;
+            audio.currentTime = t;
+            audio.volume = 1;
+            audio.play().catch(function () {});
+          }
+          // Keep audio in sync
+          if (!audio.paused && Math.abs(audio.currentTime - t) > 0.2) {
+            audio.currentTime = t;
+          }
+        }
+      });
+
+      window.__timelines['reel'] = tl;
+
+      // Master driver — 104s
+      tl.to({ v: 0 }, { v: 1, duration: 104, ease: 'none' }, 0);
+
+      // Title card animations
+      tl.fromTo('#title-main', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' }, 0.4);
+      tl.fromTo('#title-sub',  { opacity: 0 }, { opacity: 1, duration: 0.6 }, 1.0);
+      tl.fromTo('#title-tag',  { opacity: 0 }, { opacity: 1, duration: 0.6 }, 1.4);
+      tl.to('#title-card', { opacity: 0, duration: 0.6 }, 3.4);
+
+      // Music fade out last 10s
+      tl.to(audioProxy, {
+        vol: 0,
+        duration: 10,
+        ease: 'power1.in',
+        onUpdate: function () {
+          var audio = document.getElementById('music');
+          if (audio) audio.volume = Math.max(0, audioProxy.vol);
+        }
+      }, 94);
+
+      // Label fade-ins / fade-outs
+      var labels = [
+        { n: '01', s: 4  },
+        { n: '02', s: 9  },
+        { n: '03', s: 14 },
+        { n: '04', s: 19 },
+        { n: '05', s: 24 },
+        { n: '06', s: 29 },
+        { n: '07', s: 34 },
+        { n: '08', s: 39 },
+        { n: '09', s: 44 },
+        { n: '10', s: 49 },
+        { n: '11', s: 54 },
+        { n: '12', s: 59 },
+        { n: '13', s: 64 },
+        { n: '14', s: 69 },
+        { n: '15', s: 74 },
+        { n: '16', s: 79 },
+        { n: '17', s: 84 },
+        { n: '18', s: 89 },
+        { n: '19', s: 94 },
+        { n: '20', s: 99 }
+      ];
+
+      labels.forEach(function (l) {
+        var sel = '.label-' + l.n;
+        tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.out' }, l.s + 0.5);
+        tl.to(sel, { opacity: 0, duration: 0.4, ease: 'power1.in' }, l.s + 4.1);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,47 @@
+/* Lattices Design System v1
+ * ==========================
+ * Canvas-based video style guide. Import this into every composition.
+ * All units in px for 1920x1080 canvas.
+ */
+
+:root {
+  /* Canvas */
+  --canvas: #000000;
+  --surface: #0a0a0f;
+  --panel: #111118;
+
+  /* Ink */
+  --ink: #f2f2f2;
+  --ink-dim: rgba(255,255,255,0.45);
+  --ink-ghost: rgba(255,255,255,0.18);
+  --ink-muted: #5a5a6a;
+
+  /* Accent */
+  --accent: #4ade80;
+  --accent-dim: rgba(74,222,128,0.25);
+
+  /* Grid */
+  --grid-line: rgba(255,255,255,0.08);
+  --cell-size: 107px;
+  --cell-gap: 8px;
+  --cell-radius: 10px;
+
+  /* Timing */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: power2.out;
+  --dur-fast: 0.3s;
+  --dur-normal: 0.5s;
+  --dur-slow: 0.8s;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  margin: 0; width: 1920px; height: 1080px;
+  overflow: hidden; background: var(--canvas);
+  font-family: system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+}
+.scene {
+  position: absolute; inset: 0;
+}

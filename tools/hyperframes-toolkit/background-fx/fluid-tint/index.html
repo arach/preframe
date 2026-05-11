@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; z-index: 0; }
+      #fx-canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 1; }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="fluid-tint" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+      <div id="driver" class="clip" data-start="0" data-duration="8" data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></div>
+    </div>
+
+    <script>
+    (function () {
+      var root  = document.getElementById('root');
+      var video = document.getElementById('bg-video');
+      video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+      video.load();
+
+      var canvas = document.getElementById('fx-canvas');
+      var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+
+      window.__timelines = window.__timelines || {};
+
+      if (!gl) {
+        window.__timelines['fluid-tint'] = gsap.timeline({ paused: true });
+        return;
+      }
+
+      gl.viewport(0, 0, 1920, 1080);
+
+      var vertSrc =
+        'attribute vec2 a_pos; varying vec2 v_uv;' +
+        'void main(){v_uv=a_pos*0.5+0.5; v_uv.y=1.0-v_uv.y; gl_Position=vec4(a_pos,0.0,1.0);}';
+
+      var fragSrc =
+        'precision mediump float;' +
+        'varying vec2 v_uv;' +
+        'uniform sampler2D u_video;' +
+        'uniform float u_time;' +
+        'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}' +
+        'float vnoise(vec2 p){' +
+        '  vec2 i=floor(p),f=fract(p);' +
+        '  f=f*f*(3.0-2.0*f);' +
+        '  return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);' +
+        '}' +
+        'float fbm(vec2 p){' +
+        '  float v=0.0,a=0.5;' +
+        '  for(int i=0;i<4;i++){v+=a*vnoise(p);p=p*2.1+vec2(5.3,1.7);a*=0.5;}' +
+        '  return v;' +
+        '}' +
+        'uniform float u_warp_strength;' +
+        'uniform float u_tint_mix;' +
+        'void main(){' +
+        '  float t=u_time*0.18;' +
+        '  vec2 q=vec2(fbm(v_uv*2.5+t),fbm(v_uv*2.5+vec2(1.7,9.2)+t));' +
+        '  vec2 warpedUV=clamp(v_uv+0.10*u_warp_strength*q,0.0,1.0);' +
+        '  vec4 col=texture2D(u_video,warpedUV);' +
+        '  float luma=dot(col.rgb,vec3(0.299,0.587,0.114));' +
+        '  col.rgb=mix(vec3(luma)*vec3(0.6,0.85,1.0),col.rgb*1.15,u_tint_mix);' +
+        '  gl_FragColor=vec4(clamp(col.rgb,0.0,1.0),1.0);' +
+        '}';
+
+      function compileShader(src, type) {
+        var s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('fluid-tint shader:', gl.getShaderInfoLog(s));
+        return s;
+      }
+      function mkProg(fSrc) {
+        var p = gl.createProgram();
+        gl.attachShader(p, compileShader(vertSrc, gl.VERTEX_SHADER));
+        gl.attachShader(p, compileShader(fSrc, gl.FRAGMENT_SHADER));
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error('fluid-tint link:', gl.getProgramInfoLog(p));
+        return p;
+      }
+
+      var prog = mkProg(fragSrc);
+      var uVideo = gl.getUniformLocation(prog, 'u_video');
+      var uTime  = gl.getUniformLocation(prog, 'u_time');
+      var uWarpStrength = gl.getUniformLocation(prog, 'u_warp_strength');
+      var uTintMix = gl.getUniformLocation(prog, 'u_tint_mix');
+
+      var quadBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+      var videoTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, videoTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+
+      function uploadVideoFrame() {
+        if (video.readyState >= 2) {
+          gl.bindTexture(gl.TEXTURE_2D, videoTex);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        }
+      }
+
+      function draw(t) {
+        uploadVideoFrame();
+        gl.useProgram(prog);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.uniform1i(uVideo, 0);
+        gl.uniform1f(uTime, t);
+        gl.uniform1f(uWarpStrength, (window.__params && window.__params.warp_strength !== undefined ? window.__params.warp_strength : 1.0));
+        gl.uniform1f(uTintMix, (window.__params && window.__params.tint_mix !== undefined ? window.__params.tint_mix : 0.7));
+        var pos = gl.getAttribLocation(prog, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      draw(0);
+
+      var tl = gsap.timeline({ paused: true, onUpdate: function () { draw(tl.time() * (window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0)); } });
+      tl.to({ _: 0 }, { _: 1, duration: 8, ease: 'none' }, 0);
+      window.__timelines['fluid-tint'] = tl;
+    })();
+
+        // Parameter control bridge
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

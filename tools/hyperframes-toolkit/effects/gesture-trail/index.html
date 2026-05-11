@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; font-family: system-ui, -apple-system, sans-serif; }
+      .scene { position: absolute; inset: 0; }
+      .video-bg { position: absolute; left: 192px; top: 220px; width: 1536px; height: 640px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); overflow: hidden; }
+      .video-bg video { width: 100%; height: 100%; object-fit: cover; }
+      .cell-overlay { position: absolute; left: 192px; top: 220px; width: 1536px; height: 640px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); pointer-events: none; }
+      .cell { border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; margin: 2px; background: rgba(255,255,255,0.02); }
+      #cursor { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 20px rgba(74,222,128,0.5); pointer-events: none; z-index: 100; opacity: 0; }
+      #trail-canvas { position: absolute; left: 192px; top: 220px; pointer-events: none; z-index: 50; }
+      .meta-bar { position: absolute; left: 192px; bottom: 160px; display: flex; gap: 20px; opacity: 0; }
+      .meta-bar span { font-size: 11px; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.25); }
+      .meta-bar span.on { color: #4ade80; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="gesture" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <!-- Video is sibling to .clip, not nested inside -->
+      <div class="video-bg">
+        <video id="v-wide" src="assets/2d33-encoded.mp4" muted playsinline data-start="0" data-duration="8"></video>
+      </div>
+      <div id="gesture" class="scene clip" data-start="0" data-duration="8" data-track-index="1">
+        <canvas id="trail-canvas" width="1536" height="640"></canvas>
+        <div class="cell-overlay" id="cell-grid">
+          <div class="cell" id="oc-0-0"></div>
+          <div class="cell" id="oc-0-1"></div>
+          <div class="cell" id="oc-0-2"></div>
+          <div class="cell" id="oc-1-0"></div>
+          <div class="cell" id="oc-1-1"></div>
+          <div class="cell" id="oc-1-2"></div>
+          <div class="cell" id="oc-2-0"></div>
+          <div class="cell" id="oc-2-1"></div>
+          <div class="cell" id="oc-2-2"></div>
+        </div>
+        <div id="cursor"></div>
+        <div class="meta-bar" id="meta">
+          <span>gesture: lattice-trace</span>
+          <span id="cell-meta">cell: —</span>
+          <span class="on" id="l-shape">L-shape active</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const c = document.getElementById("trail-canvas");
+      const ctx = c.getContext("2d");
+      const cursor = document.getElementById("cursor");
+      const cw = 1536 / 3, ch = 640 / 3;
+      const centers = [];
+      for (let r = 0; r < 3; r++) { for (let col = 0; col < 3; col++) { centers.push({ x: col*cw+cw/2, y: r*ch+ch/2 }); } }
+      const cellIdx = (r,c) => r*3+c;
+      const cellId = (r,c) => "oc-"+r+"-"+c;
+      const isLShape = (r,c) => c===0 || r===2;
+      let trail = [], maxTrail = 80;
+      const pathSteps = [
+        {r:0,c:0,t:0.5},{r:1,c:0,t:1.5},{r:2,c:0,t:2.5},{r:2,c:1,t:3.5},
+        {r:1,c:1,t:4.5},{r:0,c:1,t:5.0},{r:0,c:2,t:5.5},{r:1,c:2,t:6.0},{r:2,c:2,t:6.5}
+      ];
+      const cellPos = {x:0,y:0};
+      pathSteps.forEach((step,i) => {
+        const tgt = centers[cellIdx(step.r,step.c)];
+        const startT = i===0 ? 0.3 : pathSteps[i-1].t + 0.2;
+        const dur = step.t - startT;
+        if (i===0) tl.set(cursor,{opacity:1,x:centers[0].x+192-6,y:centers[0].y+220-6},0.3);
+        tl.to(cellPos,{x:tgt.x,y:tgt.y,duration:Math.max(0.3,dur),ease:"power1.inOut",onUpdate:function(){
+          trail.push({x:cellPos.x,y:cellPos.y,age:0});
+          if (trail.length>maxTrail) trail.shift();
+          ctx.clearRect(0,0,c.width,c.height);
+          for (let ti=0;ti<trail.length-1;ti++){
+            const a=trail[ti],b=trail[ti+1];
+            const alpha=Math.max(0,1-a.age/maxTrail);
+            ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+            ctx.strokeStyle="rgba(74,222,128,"+(alpha*0.8)+")";
+            ctx.lineWidth=3;ctx.lineCap="round";ctx.stroke();
+            a.age+=1;
+          }
+          ctx.beginPath();ctx.arc(cellPos.x,cellPos.y,5,0,Math.PI*2);
+          ctx.fillStyle="#4ade80";ctx.fill();
+          gsap.set(cursor,{x:cellPos.x+192-6,y:cellPos.y+220-6});
+          const cr=Math.floor(cellPos.y/ch),cc=Math.floor(cellPos.x/cw);
+          if (cr>=0&&cr<3&&cc>=0&&cc<3){
+            const el=document.getElementById(cellId(cr,cc));
+            if (isLShape(cr,cc)) gsap.to(el,{background:"rgba(74,222,128,0.15)",borderColor:"rgba(74,222,128,0.4)",duration:0.2});
+            else gsap.to(el,{background:"rgba(255,255,255,0.08)",borderColor:"rgba(255,255,255,0.2)",duration:0.2});
+            document.getElementById("cell-meta").textContent="cell: ("+cr+","+cc+")";
+          }
+        }},startT);
+      });
+      tl.fromTo(".cell",{opacity:0,scale:0.95},{opacity:1,scale:1,duration:0.4,stagger:0.03},0.2);
+      tl.to("#meta",{opacity:1,duration:0.5},0.5);
+      tl.to(".cell",{background:"rgba(255,255,255,0.01)",borderColor:"rgba(255,255,255,0.04)",duration:0.5,stagger:0.02},6.8);
+      tl.to(cursor,{opacity:0,duration:0.3},7.0);
+      tl.to("#meta",{opacity:0,duration:0.3},7.0);
+      tl.to(".video-bg",{opacity:0,duration:0.4},7.2);
+      window.__timelines["gesture"]=tl;
+    </script>
+  </body>
+</html>

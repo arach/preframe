@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    #grid {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-columns: repeat(3, 107px);
+      grid-template-rows: repeat(3, 107px);
+      gap: 8px;
+    }
+    .cell {
+      width: 107px; height: 107px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      transform-origin: center bottom;
+    }
+    /* L-shape: col 0 + row 2 */
+    .cell.l { border-color: rgba(74,222,128,0.15); background: rgba(74,222,128,0.02); }
+
+    #bass-ring {
+      position: absolute; left: 50%; top: 50%;
+      width: 600px; height: 600px;
+      margin: -300px 0 0 -300px;
+      border-radius: 50%;
+      border: 2px solid rgba(74,222,128,0);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="bass-ring"></div>
+  <div id="grid"></div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const ring = document.getElementById('bass-ring');
+    const cells = [];
+
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const el = document.createElement('div');
+        el.className = 'cell' + (c === 0 || r === 2 ? ' l' : '');
+        grid.appendChild(el);
+        cells.push(el);
+      }
+    }
+
+    const lCells = cells.filter((_, i) => i % 3 === 0 || Math.floor(i / 3) === 2);
+
+    let lastBeat = 0;
+    let killDrop = null;
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false } = data;
+      const now = Date.now();
+
+      // Bass-driven ring
+      gsap.to(ring, {
+        borderColor: `rgba(74,222,128,${bass * 0.5})`,
+        scale: 1 + bass * 0.8,
+        duration: 0.08, overwrite: true
+      });
+
+      if (drop) {
+        // Slam all cells in from nothing
+        if (killDrop) killDrop.kill();
+        gsap.fromTo(cells,
+          { scaleY: 0, opacity: 0, transformOrigin: 'center bottom' },
+          { scaleY: 1, opacity: 1, duration: 0.18, ease: 'back.out(2)',
+            stagger: { amount: 0.12, from: 'center' } }
+        );
+        gsap.to(lCells, {
+          boxShadow: '0 0 40px rgba(74,222,128,0.7)',
+          duration: 0.06, yoyo: true, repeat: 3
+        });
+      } else if (beat && now - lastBeat > 120) {
+        lastBeat = now;
+        // Compress then spring back
+        gsap.to(cells, {
+          scaleY: 0.7, duration: 0.05, ease: 'power3.in',
+          stagger: { amount: 0.03, from: 'random' },
+          onComplete() {
+            gsap.to(cells, { scaleY: 1, duration: 0.22, ease: 'elastic.out(1.2, 0.5)' });
+          }
+        });
+        gsap.to(lCells, { boxShadow: `0 0 ${amplitude * 30}px rgba(74,222,128,0.5)`, duration: 0.06, yoyo: true, repeat: 1 });
+      }
+    });
+  </script>
+</body>
+</html>

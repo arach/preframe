@@ -1,0 +1,77 @@
+# Build output
+node_modules/
+.next/
+out/
+dist/
+
+# OS
+.DS_Store
+
+# Claude Code local settings
+.claude/
+
+# Logs
+*.log
+
+# Environment
+.env*.local
+
+# Next.js
+next-env.d.ts
+*.tsbuildinfo
+
+# Audio assets
+public/*.mp3
+public/*.aiff
+public/*.wav
+
+# Video assets
+public/*.mp4
+public/demos/
+public/out
+public/catalog-data.json
+public/inbox/
+public/tracks/generated/
+public/*.gif
+public/*.webm
+public/*.mov
+public/*.mkv
+
+# Local reference media and generated renders
+public/tracks/reference/
+public/mira-action/source/*.mp4
+public/mira-action/source/*.mov
+hyperframes/**/*.mp3
+hyperframes/**/*.mp4
+hyperframes/**/*.mov
+tools/hyperframes-toolkit/**/*.mp3
+tools/hyperframes-toolkit/**/*.mp4
+tools/hyperframes-toolkit/**/*.mov
+tools/hyperframes-toolkit/inventory/media/
+tools/hyperframes-toolkit/inventory/videos/
+tools/hyperframes-toolkit/renders/
+
+# Transcripts
+public/transcripts/
+transcripts/
+
+# Storyboards
+public/storyboard.html
+
+# Debug utilities
+src/components/debug/
+
+# Client-specific projects (keep local)
+src/projects/hostai-montage/
+src/projects/audit-demo/
+public/hostai-*
+.data/
+.clip-cache/
+.queue/
+.openscout/
+static/
+.compositions/
+src/_generated-compositions.ts
+# OpenScout local state
+.openscout/project.json
+package-lock.json

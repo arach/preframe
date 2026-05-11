@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+    [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+    #bg-video {
+      position: absolute; inset: 0;
+      width: 1920px; height: 1080px;
+      object-fit: cover; z-index: 0;
+    }
+    #fx-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 1920px; height: 1080px;
+      pointer-events: none; z-index: 2;
+    }
+    #ui-layer {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"
+    data-composition-id="l-system"
+    data-start="0"
+    data-duration="8"
+    data-width="1920"
+    data-height="1080"
+  >
+    <video id="bg-video" muted playsinline></video>
+    <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+    <div id="ui-layer"></div>
+
+    <!-- driver clip -->
+    <div class="clip"
+      data-start="0"
+      data-duration="8"
+      data-track-index="0"
+      style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+    ></div>
+  </div>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    // Video source
+    var root = document.getElementById('root');
+    var video = document.getElementById('bg-video');
+    video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+
+    var canvas = document.getElementById('fx-canvas');
+    var ctx = canvas.getContext('2d');
+
+    // --- L-System generation ---
+    var ANGLE = 25 * Math.PI / 180;
+    var STEP = 6;
+    var MAX_SEGS = 4000;
+
+    function expandLSystem(axiom, rules, iterations) {
+      var str = axiom;
+      for (var i = 0; i < iterations; i++) {
+        var next = '';
+        for (var j = 0; j < str.length; j++) {
+          var c = str[j];
+          next += (rules[c] !== undefined) ? rules[c] : c;
+        }
+        str = next;
+      }
+      return str;
+    }
+
+    var rules = { 'F': 'FF', 'X': 'F+[[X]-X]-F[-FX]+X' };
+    var lstr = expandLSystem('X', rules, 4);
+
+    // Pre-compute all line segments
+    var segments = []; // each: {x1,y1,x2,y2}
+    var stack = [];
+    var cx = 960, cy = 1080, angle = -Math.PI / 2;
+
+    for (var i = 0; i < lstr.length; i++) {
+      if (segments.length >= MAX_SEGS) break;
+      var ch = lstr[i];
+      if (ch === 'F') {
+        var nx = cx + Math.cos(angle) * STEP;
+        var ny = cy + Math.sin(angle) * STEP;
+        segments.push({ x1: cx, y1: cy, x2: nx, y2: ny });
+        cx = nx; cy = ny;
+      } else if (ch === '+') {
+        angle += ANGLE;
+      } else if (ch === '-') {
+        angle -= ANGLE;
+      } else if (ch === '[') {
+        stack.push({ cx: cx, cy: cy, angle: angle });
+      } else if (ch === ']') {
+        if (stack.length) {
+          var s = stack.pop();
+          cx = s.cx; cy = s.cy; angle = s.angle;
+        }
+      }
+    }
+
+    var N = segments.length;
+
+    function easeInOut(p) {
+      return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    }
+
+    function draw(t) {
+      ctx.clearRect(0, 0, 1920, 1080);
+      var progress = easeInOut(Math.min(t / 8, 1));
+      var count = Math.floor(N * progress);
+      ctx.strokeStyle = 'rgba(255,255,255,' + (window.__params && window.__params.opacity !== undefined ? window.__params.opacity : 0.22) + ')';
+      ctx.lineWidth = window.__params && window.__params.line_width !== undefined ? window.__params.line_width : 1.2;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.beginPath();
+      for (var i = 0; i < count; i++) {
+        var seg = segments[i];
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+      }
+      ctx.stroke();
+    }
+
+    var proxy = { t: 0 };
+    var tl = gsap.timeline({ paused: true,
+      onUpdate: function() { draw(proxy.t); }
+    });
+    tl.to(proxy, { t: 8, duration: 8, ease: 'none' }, 0);
+    window.__timelines['l-system'] = tl;
+  </script>
+</body>
+</html>

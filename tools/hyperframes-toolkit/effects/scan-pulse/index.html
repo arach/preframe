@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    /* CRT scanline base — always on at low opacity */
+    #crt-base {
+      position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 2px,
+        rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 3px
+      );
+    }
+
+    /* Sweep line — bright horizontal bar that moves down */
+    .sweep {
+      position: absolute; left: 0; right: 0; top: -4px;
+      height: 4px;
+      background: linear-gradient(to right,
+        transparent 0%, rgba(255,255,255,0.5) 20%,
+        rgba(74,222,128,0.9) 50%,
+        rgba(255,255,255,0.5) 80%, transparent 100%
+      );
+      opacity: 0;
+    }
+
+    /* Bass frequency bars at bottom — equalizer style */
+    #bars {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      height: 120px;
+      display: flex; align-items: flex-end; gap: 2px;
+    }
+    .bar {
+      flex: 1; background: rgba(74,222,128,0.5);
+      transform-origin: bottom; transform: scaleY(0);
+    }
+
+    /* Phosphor glow at scan line position */
+    .phosphor {
+      position: absolute; left: 0; right: 0;
+      height: 60px; opacity: 0;
+      background: linear-gradient(to bottom,
+        transparent 0%,
+        rgba(74,222,128,0.06) 40%,
+        transparent 100%
+      );
+    }
+  </style>
+</head>
+<body>
+  <div id="crt-base"></div>
+  <div id="bars"></div>
+
+  <script>
+    const NUM_BARS = 48;
+    const barsEl = document.getElementById('bars');
+    const bars = [];
+
+    for (let i = 0; i < NUM_BARS; i++) {
+      const b = document.createElement('div');
+      b.className = 'bar';
+      barsEl.appendChild(b);
+      bars.push(b);
+    }
+
+    // Pool of sweep lines
+    const sweepPool = [];
+    const phosphorPool = [];
+    for (let i = 0; i < 6; i++) {
+      const s = document.createElement('div');
+      s.className = 'sweep';
+      document.body.appendChild(s);
+      sweepPool.push(s);
+
+      const p = document.createElement('div');
+      p.className = 'phosphor';
+      document.body.appendChild(p);
+      phosphorPool.push(p);
+    }
+    let sweepIdx = 0;
+
+    function spawnSweep(intensity) {
+      const sweep = sweepPool[sweepIdx % sweepPool.length];
+      const phosphor = phosphorPool[sweepIdx % phosphorPool.length];
+      sweepIdx++;
+
+      const speed = 0.15 + (1 - intensity) * 0.25;
+
+      gsap.fromTo(sweep,
+        { top: -4, opacity: intensity },
+        { top: 1084, opacity: 0, duration: speed, ease: 'none' }
+      );
+      gsap.fromTo(phosphor,
+        { top: 0, opacity: intensity * 0.5 },
+        { top: 1080, opacity: 0, duration: speed * 1.2, ease: 'none' }
+      );
+    }
+
+    let lastBeat = 0;
+    let lastDrop = 0;
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false, frequencies } = data;
+      const now = Date.now();
+
+      // Drive frequency bars from FFT data
+      if (frequencies && frequencies.length) {
+        const binCount = frequencies.length;
+        bars.forEach((bar, i) => {
+          const binIdx = Math.floor((i / NUM_BARS) * (binCount * 0.5)); // use lower half
+          const val = (frequencies[binIdx] || 0) / 255;
+          gsap.to(bar, { scaleY: val, duration: 0.06, overwrite: true });
+        });
+      } else {
+        // Fallback: animate bars with bass
+        bars.forEach((bar, i) => {
+          const phase = Math.sin((i / NUM_BARS) * Math.PI * 3 + Date.now() * 0.003);
+          gsap.to(bar, { scaleY: bass * (0.3 + 0.7 * Math.abs(phase)), duration: 0.1, overwrite: true });
+        });
+      }
+
+      if (drop && now - lastDrop > 200) {
+        lastDrop = now;
+        // 3 rapid sweeps on drop
+        spawnSweep(1.0);
+        setTimeout(() => spawnSweep(0.7), 80);
+        setTimeout(() => spawnSweep(0.4), 160);
+
+        // Bars slam up then fall
+        gsap.fromTo(bars,
+          { scaleY: 1.5 },
+          { scaleY: 0, duration: 0.6, ease: 'power2.out', stagger: { amount: 0.1, from: 'center' } }
+        );
+      } else if (beat && now - lastBeat > 100) {
+        lastBeat = now;
+        spawnSweep(0.4 + amplitude * 0.6);
+      }
+    });
+  </script>
+</body>
+</html>

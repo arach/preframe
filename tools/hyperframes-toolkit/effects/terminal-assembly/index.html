@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #000000;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #e8e8f0;
+      }
+      .scene { position: absolute; inset: 0; }
+
+      .tmux-stage {
+        position: absolute;
+        left: 240px; top: 180px;
+        width: 1440px; height: 720px;
+      }
+
+      .pane {
+        position: absolute;
+        border: 0px solid #4ade80;
+        background: #0a0a0f;
+        overflow: hidden;
+        opacity: 0;
+      }
+      .pane .top-bar {
+        height: 22px;
+        background: #111118;
+        border-bottom: 1px solid #1e1e2a;
+        display: flex; align-items: center; gap: 6px; padding: 0 10px;
+      }
+      .pane .top-bar .shell {
+        font-size: 10px; color: rgba(255,255,255,0.3);
+      }
+      .pane .scroller {
+        padding: 8px 10px;
+        font-size: 10px; line-height: 1.7;
+        color: rgba(255,255,255,0.15);
+        overflow: hidden;
+      }
+      .pane .scroller .cmd {
+        color: rgba(255,255,255,0.4);
+      }
+      .pane .scroller .output {
+        color: rgba(255,255,255,0.12);
+      }
+      .pane .scroller .prompt {
+        color: #4ade80;
+      }
+
+      /* Active cursor in pane */
+      .cursor-blink {
+        display: inline-block;
+        width: 7px; height: 13px;
+        background: #4ade80;
+        opacity: 1;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="terminal"
+      data-start="0"
+      data-duration="3.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="terminal" class="scene clip" data-start="0" data-duration="3.5" data-track-index="1">
+        <div class="tmux-stage">
+          <!-- Top-left: git status -->
+          <div class="pane" id="t-lt" style="left:0;top:0;width:720px;height:360px;">
+            <div class="top-bar"><span class="shell">bash</span></div>
+            <div class="scroller" id="sc-lt">
+              <span class="prompt">$</span> git status<br/>
+              <span class="output">On branch main<br/>Changes to be committed:<br/>&nbsp;&nbsp;(use "git restore --staged ...")</span><br/>
+              <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modified:   src/wm.ts</span><br/>
+              <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modified:   src/layout.ts</span><br/>
+              <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;new file:   src/agent.ts</span><br/>
+              <span class="output">+1,247 -834 lines</span>
+            </div>
+          </div>
+          <!-- Top-right: server log -->
+          <div class="pane" id="t-rt" style="left:720px;top:0;width:720px;height:360px;">
+            <div class="top-bar"><span class="shell">node</span></div>
+            <div class="scroller" id="sc-rt">
+              <span class="output">[lattices] broker listening on :65535</span><br/>
+              <span class="output">[lattices] scout connected: iris.arts-mac-mini-local</span><br/>
+              <span class="output">[lattices] relay up: relay-iris</span><br/>
+              <span class="output">[scout] message received: 138 total</span><br/>
+              <span class="output">[lattices] window captured: 3440x1440</span><br/>
+              <span class="cmd">&gt; hyperframes render --quality draft</span>
+            </div>
+          </div>
+          <!-- Bottom: code editor -->
+          <div class="pane" id="t-b" style="left:0;top:360px;width:1440px;height:360px;">
+            <div class="top-bar"><span class="shell">Cursor — agent.ts</span></div>
+            <div class="scroller" id="sc-b">
+              <span class="cmd">export class AgentLayer {</span><br/>
+              <span class="output">&nbsp;&nbsp;private wm: WindowManager;</span><br/>
+              <span class="output">&nbsp;&nbsp;private layout: LayoutEngine;</span><br/>
+              <span class="cmd">&nbsp;&nbsp;async handle(intent: Intent) {</span><br/>
+              <span class="output">&nbsp;&nbsp;&nbsp;&nbsp;const windows = await this.wm.list();</span><br/>
+              <span class="output">&nbsp;&nbsp;&nbsp;&nbsp;const grid = this.layout.toGrid(windows);</span><br/>
+              <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;return { grid, action: intent.action };</span><br/>
+              <span class="output">&nbsp;&nbsp;}</span><br/>
+              <span class="output">}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Pane borders draw in like tmux splits
+      tl.fromTo("#t-lt", {
+        opacity: 0, borderWidth: 0,
+        clipPath: "inset(0 100% 100% 0)"
+      }, {
+        opacity: 1, borderWidth: 1,
+        clipPath: "inset(0 0% 0% 0%)",
+        duration: 0.5, ease: "power2.out"
+      }, 0.2);
+
+      tl.fromTo("#t-rt", {
+        opacity: 0, borderWidth: 0,
+        clipPath: "inset(0 0 100% 100%)"
+      }, {
+        opacity: 1, borderWidth: 1,
+        clipPath: "inset(0 0% 0% 0%)",
+        duration: 0.5, ease: "power2.out"
+      }, 0.4);
+
+      tl.fromTo("#t-b", {
+        opacity: 0, borderWidth: 0,
+        clipPath: "inset(100% 0 0 0)"
+      }, {
+        opacity: 1, borderWidth: 1,
+        clipPath: "inset(0% 0 0 0%)",
+        duration: 0.5, ease: "power2.out"
+      }, 0.6);
+
+      // Content types in with simulated typing
+      const typeIn = (sel, start) => {
+        const el = document.querySelector(sel);
+        const orig = el.innerHTML;
+        el.innerHTML = "";
+        tl.call(() => { el.innerHTML = orig; }, [], start);
+        tl.fromTo(sel + " *", { opacity: 0 }, { opacity: 1, duration: 0.02, stagger: 0.008 }, start);
+      };
+      typeIn("#sc-lt", 0.8);
+      typeIn("#sc-rt", 1.0);
+      typeIn("#sc-b", 1.3);
+
+      // Cursor blink appears in bottom pane
+      tl.fromTo("#sc-b", {
+        backgroundImage: "linear-gradient(to right, #4ade80 0px 7px, transparent 7px)",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "10px 200px"
+      }, {}); // just setup, animate below
+
+      // Active line highlight
+      tl.fromTo("#t-b .scroller", {
+        boxShadow: "inset 0 -60px 40px -40px rgba(74,222,128,0.0)"
+      }, {
+        boxShadow: "inset 0 -60px 40px -40px rgba(74,222,128,0.08)",
+        duration: 0.6, yoyo: true, repeat: 1
+      }, 2.0);
+
+      // Exit: panes shrink to a single window chrome, crossfade to next clip
+      tl.to("#t-rt", { opacity: 0, x: 200, duration: 0.3, ease: "power2.in" }, 2.8);
+      tl.to("#t-lt", { opacity: 0, x: -200, duration: 0.3, ease: "power2.in" }, 2.85);
+      tl.to("#t-b", {
+        left: 240, top: 180, width: 1440, height: 720,
+        duration: 0.5, ease: "power2.inOut"
+      }, 3.0);
+      tl.to("#t-b", { opacity: 0, duration: 0.3 }, 3.2);
+
+      window.__timelines["terminal"] = tl;
+    </script>
+  </body>
+</html>

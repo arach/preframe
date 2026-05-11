@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; display: none; }
+      #fx-canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 1; }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="duotone"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+
+      <div
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+      ></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var video = document.getElementById('bg-video');
+      video.src = document.getElementById('root').dataset.videoSrc || '../../assets/sample.mp4';
+
+      var canvas = document.getElementById('fx-canvas');
+      var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+      gl.viewport(0, 0, 1920, 1080);
+
+      var vertSrc = 'attribute vec2 a_pos;varying vec2 v_uv;void main(){v_uv=a_pos*.5+.5;v_uv.y=1.-v_uv.y;gl_Position=vec4(a_pos,0,1);}';
+      var buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+
+      function compile(src, type) {
+        var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error(gl.getShaderInfoLog(s));
+        return s;
+      }
+      function mkProg(frag) {
+        var p = gl.createProgram();
+        gl.attachShader(p, compile(vertSrc, gl.VERTEX_SHADER));
+        gl.attachShader(p, compile(frag, gl.FRAGMENT_SHADER));
+        gl.linkProgram(p); return p;
+      }
+      function mkTex() {
+        var t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([0,0,0,255]));
+        return t;
+      }
+      function upload(tex) {
+        if (video.readyState >= 2) {
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        }
+      }
+      function draw(prog) {
+        var loc = gl.getAttribLocation(prog, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      var vTex = mkTex();
+
+      var fragSrc = [
+        'precision mediump float;',
+        'varying vec2 v_uv;',
+        'uniform sampler2D u_video;',
+        'uniform vec3 u_colorA;',
+        'uniform vec3 u_colorB;',
+        'uniform float u_mix;',
+        'void main(){',
+        '  vec4 c = texture2D(u_video, v_uv);',
+        '  float luma = dot(c.rgb, vec3(0.299,0.587,0.114));',
+        '  luma = smoothstep(0.05, 0.95, luma);',
+        '  vec3 duo = mix(u_colorA, u_colorB, luma);',
+        '  vec3 result = mix(c.rgb, duo, u_mix);',
+        '  gl_FragColor = vec4(result, 1.0);',
+        '}'
+      ].join('\n');
+
+      var prog = mkProg(fragSrc);
+      var uVideo  = gl.getUniformLocation(prog, 'u_video');
+      var uColorA = gl.getUniformLocation(prog, 'u_colorA');
+      var uColorB = gl.getUniformLocation(prog, 'u_colorB');
+      var uMix    = gl.getUniformLocation(prog, 'u_mix');
+
+      // Set brand colors once
+      gl.useProgram(prog);
+      gl.uniform3f(uColorA, 0.051, 0.106, 0.165); // deep navy #0d1b2a
+      gl.uniform3f(uColorB, 0.961, 0.784, 0.259); // warm gold #f5c842
+
+      var proxy = { mix: 0 };
+
+      var tl = gsap.timeline({ paused: true,
+        onUpdate: function() {
+          upload(vTex);
+          gl.useProgram(prog);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, vTex);
+          gl.uniform1i(uVideo, 0);
+          gl.uniform3f(uColorA, 0.051, 0.106, 0.165);
+          gl.uniform3f(uColorB, 0.961, 0.784, 0.259);
+          gl.uniform1f(uMix, (window.__params.mix !== undefined ? window.__params.mix : proxy.mix));
+          draw(prog);
+        }
+      });
+
+      tl.to(proxy, { mix: 1, duration: 2.5, ease: 'power2.inOut' }, 0);
+      tl.to(proxy, { mix: 1, duration: 5.5 }, 2.5); // hold
+
+      window.__timelines['duotone'] = tl;
+    </script>
+  </body>
+</html>

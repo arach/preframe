@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+
+      .video-layer {
+        position: absolute;
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+        transform-origin: center center;
+      }
+
+      #layer-bg {
+        z-index: 1;
+        filter: blur(2px) brightness(1.0);
+        transform: scale(1.04);
+      }
+      #layer-mg {
+        z-index: 2;
+        filter: brightness(0.95);
+        transform: scale(1.08);
+      }
+      #layer-fg {
+        z-index: 3;
+        filter: brightness(0.7) contrast(1.05);
+        opacity: 0.5;
+        transform: scale(1.15);
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="parallax-depth"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="layer-bg" class="video-layer" muted playsinline></video>
+      <video id="layer-mg" class="video-layer" muted playsinline></video>
+      <video id="layer-fg" class="video-layer" muted playsinline></video>
+
+      <div id="ui-layer"></div>
+
+      <div
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+      ></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      var root = document.getElementById('root');
+      var src = root.dataset.videoSrc || '../../assets/sample.mp4';
+
+      ['layer-bg', 'layer-mg', 'layer-fg'].forEach(function(id) {
+        var v = document.getElementById(id);
+        v.src = src;
+        v.currentTime = 0;
+      });
+
+      var tl = gsap.timeline({ paused: true });
+
+      // Background — slowest drift ±8x, ±4y
+      tl.to('#layer-bg', { x: 8,  y: 4,  duration: 4, ease: 'sine.inOut' }, 0);
+      tl.to('#layer-bg', { x: -8, y: -4, duration: 4, ease: 'sine.inOut' }, 4);
+
+      // Midground — medium drift ±20x, ±10y
+      tl.to('#layer-mg', { x: 20,  y: 10,  duration: 3.5, ease: 'sine.inOut' }, 0);
+      tl.to('#layer-mg', { x: -20, y: -10, duration: 3.5, ease: 'sine.inOut' }, 3.5);
+
+      // Foreground — fastest drift ±40x, ±20y
+      tl.to('#layer-fg', { x: 40,  y: 20,  duration: 3, ease: 'sine.inOut' }, 0);
+      tl.to('#layer-fg', { x: -40, y: -20, duration: 3, ease: 'sine.inOut' }, 3);
+      tl.to('#layer-fg', { x: 40,  y: 20,  duration: 2, ease: 'sine.inOut' }, 6);
+
+      window.__timelines['parallax-depth'] = tl;
+
+        // Parameter control bridge
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

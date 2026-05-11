@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Composer — Preframe</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw; height: 100vh; overflow: hidden;
+      background: #09090b;
+      color: rgba(255,255,255,0.8);
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+    }
+
+    /* ── Layout ── */
+    #layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) 340px;
+      grid-template-rows: 1fr;
+      height: 100vh;
+    }
+
+    /* ── Preview panel ── */
+    #preview-panel {
+      display: flex; flex-direction: column;
+      background: #000;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    #preview-wrap {
+      flex: 1; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #000;
+    }
+    #preview-stage {
+      position: relative;
+      /* 16:9 — sized to fit container */
+      aspect-ratio: 16/9;
+      max-width: 100%;
+      max-height: 100%;
+      background: #000;
+    }
+    #video-bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+    #overlay-frame {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      border: none;
+      background: transparent;
+      pointer-events: none;
+    }
+
+    /* ── Preview controls (bottom bar) ── */
+    #preview-bar {
+      shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0,0,0,0.8);
+    }
+    #preview-bar select, #preview-bar button {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.75);
+      border-radius: 3px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+    }
+    #preview-bar select:hover, #preview-bar button:hover { border-color: rgba(74,222,128,0.3); }
+    #play-btn { color: rgba(74,222,128,0.9); border-color: rgba(74,222,128,0.25); min-width: 56px; }
+    #preview-bar label { font-size: 9px; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.1em; }
+    #beat-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(74,222,128,0.25); flex-shrink: 0; }
+    #beat-dot.on { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .bar-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.06); }
+
+    /* ── Control panel ── */
+    #control-panel {
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      background: #0a0a0c;
+    }
+    #panel-header {
+      shrink: 0;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #panel-header h1 {
+      font-size: 11px; font-weight: 600;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase; letter-spacing: 0.12em;
+    }
+    #copy-json-btn {
+      font-size: 9px; font-family: inherit;
+      color: rgba(74,222,128,0.6); background: rgba(74,222,128,0.06);
+      border: 1px solid rgba(74,222,128,0.15); border-radius: 3px;
+      padding: 4px 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    #copy-json-btn:hover { background: rgba(74,222,128,0.1); color: rgba(74,222,128,0.9); }
+
+    #panel-scroll { flex: 1; overflow-y: auto; }
+    #panel-scroll::-webkit-scrollbar { width: 3px; }
+    #panel-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    /* ── Sections ── */
+    .section {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .section-header {
+      display: flex; align-items: center; gap-: 8px;
+      padding: 9px 14px;
+      cursor: pointer;
+      user-select: none;
+      gap: 8px;
+    }
+    .section-header:hover { background: rgba(255,255,255,0.02); }
+    .section-toggle {
+      width: 28px; height: 15px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      border: none; cursor: pointer;
+      position: relative; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .section-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.35);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .section-toggle.on { background: rgba(74,222,128,0.3); }
+    .section-toggle.on::after { transform: translateX(13px); background: #4ade80; }
+    .section-label {
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.5);
+      flex: 1;
+    }
+    .section-label.active { color: rgba(255,255,255,0.8); }
+    .section-chevron {
+      font-size: 9px; color: rgba(255,255,255,0.2);
+      transition: transform 0.15s;
+    }
+    .section-chevron.open { transform: rotate(90deg); }
+
+    .section-body {
+      padding: 4px 14px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .section-body.collapsed { display: none; }
+
+    /* ── Form controls ── */
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field-row { display: flex; align-items: center; gap: 8px; }
+    .field label {
+      font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.3);
+    }
+    input[type="text"], input[type="number"], textarea, select {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.75);
+      border-radius: 3px;
+      padding: 5px 8px;
+      font-size: 11px;
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: rgba(74,222,128,0.3);
+    }
+    textarea { resize: vertical; min-height: 44px; line-height: 1.5; }
+    input[type="color"] {
+      width: 32px; height: 26px;
+      padding: 2px 3px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 3px;
+      background: rgba(255,255,255,0.04);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    input[type="range"] {
+      flex: 1; height: 3px; cursor: pointer;
+      accent-color: #4ade80;
+    }
+    .range-val {
+      font-size: 10px; color: rgba(255,255,255,0.4);
+      min-width: 28px; text-align: right; flex-shrink: 0;
+    }
+
+    /* Label sub-items */
+    .label-item {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 3px;
+      padding: 8px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .label-item-header {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .label-item-num {
+      font-size: 9px; color: rgba(255,255,255,0.2);
+      min-width: 14px;
+    }
+    .mini-toggle {
+      width: 22px; height: 12px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      border: none; cursor: pointer;
+      position: relative; flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .mini-toggle::after {
+      content: ''; position: absolute;
+      top: 1.5px; left: 1.5px;
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .mini-toggle.on { background: rgba(74,222,128,0.3); }
+    .mini-toggle.on::after { transform: translateX(10px); background: #4ade80; }
+    .label-controls { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .label-controls input, .label-controls select { width: 100%; }
+
+    /* ── JSON panel ── */
+    #json-panel {
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 14px;
+      background: rgba(0,0,0,0.3);
+    }
+    #json-out {
+      font-size: 10px;
+      color: rgba(255,255,255,0.3);
+      line-height: 1.5;
+      white-space: pre;
+      overflow: hidden;
+      max-height: 80px;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+<div id="layout">
+
+  <!-- ── Preview ── -->
+  <div id="preview-panel">
+    <div id="preview-wrap">
+      <div id="preview-stage">
+        <video id="video-bg" loop playsinline muted></video>
+        <iframe id="overlay-frame" src="/overlays/composition-frame.html"></iframe>
+      </div>
+    </div>
+    <div id="preview-bar">
+      <button id="play-btn">▶ Play</button>
+      <div id="beat-dot"></div>
+      <div class="bar-sep"></div>
+      <label>Video</label>
+      <select id="video-select"></select>
+      <div class="bar-sep"></div>
+      <label>Track</label>
+      <select id="track-select"></select>
+    </div>
+  </div>
+
+  <!-- ── Controls ── -->
+  <div id="control-panel">
+    <div id="panel-header">
+      <h1>Composition</h1>
+      <button id="copy-json-btn">Copy JSON</button>
+    </div>
+
+    <div id="panel-scroll">
+
+      <!-- Brackets -->
+      <div class="section" id="sec-brackets">
+        <div class="section-header" onclick="toggleSection('brackets')">
+          <button class="section-toggle" id="tog-brackets" onclick="event.stopPropagation(); toggleZone('brackets')"></button>
+          <span class="section-label" id="lbl-brackets">Brackets</span>
+          <span class="section-chevron open" id="chv-brackets">▶</span>
+        </div>
+        <div class="section-body" id="body-brackets">
+          <div class="field-row">
+            <label style="flex:1">Color</label>
+            <input type="color" id="brackets-color" value="#4ade80" oninput="syncSpec()">
+          </div>
+          <div class="field">
+            <label>Opacity</label>
+            <div class="field-row">
+              <input type="range" id="brackets-opacity" min="0.1" max="1" step="0.05" value="0.85" oninput="syncSpec(); this.nextElementSibling.textContent = this.value">
+              <span class="range-val">0.85</span>
+            </div>
+          </div>
+          <div class="field-row" style="gap:6px;align-items:center">
+            <button class="mini-toggle" id="tog-edges" onclick="spec.brackets.edges = !spec.brackets.edges; refreshEdgeTog(); syncSpec()"></button>
+            <label style="cursor:pointer" onclick="spec.brackets.edges = !spec.brackets.edges; refreshEdgeTog(); syncSpec()">Connect edges (full frame)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caption -->
+      <div class="section" id="sec-caption">
+        <div class="section-header" onclick="toggleSection('caption')">
+          <button class="section-toggle" id="tog-caption" onclick="event.stopPropagation(); toggleZone('caption')"></button>
+          <span class="section-label" id="lbl-caption">Caption</span>
+          <span class="section-chevron" id="chv-caption">▶</span>
+        </div>
+        <div class="section-body collapsed" id="body-caption">
+          <div class="field">
+            <label>Text</label>
+            <textarea id="caption-text" rows="2" placeholder="Caption text…" oninput="syncSpec()"></textarea>
+          </div>
+          <div class="field-row" style="gap:6px;align-items:center">
+            <button class="mini-toggle on" id="tog-cap-accent" onclick="spec.caption.accent = !spec.caption.accent; this.classList.toggle('on', spec.caption.accent); syncSpec()"></button>
+            <label>Accent bar</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lower Third -->
+      <div class="section" id="sec-lowerThird">
+        <div class="section-header" onclick="toggleSection('lowerThird')">
+          <button class="section-toggle" id="tog-lowerThird" onclick="event.stopPropagation(); toggleZone('lowerThird')"></button>
+          <span class="section-label" id="lbl-lowerThird">Lower Third</span>
+          <span class="section-chevron" id="chv-lowerThird">▶</span>
+        </div>
+        <div class="section-body collapsed" id="body-lowerThird">
+          <div class="field">
+            <label>Title</label>
+            <input type="text" id="lt-title" placeholder="Title…" oninput="syncSpec()">
+          </div>
+          <div class="field">
+            <label>Subtitle</label>
+            <input type="text" id="lt-subtitle" placeholder="Subtitle or role…" oninput="syncSpec()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Labels -->
+      <div class="section" id="sec-labels">
+        <div class="section-header" onclick="toggleSection('labels')">
+          <button class="section-toggle" id="tog-labels" onclick="event.stopPropagation(); toggleAllLabels()"></button>
+          <span class="section-label" id="lbl-labels">Labels</span>
+          <span class="section-chevron" id="chv-labels">▶</span>
+        </div>
+        <div class="section-body collapsed" id="body-labels">
+          <!-- Generated by JS -->
+        </div>
+      </div>
+
+      <!-- Tagline -->
+      <div class="section" id="sec-tagline">
+        <div class="section-header" onclick="toggleSection('tagline')">
+          <button class="section-toggle" id="tog-tagline" onclick="event.stopPropagation(); toggleZone('tagline')"></button>
+          <span class="section-label" id="lbl-tagline">Tagline</span>
+          <span class="section-chevron" id="chv-tagline">▶</span>
+        </div>
+        <div class="section-body collapsed" id="body-tagline">
+          <div class="field">
+            <label>Text (top-right, monospace)</label>
+            <input type="text" id="tagline-text" placeholder="e.g. LATTICES  ·  v3.1" oninput="syncSpec()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid / Safe Area / Timecode -->
+      <div class="section" id="sec-guides">
+        <div class="section-header" onclick="toggleSection('guides')">
+          <span class="section-label">Guides</span>
+          <span class="section-chevron" id="chv-guides">▶</span>
+        </div>
+        <div class="section-body collapsed" id="body-guides">
+          <div class="field-row" style="gap:6px;align-items:center">
+            <button class="mini-toggle" id="tog-grid" onclick="spec.grid.enabled = !spec.grid.enabled; this.classList.toggle('on', spec.grid.enabled); syncSpec()"></button>
+            <label>Rule of thirds grid</label>
+          </div>
+          <div class="field-row" style="gap:6px;align-items:center">
+            <button class="mini-toggle" id="tog-safe" onclick="spec.safeArea.enabled = !spec.safeArea.enabled; this.classList.toggle('on', spec.safeArea.enabled); syncSpec()"></button>
+            <label>Safe area boundary</label>
+          </div>
+          <div class="field-row" style="gap:6px;align-items:center">
+            <button class="mini-toggle" id="tog-tc" onclick="spec.timecode.enabled = !spec.timecode.enabled; this.classList.toggle('on', spec.timecode.enabled); syncSpec()"></button>
+            <label>Timecode (bottom-right)</label>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-scroll -->
+
+    <div id="json-panel">
+      <div id="json-out"></div>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<audio id="audio" crossorigin="anonymous"></audio>
+
+<script>
+// ── Spec state ────────────────────────────────────────────────────────────────
+const spec = {
+  brackets:   { enabled: true, color: '#4ade80', opacity: 0.85, edges: false },
+  caption:    { enabled: false, text: '', accent: true },
+  lowerThird: { enabled: false, title: '', subtitle: '' },
+  labels: [
+    { enabled: false, text: '', pos: 'top-left' },
+    { enabled: false, text: '', pos: 'top-right' },
+    { enabled: false, text: '', pos: 'bottom-left' },
+    { enabled: false, text: '', pos: 'bottom-right' },
+  ],
+  tagline:  { enabled: false, text: '' },
+  grid:     { enabled: false },
+  safeArea: { enabled: false },
+  timecode: { enabled: false },
+};
+
+const LABEL_POS_OPTIONS = [
+  'top-left','top-right','top-center',
+  'center-left','center-right',
+  'bottom-left','bottom-right',
+];
+
+const overlay = document.getElementById('overlay-frame');
+const video   = document.getElementById('video-bg');
+const audioEl = document.getElementById('audio');
+const playBtn = document.getElementById('play-btn');
+const beatDot = document.getElementById('beat-dot');
+
+// ── Build label items ─────────────────────────────────────────────────────────
+function buildLabelsUI() {
+  const body = document.getElementById('body-labels');
+  spec.labels.forEach((l, i) => {
+    const item = document.createElement('div');
+    item.className = 'label-item';
+    item.innerHTML = `
+      <div class="label-item-header">
+        <span class="label-item-num">${i + 1}</span>
+        <button class="mini-toggle" id="label-tog-${i}" onclick="toggleLabel(${i})"></button>
+        <span style="font-size:9px;color:rgba(255,255,255,0.25);text-transform:uppercase;letter-spacing:.08em">Label ${i+1}</span>
+      </div>
+      <div class="label-controls">
+        <input type="text" id="label-text-${i}" placeholder="Text…" oninput="updateLabel(${i})">
+        <select id="label-pos-${i}" onchange="updateLabel(${i})">
+          ${LABEL_POS_OPTIONS.map(p => `<option value="${p}" ${l.pos === p ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
+      </div>
+    `;
+    body.appendChild(item);
+  });
+}
+buildLabelsUI();
+
+function toggleLabel(i) {
+  spec.labels[i].enabled = !spec.labels[i].enabled;
+  const tog = document.getElementById('label-tog-' + i);
+  tog.classList.toggle('on', spec.labels[i].enabled);
+  refreshSectionLabel('labels');
+  syncSpec();
+}
+
+function updateLabel(i) {
+  spec.labels[i].text = document.getElementById('label-text-' + i).value;
+  spec.labels[i].pos  = document.getElementById('label-pos-' + i).value;
+  syncSpec();
+}
+
+function toggleAllLabels() {
+  const anyOn = spec.labels.some(l => l.enabled);
+  spec.labels.forEach((l, i) => {
+    l.enabled = !anyOn;
+    document.getElementById('label-tog-' + i)?.classList.toggle('on', l.enabled);
+  });
+  document.getElementById('tog-labels').classList.toggle('on', !anyOn);
+  refreshSectionLabel('labels');
+  syncSpec();
+}
+
+// ── Section open/close ────────────────────────────────────────────────────────
+const openSections = new Set(['brackets']);
+
+function toggleSection(id) {
+  const body = document.getElementById('body-' + id);
+  const chv  = document.getElementById('chv-' + id);
+  if (!body) return;
+  if (openSections.has(id)) {
+    openSections.delete(id);
+    body.classList.add('collapsed');
+    if (chv) chv.classList.remove('open');
+  } else {
+    openSections.add(id);
+    body.classList.remove('collapsed');
+    if (chv) chv.classList.add('open');
+  }
+}
+
+// ── Zone toggles ──────────────────────────────────────────────────────────────
+function toggleZone(key) {
+  if (!spec[key]) return;
+  spec[key].enabled = !spec[key].enabled;
+  document.getElementById('tog-' + key)?.classList.toggle('on', spec[key].enabled);
+  refreshSectionLabel(key);
+  syncSpec();
+}
+
+function refreshSectionLabel(key) {
+  const lbl = document.getElementById('lbl-' + key);
+  if (!lbl) return;
+  const enabled = key === 'labels'
+    ? spec.labels.some(l => l.enabled)
+    : spec[key]?.enabled;
+  lbl.classList.toggle('active', !!enabled);
+}
+
+function refreshEdgeTog() {
+  document.getElementById('tog-edges').classList.toggle('on', spec.brackets.edges);
+}
+
+// ── Read form → spec ──────────────────────────────────────────────────────────
+function syncSpec(animate = true) {
+  // Brackets
+  spec.brackets.color   = document.getElementById('brackets-color').value;
+  spec.brackets.opacity = parseFloat(document.getElementById('brackets-opacity').value);
+
+  // Caption
+  spec.caption.text = document.getElementById('caption-text').value;
+
+  // Lower third
+  spec.lowerThird.title    = document.getElementById('lt-title').value;
+  spec.lowerThird.subtitle = document.getElementById('lt-subtitle').value;
+
+  // Tagline
+  spec.tagline.text = document.getElementById('tagline-text').value;
+
+  // Post to overlay
+  overlay.contentWindow?.postMessage({ type: 'composition-spec', spec: JSON.parse(JSON.stringify(spec)), animate }, '*');
+
+  // Update JSON preview
+  document.getElementById('json-out').textContent = JSON.stringify(spec, null, 2);
+}
+
+// Initial push
+setTimeout(() => syncSpec(true), 400);
+
+// ── Copy JSON ──────────────────────────────────────────────────────────────────
+document.getElementById('copy-json-btn').addEventListener('click', () => {
+  navigator.clipboard.writeText(JSON.stringify(spec, null, 2));
+  const btn = document.getElementById('copy-json-btn');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy JSON', 1400);
+});
+
+// ── Catalog data ──────────────────────────────────────────────────────────────
+const VIDEOS = [
+  '/out/lattices-gesture-recording-loop-v6.mp4',
+  '/out/lattices-gesture-recording-loop-v5.mp4',
+  '/out/lattices-gesture-recording-loop-v4.mp4',
+  '/out/lattices-gesture-recording-loop-v3.mp4',
+  '/out/lattices-dictation-gesture-demo-v9.mp4',
+  '/out/lattices-mouse-gestures-dictation-enter.mp4',
+  '/out/lattices-mouse-gestures-music.mp4',
+  '/out/lattices-mouse-gestures-first.mp4',
+];
+
+const videoSel = document.getElementById('video-select');
+const trackSel = document.getElementById('track-select');
+
+VIDEOS.forEach(v => {
+  const o = document.createElement('option');
+  o.value = v;
+  o.textContent = v.split('/').pop().replace('.mp4','');
+  videoSel.appendChild(o);
+});
+video.src = VIDEOS[0];
+
+videoSel.addEventListener('change', () => {
+  video.src = videoSel.value;
+  if (playing) video.play();
+});
+
+const _urlTrack = new URLSearchParams(location.search).get('track');
+fetch('/catalog-data.json').then(r => r.json()).then(d => {
+  (d.audioAssets || []).forEach(a => {
+    const o = document.createElement('option');
+    o.value = '/' + a.path;
+    o.textContent = a.songTitle || a.id;
+    if (_urlTrack) {
+      if (a.id === _urlTrack || a.path.includes(_urlTrack)) o.selected = true;
+    } else {
+      if (a.id.includes('ref-adrian-quesada') || a.id.includes('47-jaar') || a.id.includes('dark-808') || a.id.includes('03-dark')) o.selected = true;
+    }
+    trackSel.appendChild(o);
+  });
+  if (d.audioAssets?.length) audioEl.src = trackSel.value;
+}).catch(() => {});
+
+trackSel.addEventListener('change', () => {
+  audioEl.src = trackSel.value;
+  if (playing) audioEl.play();
+});
+
+// ── Audio + beat detection ────────────────────────────────────────────────────
+let audioCtx, analyser, source, freqData;
+let playing = false, prevAmp = 0, beatThreshold = 0.35, lastBeat = 0, lastDrop = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser  = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.8;
+  source = audioCtx.createMediaElementSource(audioEl);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  freqData = new Uint8Array(analyser.frequencyBinCount);
+}
+
+function energy(lo, hi) {
+  let s = 0;
+  for (let i = lo; i < hi && i < freqData.length; i++) s += freqData[i];
+  return s / ((hi - lo) * 255);
+}
+
+function audioTick() {
+  requestAnimationFrame(audioTick);
+  if (!playing || !analyser) return;
+
+  analyser.getByteFrequencyData(freqData);
+  const bass = energy(1, 6), amp = energy(0, freqData.length);
+  beatThreshold += (amp * 1.5 - beatThreshold) * 0.02;
+  const now  = Date.now();
+  const beat = bass > beatThreshold && now - lastBeat > 180;
+  const drop = amp > 0.5 && prevAmp < 0.2 && now - lastDrop > 400;
+  prevAmp = amp;
+
+  if (beat) {
+    lastBeat = now;
+    beatDot.classList.add('on');
+    setTimeout(() => beatDot.classList.remove('on'), 80);
+  }
+
+  overlay.contentWindow?.postMessage({
+    type: 'audio-frame',
+    amplitude: amp,
+    bass,
+    beat,
+    drop,
+    frequencies: Array.from(freqData),
+  }, '*');
+}
+audioTick();
+
+playBtn.addEventListener('click', () => {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  playing = !playing;
+  if (playing) {
+    audioEl.play().catch(() => {});
+    video.play().catch(() => {});
+    playBtn.textContent = '⏸ Pause';
+  } else {
+    audioEl.pause();
+    video.pause();
+    playBtn.textContent = '▶ Play';
+  }
+});
+
+// ── Initial section states ────────────────────────────────────────────────────
+document.getElementById('tog-brackets').classList.add('on');
+document.getElementById('lbl-brackets').classList.add('active');
+</script>
+</body>
+</html>

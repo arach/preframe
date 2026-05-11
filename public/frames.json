@@ -1,0 +1,1099 @@
+[
+  {
+    "id": "tactical-video-bezel",
+    "name": "Tactical Bezel",
+    "description": "HUD-style bezel with corner brackets, status bar, and matte. Wraps video content in a tactical/military aesthetic.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "tactical",
+      "hud",
+      "overlay"
+    ],
+    "remotionComponent": "TacticalVideoBezel",
+    "slots": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "default": "HUD FEED"
+      },
+      {
+        "key": "statusText",
+        "label": "Status Text",
+        "type": "text",
+        "default": "LIVE"
+      },
+      {
+        "key": "showCornerBrackets",
+        "label": "Corner Brackets",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "showStatusBar",
+        "label": "Status Bar",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "matteColor",
+        "label": "Matte Color",
+        "type": "color",
+        "default": "rgba(20,22,28,0.95)"
+      }
+    ]
+  },
+  {
+    "id": "retro-computer-frame",
+    "name": "Retro Computer Frame",
+    "description": "Beige CRT computer bezel with scanlines, screen reflection, and power light. Video content renders inside the screen.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "retro",
+      "crt",
+      "overlay"
+    ],
+    "remotionComponent": "RetroComputerFrame",
+    "slots": [
+      {
+        "key": "monitorColor",
+        "label": "Monitor Color",
+        "type": "color",
+        "default": "#e8e0d4"
+      },
+      {
+        "key": "baseColor",
+        "label": "Base Color",
+        "type": "color",
+        "default": "#8b3a3a"
+      },
+      {
+        "key": "screenTint",
+        "label": "Screen Tint",
+        "type": "color",
+        "default": "rgba(0,20,10,0.15)"
+      },
+      {
+        "key": "showScanlines",
+        "label": "Scanlines",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "showReflection",
+        "label": "Screen Reflection",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "showPowerLight",
+        "label": "Power Light",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "midjourney-computer-frame",
+    "name": "Midjourney Computer Frame",
+    "description": "Stylized dark computer frame with Midjourney aesthetic. Renders content with a futuristic computing aesthetic.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "midjourney",
+      "computer",
+      "overlay"
+    ],
+    "remotionComponent": "MidjourneyComputerFrame",
+    "slots": [
+      {
+        "key": "musicTrack",
+        "label": "Music Track",
+        "type": "text",
+        "default": "tracks/futuristic-synthwave.mp3"
+      }
+    ]
+  },
+  {
+    "id": "crt-bezel-overlay",
+    "name": "CRT Bezel Overlay",
+    "description": "Classic CRT monitor bezel overlay with scanline effects and screen curvature.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "crt",
+      "overlay",
+      "retro"
+    ],
+    "remotionComponent": "CRTBezelOverlay",
+    "slots": [
+      {
+        "key": "scanlineOpacity",
+        "label": "Scanline Opacity",
+        "type": "number",
+        "default": 0.3
+      },
+      {
+        "key": "curvature",
+        "label": "Curvature",
+        "type": "number",
+        "default": 0.1
+      }
+    ]
+  },
+  {
+    "id": "tactical-intro",
+    "name": "Tactical Intro",
+    "description": "Military/tactical style intro with grid lines, scan effects, and text reveal.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "tactical",
+      "hud"
+    ],
+    "remotionComponent": "TacticalIntro",
+    "slots": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "default": "DEMO"
+      },
+      {
+        "key": "subtitle",
+        "label": "Subtitle",
+        "type": "text",
+        "default": "v1.0"
+      }
+    ]
+  },
+  {
+    "id": "terminal-intro",
+    "name": "Terminal Intro",
+    "description": "Green-on-black terminal typing effect intro.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "terminal",
+      "monospace"
+    ],
+    "remotionComponent": "TerminalIntro",
+    "slots": []
+  },
+  {
+    "id": "minimal-intro",
+    "name": "Minimal Intro",
+    "description": "Clean minimal intro with fade-in title and handle.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "minimal"
+    ],
+    "remotionComponent": "MinimalIntro",
+    "slots": []
+  },
+  {
+    "id": "glitch-intro",
+    "name": "Glitch Intro",
+    "description": "RGB-split glitch effect intro with digital noise.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "glitch",
+      "rgb"
+    ],
+    "remotionComponent": "GlitchIntro",
+    "slots": []
+  },
+  {
+    "id": "ascii-intro",
+    "name": "ASCII Intro",
+    "description": "ASCII art character animation intro.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "ascii",
+      "monospace"
+    ],
+    "remotionComponent": "AsciiIntro",
+    "slots": []
+  },
+  {
+    "id": "talkie-glitch-intro",
+    "name": "Talkie Glitch Intro",
+    "description": "Talkie-branded glitch intro with RGB split and digital artifacts.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "talkie",
+      "glitch"
+    ],
+    "remotionComponent": "TalkieGlitchIntro",
+    "slots": []
+  },
+  {
+    "id": "talkie-pixel-intro",
+    "name": "Talkie Pixel Intro",
+    "description": "Talkie-branded pixel/mosaic reveal intro.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "talkie",
+      "pixel"
+    ],
+    "remotionComponent": "TalkiePixelIntro",
+    "slots": []
+  },
+  {
+    "id": "talkie-ascii-intro",
+    "name": "Talkie ASCII Intro",
+    "description": "Talkie-branded ASCII art intro sequence.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "talkie",
+      "ascii"
+    ],
+    "remotionComponent": "TalkieAsciiIntro",
+    "slots": []
+  },
+  {
+    "id": "talkie-tactical-intro",
+    "name": "Talkie Tactical Intro",
+    "description": "Talkie-branded tactical HUD intro with scan lines and grid.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "talkie",
+      "tactical",
+      "hud"
+    ],
+    "remotionComponent": "TalkieTacticalIntro",
+    "slots": []
+  },
+  {
+    "id": "tactical-outro",
+    "name": "Tactical Outro",
+    "description": "Tactical-style outro with handle display and fade-out sequence.",
+    "engine": "remotion",
+    "tags": [
+      "outro",
+      "tactical"
+    ],
+    "remotionComponent": "TacticalOutro",
+    "slots": [
+      {
+        "key": "handle",
+        "label": "Handle",
+        "type": "text",
+        "default": "@arach"
+      }
+    ]
+  },
+  {
+    "id": "composition-frame",
+    "name": "Composition Frame",
+    "description": "Full-bleed transparent overlay with corner brackets, caption track, lower third, floating labels, tagline, and safe-area guides. Drives via postMessage or HyperFrames --variables.",
+    "engine": "hyperframes",
+    "tags": [
+      "overlay",
+      "lower-third",
+      "caption",
+      "branding"
+    ],
+    "hyperframesPath": "/overlays/composition-frame.html",
+    "previewUrl": "/overlays/composition-frame.html",
+    "slots": [
+      {
+        "key": "brackets.enabled",
+        "label": "Corner Brackets",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "brackets.color",
+        "label": "Bracket Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "brackets.edges",
+        "label": "Connect Edges",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "caption.enabled",
+        "label": "Caption",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "caption.text",
+        "label": "Caption Text",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "lowerThird.enabled",
+        "label": "Lower Third",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "lowerThird.title",
+        "label": "Lower Third \u2014 Title",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "lowerThird.subtitle",
+        "label": "Lower Third \u2014 Subtitle",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "tagline.enabled",
+        "label": "Tagline",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "tagline.text",
+        "label": "Tagline Text",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "grid.enabled",
+        "label": "Grid",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "safeArea.enabled",
+        "label": "Safe Area",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "timecode.enabled",
+        "label": "Timecode",
+        "type": "boolean",
+        "default": false
+      }
+    ]
+  },
+  {
+    "id": "monitor-frame",
+    "name": "Monitor Frame",
+    "description": "Modern flat-panel Apple-style monitor bezel with stand, screen glow, reflection, and power-on fade. Contemporary counterpart to the vintage Retro Computer Frame.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "monitor",
+      "modern",
+      "apple"
+    ],
+    "remotionComponent": "MonitorFrame",
+    "slots": [
+      {
+        "key": "bezelColor",
+        "label": "Bezel Color",
+        "type": "color",
+        "default": "#1a1a1e"
+      },
+      {
+        "key": "wordmark",
+        "label": "Wordmark",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "showStand",
+        "label": "Show Stand",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "showReflection",
+        "label": "Screen Reflection",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "showScreenGlow",
+        "label": "Screen Glow",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "powerOnEffect",
+        "label": "Power-On Fade",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "hermes-effects",
+    "name": "Hermes Effects",
+    "description": "Cinematic overlay stack: film grain, moving scanlines, holographic shimmer, teal/orange color grade, vignette, and chromatic aberration. Drop on top of any footage to transform its atmosphere.",
+    "engine": "remotion",
+    "tags": [
+      "overlay",
+      "cinematic",
+      "grain",
+      "vignette",
+      "holographic",
+      "grade"
+    ],
+    "remotionComponent": "HermesEffects",
+    "slots": [
+      {
+        "key": "holoIntensity",
+        "label": "Holo Intensity",
+        "type": "number",
+        "default": 0.28
+      },
+      {
+        "key": "grainIntensity",
+        "label": "Film Grain",
+        "type": "number",
+        "default": 0.2
+      },
+      {
+        "key": "scanlineOpacity",
+        "label": "Scanline Opacity",
+        "type": "number",
+        "default": 0.55
+      },
+      {
+        "key": "tealStrength",
+        "label": "Teal Grade",
+        "type": "number",
+        "default": 0.1
+      },
+      {
+        "key": "orangeStrength",
+        "label": "Orange Warmth",
+        "type": "number",
+        "default": 0.07
+      },
+      {
+        "key": "vignetteStrength",
+        "label": "Vignette",
+        "type": "number",
+        "default": 0.48
+      },
+      {
+        "key": "chromaShift",
+        "label": "Chroma Shift (px)",
+        "type": "number",
+        "default": 3.5
+      }
+    ]
+  },
+  {
+    "id": "tactical-caption-bar",
+    "name": "Tactical Caption Bar",
+    "description": "Transcript-driven caption bar with speaker identification and timecode. Reads a JSON transcript file and renders live captions below the video.",
+    "engine": "remotion",
+    "tags": [
+      "captions",
+      "transcript",
+      "speaker",
+      "accessibility"
+    ],
+    "remotionComponent": "TacticalCaptionBar",
+    "slots": [
+      {
+        "key": "transcriptFile",
+        "label": "Transcript File",
+        "type": "text",
+        "required": true
+      },
+      {
+        "key": "height",
+        "label": "Bar Height (px)",
+        "type": "number",
+        "default": 120
+      },
+      {
+        "key": "enabled",
+        "label": "Enabled",
+        "type": "boolean",
+        "default": true
+      },
+      {
+        "key": "timeOffset",
+        "label": "Time Offset (s)",
+        "type": "number",
+        "default": 0
+      }
+    ]
+  },
+  {
+    "id": "glass-panel",
+    "name": "Glass Panel",
+    "description": "Glass morphism UI panel: frosted dark glass with teal, orange, neutral, or deep tints. Supports holographic border shimmer and chromatic aberration when paired with HermesEffects.",
+    "engine": "remotion",
+    "tags": [
+      "glass",
+      "morphism",
+      "overlay",
+      "panel",
+      "hermes"
+    ],
+    "remotionComponent": "GlassPanel",
+    "slots": [
+      {
+        "key": "tint",
+        "label": "Tint",
+        "type": "select",
+        "default": "neutral",
+        "options": [
+          "neutral",
+          "teal",
+          "orange",
+          "deep"
+        ]
+      },
+      {
+        "key": "shimmer",
+        "label": "Holographic Border",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "ca",
+        "label": "Chromatic Aberration",
+        "type": "boolean",
+        "default": false
+      },
+      {
+        "key": "opacity",
+        "label": "Opacity",
+        "type": "number",
+        "default": 1
+      }
+    ]
+  },
+  {
+    "id": "hud-experiment-intro",
+    "name": "HUD Experiment Intro",
+    "description": "Tactical intro with grid lines, guide marks, and minimal text reveal. No branding, pure HUD aesthetic.",
+    "engine": "remotion",
+    "tags": [
+      "intro",
+      "hud",
+      "tactical",
+      "grid"
+    ],
+    "remotionComponent": "HUDExperimentIntro",
+    "slots": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "default": "HUD EXPERIMENT"
+      },
+      {
+        "key": "subtitle",
+        "label": "Subtitle",
+        "type": "text",
+        "default": "Prototype v0.1"
+      }
+    ]
+  },
+  {
+    "id": "minimal-outro",
+    "name": "Minimal Outro",
+    "description": "Clean minimal outro: handle with shimmer sweep, status bar, and typed FINISHED signal. Monospace, no branding.",
+    "engine": "remotion",
+    "tags": [
+      "outro",
+      "minimal",
+      "monospace",
+      "handle"
+    ],
+    "remotionComponent": "MinimalOutro",
+    "slots": [
+      {
+        "key": "handle",
+        "label": "Handle",
+        "type": "text",
+        "default": "@arach"
+      }
+    ]
+  },
+  {
+    "id": "film-burn",
+    "name": "Film Burn",
+    "description": "Organic analog overlay: film grain, heavy vignette, warm/cool/none color grade. Kodak 16mm feel \u2014 no scanlines, no digital noise.",
+    "engine": "remotion",
+    "tags": [
+      "overlay",
+      "film",
+      "grain",
+      "vignette",
+      "analog",
+      "grade"
+    ],
+    "remotionComponent": "FilmBurn",
+    "slots": [
+      {
+        "key": "grainStrength",
+        "label": "Film Grain",
+        "type": "number",
+        "default": 0.3
+      },
+      {
+        "key": "vignetteAmount",
+        "label": "Vignette",
+        "type": "number",
+        "default": 0.55
+      },
+      {
+        "key": "tint",
+        "label": "Tint",
+        "type": "select",
+        "default": "warm",
+        "options": [
+          "warm",
+          "cool",
+          "none"
+        ]
+      },
+      {
+        "key": "scratchIntensity",
+        "label": "Scratch",
+        "type": "number",
+        "default": 0.08
+      },
+      {
+        "key": "burnIn",
+        "label": "Opacity",
+        "type": "number",
+        "default": 1
+      }
+    ]
+  },
+  {
+    "id": "metric-pop",
+    "name": "Metric Pop",
+    "description": "Spring-based animated counter that counts up to a target number with a label. For results moments in product demos.",
+    "engine": "remotion",
+    "tags": [
+      "counter",
+      "metric",
+      "data",
+      "animation",
+      "overlay"
+    ],
+    "remotionComponent": "MetricPop",
+    "slots": [
+      {
+        "key": "value",
+        "label": "Value",
+        "type": "number",
+        "default": 10000,
+        "required": true
+      },
+      {
+        "key": "label",
+        "label": "Label",
+        "type": "text",
+        "default": "active users",
+        "required": true
+      },
+      {
+        "key": "prefix",
+        "label": "Prefix",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "suffix",
+        "label": "Suffix",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "countUpDuration",
+        "label": "Count Duration (s)",
+        "type": "number",
+        "default": 1.8
+      }
+    ]
+  },
+  {
+    "id": "device-frame",
+    "name": "Device Frame",
+    "description": "Modern device bezels \u2014 iPhone (Dynamic Island), MacBook (lid + hinge + base), or browser chrome. Every existing bezel in the catalog is vintage; this fills the contemporary gap.",
+    "engine": "remotion",
+    "tags": [
+      "bezel",
+      "device",
+      "iphone",
+      "macbook",
+      "browser",
+      "modern"
+    ],
+    "remotionComponent": "DeviceFrame",
+    "slots": [
+      {
+        "key": "device",
+        "label": "Device",
+        "type": "select",
+        "default": "iphone",
+        "options": [
+          "iphone",
+          "macbook",
+          "browser"
+        ]
+      },
+      {
+        "key": "colorScheme",
+        "label": "Color",
+        "type": "select",
+        "default": "dark",
+        "options": [
+          "dark",
+          "silver"
+        ]
+      },
+      {
+        "key": "showStatusBar",
+        "label": "Status Bar",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "social-reel",
+    "name": "Social Reel",
+    "description": "9:16 vertical wrapper that letterboxes 16:9 footage with branded top and bottom strips. Essential for short-form distribution.",
+    "engine": "remotion",
+    "tags": [
+      "vertical",
+      "social",
+      "9:16",
+      "reels",
+      "shorts",
+      "tiktok"
+    ],
+    "remotionComponent": "SocialReel",
+    "slots": [
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "handle",
+        "label": "Handle",
+        "type": "text",
+        "default": "@arach"
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "topStripHeight",
+        "label": "Top Strip (px)",
+        "type": "number",
+        "default": 120
+      },
+      {
+        "key": "bottomStripHeight",
+        "label": "Bottom Strip (px)",
+        "type": "number",
+        "default": 100
+      }
+    ]
+  },
+  {
+    "id": "chapter-slate",
+    "name": "Chapter Slate",
+    "description": "Full-frame chapter break card. Chapter number watermark + accent rule + title slide-in. For sectioning long-form demos and reels.",
+    "engine": "remotion",
+    "tags": [
+      "chapter",
+      "slate",
+      "intro",
+      "section",
+      "long-form"
+    ],
+    "remotionComponent": "ChapterSlate",
+    "slots": [
+      {
+        "key": "chapter",
+        "label": "Chapter Number",
+        "type": "number",
+        "default": 1,
+        "required": true
+      },
+      {
+        "key": "title",
+        "label": "Title",
+        "type": "text",
+        "default": "Introduction",
+        "required": true
+      },
+      {
+        "key": "subtitle",
+        "label": "Subtitle",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      }
+    ]
+  },
+  {
+    "id": "kinetic-title",
+    "name": "Kinetic Title",
+    "description": "Words slam in one at a time with spring overshoot, hold, then exit via fade or clip-slice. Bold product-launch energy.",
+    "engine": "remotion",
+    "tags": [
+      "kinetic",
+      "title",
+      "type",
+      "motion",
+      "intro",
+      "spring"
+    ],
+    "remotionComponent": "KineticTitle",
+    "slots": [
+      {
+        "key": "lines",
+        "label": "Lines (JSON array)",
+        "type": "text",
+        "default": "[\"BUILT FOR\",\"THE PEOPLE\",\"WHO SHIP\"]",
+        "required": true
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "accentLineIndex",
+        "label": "Accent Line Index",
+        "type": "number",
+        "default": 0
+      },
+      {
+        "key": "exitStyle",
+        "label": "Exit Style",
+        "type": "select",
+        "default": "fade",
+        "options": [
+          "fade",
+          "slice"
+        ]
+      },
+      {
+        "key": "holdPerLine",
+        "label": "Hold Per Line (s)",
+        "type": "number",
+        "default": 0.8
+      }
+    ]
+  },
+  {
+    "id": "interview-ident",
+    "name": "Interview Ident",
+    "description": "Documentary lower-third: name + role with a vertical accent bar that draws in and a thin rule between. Cinematic, not broadcast.",
+    "engine": "hyperframes",
+    "tags": [
+      "lower-third",
+      "documentary",
+      "interview",
+      "ident",
+      "overlay"
+    ],
+    "hyperframesPath": "/overlays/interview-ident.html",
+    "previewUrl": "/overlays/interview-ident.html",
+    "slots": [
+      {
+        "key": "name",
+        "label": "Name",
+        "type": "text",
+        "default": "Jane Smith",
+        "required": true
+      },
+      {
+        "key": "role",
+        "label": "Role",
+        "type": "text",
+        "default": "Lead Designer",
+        "required": true
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "enabled",
+        "label": "Visible",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "version-stamp",
+    "name": "Version Stamp",
+    "description": "Persistent corner badge: app name, version, and date in stacked monospace. Sits quietly in any corner. Perfect for product demos and dev session recordings.",
+    "engine": "hyperframes",
+    "tags": [
+      "badge",
+      "version",
+      "corner",
+      "demo",
+      "overlay",
+      "monospace"
+    ],
+    "hyperframesPath": "/overlays/version-stamp.html",
+    "previewUrl": "/overlays/version-stamp.html",
+    "slots": [
+      {
+        "key": "app",
+        "label": "App Name",
+        "type": "text",
+        "default": "PREFRAME"
+      },
+      {
+        "key": "version",
+        "label": "Version",
+        "type": "text",
+        "default": "v1.0.0"
+      },
+      {
+        "key": "date",
+        "label": "Date",
+        "type": "text",
+        "default": "2026-05-10"
+      },
+      {
+        "key": "corner",
+        "label": "Corner",
+        "type": "select",
+        "default": "top-right",
+        "options": [
+          "top-right",
+          "top-left",
+          "bottom-right",
+          "bottom-left"
+        ]
+      },
+      {
+        "key": "enabled",
+        "label": "Visible",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "glitch-frame",
+    "name": "Glitch Frame",
+    "description": "RGB-split animated border around the full frame. Three color-channel layers slightly offset, periodic glitch jumps, slow opacity shimmer. Pure atmosphere, no text.",
+    "engine": "hyperframes",
+    "tags": [
+      "glitch",
+      "border",
+      "rgb",
+      "atmosphere",
+      "overlay",
+      "effect"
+    ],
+    "hyperframesPath": "/overlays/glitch-frame.html",
+    "previewUrl": "/overlays/glitch-frame.html",
+    "slots": [
+      {
+        "key": "color",
+        "label": "Color",
+        "type": "color",
+        "default": "#00ff88"
+      },
+      {
+        "key": "intensity",
+        "label": "Intensity",
+        "type": "number",
+        "default": 0.6
+      },
+      {
+        "key": "enabled",
+        "label": "Visible",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  },
+  {
+    "id": "kinetic-subtitle",
+    "name": "Kinetic Subtitle",
+    "description": "Word-by-word text reveal with staggered fade-up. Editorial style for impactful moments. Supports *accent* word markup.",
+    "engine": "hyperframes",
+    "tags": [
+      "subtitle",
+      "kinetic",
+      "text",
+      "reveal",
+      "editorial",
+      "overlay"
+    ],
+    "hyperframesPath": "/overlays/kinetic-subtitle.html",
+    "previewUrl": "/overlays/kinetic-subtitle.html",
+    "slots": [
+      {
+        "key": "text",
+        "label": "Text (use *word* for accent)",
+        "type": "text",
+        "default": "Built for the *people* who ship",
+        "required": true
+      },
+      {
+        "key": "accentColor",
+        "label": "Accent Color",
+        "type": "color",
+        "default": "#4ade80"
+      },
+      {
+        "key": "speed",
+        "label": "Speed",
+        "type": "number",
+        "default": 1.0
+      },
+      {
+        "key": "enabled",
+        "label": "Visible",
+        "type": "boolean",
+        "default": true
+      }
+    ]
+  }
+]

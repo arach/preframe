@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    /* Flash layer — hard cut white */
+    #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+
+    /* RGB split layers — chromatic aberration on recovery */
+    #rgb-r, #rgb-b {
+      position: absolute; inset: 0;
+      mix-blend-mode: screen;
+      opacity: 0; pointer-events: none;
+    }
+    #rgb-r { background: rgba(255,30,30,0.25); }
+    #rgb-b { background: rgba(30,30,255,0.25); }
+
+    /* Invert layer — brief negative on drop impact */
+    #invert { position: absolute; inset: 0; background: #fff; mix-blend-mode: difference; opacity: 0; }
+
+    /* Horizontal rip lines — appear on drop */
+    #rips { position: absolute; inset: 0; overflow: hidden; opacity: 0; }
+    .rip {
+      position: absolute; left: 0; right: 0; height: 3px;
+      background: rgba(255,255,255,0.6);
+    }
+
+    /* Beat brightness pulse */
+    #beat-pulse { position: absolute; inset: 0; background: #fff; opacity: 0; mix-blend-mode: screen; }
+  </style>
+</head>
+<body>
+  <div id="flash"></div>
+  <div id="invert"></div>
+  <div id="rgb-r"></div>
+  <div id="rgb-b"></div>
+  <div id="rips"></div>
+  <div id="beat-pulse"></div>
+
+  <script>
+    const flash = document.getElementById('flash');
+    const invert = document.getElementById('invert');
+    const rgbR = document.getElementById('rgb-r');
+    const rgbB = document.getElementById('rgb-b');
+    const rips = document.getElementById('rips');
+    const beatPulse = document.getElementById('beat-pulse');
+
+    // Pre-build rip lines at random Y positions
+    for (let i = 0; i < 12; i++) {
+      const rip = document.createElement('div');
+      rip.className = 'rip';
+      rip.style.top = Math.random() * 100 + '%';
+      rips.appendChild(rip);
+    }
+
+    let lastBeat = 0;
+    let lastDrop = 0;
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false } = data;
+      const now = Date.now();
+
+      if (drop && now - lastDrop > 300) {
+        lastDrop = now;
+
+        const tl = gsap.timeline();
+
+        // 1. Hard white cut (1–2 frames)
+        tl.to(flash, { opacity: 1, duration: 0.03 })
+          .to(flash, { opacity: 0, duration: 0.12, ease: 'power2.out' });
+
+        // 2. Invert briefly — disorienting negative
+        tl.to(invert, { opacity: 0.6, duration: 0.04 }, '<')
+          .to(invert, { opacity: 0, duration: 0.1 }, '+=0.02');
+
+        // 3. Chromatic aberration — R shifts right, B shifts left
+        tl.fromTo(rgbR, { x: 0, opacity: 0 }, { x: 18, opacity: 1, duration: 0.04 }, '<0.05')
+          .to(rgbR, { x: 0, opacity: 0, duration: 0.3, ease: 'power2.out' });
+        tl.fromTo(rgbB, { x: 0, opacity: 0 }, { x: -18, opacity: 1, duration: 0.04 }, '<')
+          .to(rgbB, { x: 0, opacity: 0, duration: 0.3, ease: 'power2.out' }, '<0.02');
+
+        // 4. Rip lines flash on
+        tl.to(rips, { opacity: 1, duration: 0.02 }, '<0.03')
+          .to(rips, { opacity: 0, duration: 0.15 });
+
+      } else if (beat && now - lastBeat > 100) {
+        lastBeat = now;
+        // Subtle brightness pulse on every beat
+        gsap.fromTo(beatPulse,
+          { opacity: amplitude * 0.15 },
+          { opacity: 0, duration: 0.18, ease: 'power2.out', overwrite: true }
+        );
+        // Minor chromatic flicker
+        gsap.fromTo([rgbR, rgbB],
+          { x: (i) => i === 0 ? 4 : -4, opacity: 0.3 },
+          { x: 0, opacity: 0, duration: 0.12, overwrite: true }
+        );
+      }
+    });
+  </script>
+</body>
+</html>

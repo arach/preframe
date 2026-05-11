@@ -1,0 +1,58 @@
+{
+  "frame_008.jpg": [
+    {
+      "provider": "MiniMax",
+      "label": "cursor",
+      "confidence": "high",
+      "source": ".data/minimax/clip-87917e3c-mouse-targeted-frames.json",
+      "note": "MiniMax localized a white cursor over the send/submit icon in the lower-right composer area.",
+      "rect": {
+        "x": 0.879,
+        "y": 0.943,
+        "w": 0.006,
+        "h": 0.016
+      }
+    },
+    {
+      "provider": "Moondream",
+      "label": "composer/input area",
+      "confidence": "medium",
+      "source": ".data/moondream/clip-87917e3c-mouse-0.5fps.json",
+      "note": "Moondream's strongest late-frame answers point to the lower-right composer/input area around 54s-58s.",
+      "rect": {
+        "x": 0.68,
+        "y": 0.72,
+        "w": 0.29,
+        "h": 0.25
+      }
+    }
+  ],
+  "frame_009.jpg": [
+    {
+      "provider": "MiniMax",
+      "label": "no cursor",
+      "confidence": "high",
+      "source": ".data/minimax/clip-87917e3c-mouse-targeted-frames.json",
+      "note": "MiniMax reported no visible cursor or gesture in this frame.",
+      "rect": {
+        "x": 0.68,
+        "y": 0.72,
+        "w": 0.29,
+        "h": 0.25
+      }
+    },
+    {
+      "provider": "Moondream",
+      "label": "low/no signal",
+      "confidence": "low",
+      "source": ".data/moondream/clip-87917e3c-mouse-0.5fps.json",
+      "note": "Moondream drops to no visible cursor after the 58s-60s window.",
+      "rect": {
+        "x": 0.68,
+        "y": 0.72,
+        "w": 0.29,
+        "h": 0.25
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{"kind":"typing","atMs":6440,"durationMs":1120,"detail":"address-bar typing cue; CDP owns navigation"}
+{"kind":"typing","atMs":11427,"durationMs":1136,"detail":"CDP Google input, dramatized typing"}
+{"kind":"key","atMs":12495,"durationMs":1250,"detail":"submit Google search"}
+{"kind":"typing","atMs":21901,"durationMs":1120,"detail":"address-bar typing cue; CDP owns navigation"}
+{"kind":"key","atMs":29091,"durationMs":1250,"detail":"close transient Midjourney panel"}
+{"kind":"typing","atMs":34347,"durationMs":3656,"detail":"CDP prompt input, dramatized typing"}
+{"kind":"key","atMs":41430,"durationMs":1250,"detail":"submit prompt"}

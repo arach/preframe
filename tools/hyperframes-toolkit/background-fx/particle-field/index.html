@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video {
+        position: absolute; inset: 0;
+        width: 1920px; height: 1080px;
+        object-fit: cover; z-index: 0;
+      }
+      #fx-canvas {
+        position: absolute; inset: 0;
+        width: 1920px; height: 1080px;
+        pointer-events: none; z-index: 1;
+      }
+      #ui-layer {
+        position: absolute; inset: 0;
+        z-index: 10; pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="particle-field"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+
+      <div
+        id="driver"
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+      ></div>
+    </div>
+
+    <script>
+      (function () {
+        // Set video source
+        var root = document.getElementById('root');
+        var video = document.getElementById('bg-video');
+        video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+
+        var canvas = document.getElementById('fx-canvas');
+        var ctx = canvas.getContext('2d');
+
+        // Offscreen sample canvas at 1/20th scale
+        var sampleCanvas = document.createElement('canvas');
+        sampleCanvas.width = 96;
+        sampleCanvas.height = 54;
+        var sampleCtx = sampleCanvas.getContext('2d');
+
+        // Deterministic LCG
+        function makeLCG(seed) {
+          var s = seed >>> 0;
+          return function () {
+            s = ((1664525 * s + 1013904223) >>> 0);
+            return s / 0xffffffff;
+          };
+        }
+        var rng = makeLCG(42);
+
+        // Build 600 particles deterministically
+        var PARTICLE_COUNT = 600;
+        var particles = [];
+        for (var i = 0; i < PARTICLE_COUNT; i++) {
+          particles.push({
+            baseX: rng() * 1920,
+            baseY: rng() * 1080,
+            size: rng() * 2 + 1,
+            phase: rng() * Math.PI * 2,
+            speed: rng() * 0.4 + 0.2,
+            r: 200, g: 200, b: 200
+          });
+        }
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+
+        tl.to({ t: 0 }, {
+          t: 8,
+          duration: 8,
+          ease: 'none',
+          onUpdate: function () {
+            var time = tl.time();
+
+            ctx.clearRect(0, 0, 1920, 1080);
+
+            // Sample video colors at reduced scale
+            var imageData = null;
+            if (video.readyState >= 2) {
+              sampleCtx.drawImage(video, 0, 0, 96, 54);
+              imageData = sampleCtx.getImageData(0, 0, 96, 54);
+            }
+
+            for (var i = 0; i < PARTICLE_COUNT; i++) {
+              var p = particles[i];
+
+              // Oscillate position
+              var _speed = window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0;
+              var px = p.baseX + Math.sin(time * p.speed * _speed + p.phase) * 12;
+              var py = p.baseY + Math.cos(time * p.speed * 0.7 * _speed + p.phase * 1.3) * 8;
+
+              // Sample color from video frame
+              if (imageData) {
+                var sx = Math.floor(p.baseX / 1920 * 96);
+                var sy = Math.floor(p.baseY / 1080 * 54);
+                sx = Math.max(0, Math.min(95, sx));
+                sy = Math.max(0, Math.min(53, sy));
+                var idx = (sy * 96 + sx) * 4;
+                p.r = imageData.data[idx];
+                p.g = imageData.data[idx + 1];
+                p.b = imageData.data[idx + 2];
+              }
+
+              ctx.save();
+              ctx.globalAlpha = window.__params && window.__params.opacity !== undefined ? window.__params.opacity : 0.7;
+              ctx.globalCompositeOperation = 'screen';
+              var grd = ctx.createRadialGradient(px, py, 0, px, py, p.size * 2);
+              grd.addColorStop(0, 'rgba(' + p.r + ',' + p.g + ',' + p.b + ',0.9)');
+              grd.addColorStop(1, 'rgba(' + p.r + ',' + p.g + ',' + p.b + ',0)');
+              ctx.fillStyle = grd;
+              ctx.beginPath();
+              ctx.arc(px, py, p.size * 2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+        }, 0);
+
+        window.__timelines['particle-field'] = tl;
+      })();
+    </script>
+  </body>
+</html>

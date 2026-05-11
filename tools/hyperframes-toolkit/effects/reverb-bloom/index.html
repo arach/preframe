@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    .ring {
+      position: absolute; left: 50%; top: 50%;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+      pointer-events: none;
+    }
+    /* 3 ring sizes — different expansion speeds simulate room depth */
+    #ring-a { width: 300px;  height: 300px;  border: 2px solid rgba(74,222,128,0.9); }
+    #ring-b { width: 300px;  height: 300px;  border: 1px solid rgba(255,255,255,0.4); }
+    #ring-c { width: 300px;  height: 300px;  border: 1px solid rgba(74,222,128,0.3); }
+
+    /* Bloom glow fill — fades behind ring */
+    #bloom {
+      position: absolute; left: 50%; top: 50%;
+      width: 200px; height: 200px;
+      margin: -100px 0 0 -100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74,222,128,0.5) 0%, transparent 70%);
+      transform: scale(0); opacity: 0;
+    }
+
+    /* Bass shimmer lines radiating outward */
+    #shimmer {
+      position: absolute; inset: 0;
+      background: conic-gradient(
+        transparent 0deg,
+        rgba(74,222,128,0.03) 45deg, transparent 90deg,
+        transparent 135deg,
+        rgba(74,222,128,0.02) 180deg, transparent 225deg,
+        transparent 315deg,
+        rgba(74,222,128,0.03) 360deg
+      );
+      opacity: 0; transform-origin: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="shimmer"></div>
+  <div id="bloom"></div>
+  <div class="ring" id="ring-a"></div>
+  <div class="ring" id="ring-b"></div>
+  <div class="ring" id="ring-c"></div>
+
+  <script>
+    const rings = [
+      { el: document.getElementById('ring-a'), maxScale: 5.5, dur: 1.2, color: 'rgba(74,222,128,0.9)' },
+      { el: document.getElementById('ring-b'), maxScale: 8,   dur: 1.8, color: 'rgba(255,255,255,0.35)' },
+      { el: document.getElementById('ring-c'), maxScale: 12,  dur: 2.4, color: 'rgba(74,222,128,0.25)' },
+    ];
+    const bloom = document.getElementById('bloom');
+    const shimmer = document.getElementById('shimmer');
+
+    let lastBeat = 0;
+    let shimmerAngle = 0;
+
+    function spawnRings(intensity) {
+      rings.forEach(({ el, maxScale, dur, color }) => {
+        gsap.fromTo(el,
+          { scale: 0, opacity: intensity, transformOrigin: 'center' },
+          {
+            scale: maxScale * (0.7 + intensity * 0.3),
+            opacity: 0,
+            duration: dur * (0.8 + intensity * 0.4),
+            ease: 'power1.out',
+            overwrite: false
+          }
+        );
+      });
+
+      // Bloom flash at center
+      gsap.fromTo(bloom,
+        { scale: 0.3 + intensity * 0.2, opacity: intensity },
+        { scale: 1, opacity: 0, duration: 0.5, ease: 'power2.out', overwrite: true }
+      );
+    }
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false } = data;
+      const now = Date.now();
+
+      // Shimmer rotates with bass energy
+      shimmerAngle += bass * 0.8;
+      gsap.set(shimmer, { rotation: shimmerAngle, opacity: bass * 0.4 });
+
+      if (drop) {
+        spawnRings(1.0);
+        // Extra slam ring — large fast burst
+        gsap.fromTo(document.getElementById('ring-a'),
+          { scale: 0, opacity: 1.5 },
+          { scale: 15, opacity: 0, duration: 0.6, ease: 'power3.out', overwrite: false }
+        );
+      } else if (beat && now - lastBeat > 100) {
+        lastBeat = now;
+        spawnRings(0.4 + amplitude * 0.6);
+      }
+    });
+  </script>
+</body>
+</html>

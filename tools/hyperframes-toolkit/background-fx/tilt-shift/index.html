@@ -1,0 +1,151 @@
+<!-- hyperframes-registry-item: tilt-shift -->
+<!-- shared: ../../shared/base.css -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+      [data-composition-id="tilt-shift"] {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Video: boosted saturation + contrast for the miniaturization look */
+      #bg-video {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+        z-index: 0;
+        filter: saturate(1.4) contrast(1.1);
+      }
+
+      /*
+        Blur bands via backdrop-filter + gradient mask.
+        Each band covers 40% of the frame height from its edge,
+        fading from full blur at the extreme to zero blur at center.
+        GSAP animates the height to breathe the focal plane.
+      */
+      #blur-top {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 400px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+        mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      #blur-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 400px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        -webkit-mask-image: linear-gradient(to top, black 0%, transparent 100%);
+        mask-image: linear-gradient(to top, black 0%, transparent 100%);
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      /* Subtle edge vignette to frame the miniature effect */
+      #vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse 90% 75% at 50% 50%,
+          transparent 40%,
+          rgba(0, 0, 0, 0.45) 100%
+        );
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="tilt-shift"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="bg-video" muted playsinline></video>
+
+      <div id="blur-top"></div>
+      <div id="blur-bottom"></div>
+      <div id="vignette"></div>
+
+      <div id="ui-layer"></div>
+
+      <div
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+      ></div>
+    </div>
+
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        document.getElementById('bg-video').src =
+          root.dataset.videoSrc || '../../assets/sample.mp4';
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+
+        // Focal plane breathing: blur bands grow/shrink together
+        // 380 → 420 → 380 over 8s gives a slow, meditative pulse
+        tl.fromTo(
+          '#blur-top',
+          { height: 380 },
+          { height: 420, duration: 4, ease: 'sine.inOut', yoyo: true, repeat: 1 },
+          0
+        );
+        tl.fromTo(
+          '#blur-bottom',
+          { height: 380 },
+          { height: 420, duration: 4, ease: 'sine.inOut', yoyo: true, repeat: 1 },
+          0
+        );
+
+        // Apply params to blur bands continuously
+        function applyTiltParams() {
+          var blur = window.__params && window.__params.blur !== undefined ? window.__params.blur : 10;
+          var pos = window.__params && window.__params.focal_pos !== undefined ? window.__params.focal_pos : 50;
+          var top = document.getElementById('blur-top');
+          var bot = document.getElementById('blur-bottom');
+          if (top) top.style.backdropFilter = 'blur(' + blur + 'px)';
+          if (top) top.style.webkitBackdropFilter = 'blur(' + blur + 'px)';
+          if (bot) bot.style.backdropFilter = 'blur(' + blur + 'px)';
+          if (bot) bot.style.webkitBackdropFilter = 'blur(' + blur + 'px)';
+        }
+        tl.eventCallback('onUpdate', applyTiltParams);
+        window.__timelines['tilt-shift'] = tl;
+      })();
+    </script>
+  </body>
+</html>

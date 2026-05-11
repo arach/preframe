@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kinetic Subtitle Overlay</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #subtitle-wrap {
+      position: absolute;
+      bottom: 25%;
+      left: 0; right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    #subtitle-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5vw;
+      padding: 0 6vw;
+    }
+
+    .word {
+      display: inline-block;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: clamp(18px, 3.2vw, 80px);
+      font-weight: 700;
+      color: #f2f2f2;
+      line-height: 1.15;
+      text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9);
+      opacity: 0;
+      transform: translateY(8px);
+      will-change: transform, opacity;
+    }
+
+    .word.accent {
+      color: var(--accent, #4ade80);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="subtitle-wrap">
+    <div id="subtitle-inner"></div>
+  </div>
+
+<script>
+(function registerHFTimeline() {
+  if (typeof gsap === 'undefined') return;
+  const tl = gsap.timeline({ paused: true });
+  tl.set({}, {}, 60);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['kinetic-subtitle'] = tl;
+  window.__hf = { seek: t => tl.seek(t), duration: tl.duration() * 1000 };
+})();
+
+function loadHFVariables() {
+  try {
+    const vars = window.__hyperframes?.getVariables?.() ?? window.__hfVariables ?? {};
+    if (vars.spec) return JSON.parse(typeof vars.spec === 'string' ? vars.spec : JSON.stringify(vars.spec));
+  } catch {}
+  return null;
+}
+
+const wrapEl  = document.getElementById('subtitle-wrap');
+const innerEl = document.getElementById('subtitle-inner');
+
+let activeTween = null;
+let holdTimeout = null;
+let spec = { text: '', enabled: false, accentColor: '#4ade80', speed: 1.0 };
+
+function parseWords(text) {
+  // Split on spaces, detect *word* as accent
+  return text.split(/\s+/).filter(Boolean).map(raw => {
+    const isAccent = raw.startsWith('*') && raw.endsWith('*');
+    return { word: isAccent ? raw.slice(1, -1) : raw, accent: isAccent };
+  });
+}
+
+function buildWords(words) {
+  innerEl.innerHTML = '';
+  return words.map(({ word, accent }) => {
+    const el = document.createElement('span');
+    el.className = 'word' + (accent ? ' accent' : '');
+    el.textContent = word;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(8px)';
+    innerEl.appendChild(el);
+    return el;
+  });
+}
+
+function revealText(s, animate) {
+  const accent = s.accentColor || '#4ade80';
+  document.documentElement.style.setProperty('--accent', accent);
+
+  const words   = parseWords(s.text || '');
+  const speed   = Math.max(0.1, s.speed ?? 1.0);
+  const stagger = 0.1 / speed;
+  const wordDur = 0.12;
+
+  if (activeTween) activeTween.kill();
+  if (holdTimeout) clearTimeout(holdTimeout);
+
+  const wordEls = buildWords(words);
+
+  if (!wordEls.length) {
+    gsap.set(wrapEl, { opacity: 0 });
+    return;
+  }
+
+  if (!animate) {
+    gsap.set(wrapEl, { opacity: 1 });
+    gsap.set(wordEls, { opacity: 1, y: 0 });
+    return;
+  }
+
+  gsap.set(wrapEl, { opacity: 1 });
+  gsap.set(wordEls, { opacity: 0, y: 8 });
+
+  activeTween = gsap.to(wordEls, {
+    opacity: 1,
+    y: 0,
+    duration: wordDur,
+    ease: 'power2.out',
+    stagger: stagger,
+    onComplete: () => {
+      const totalIn = wordEls.length * stagger + wordDur;
+      holdTimeout = setTimeout(() => {
+        gsap.to(wrapEl, { opacity: 0, duration: 0.4, ease: 'power2.in' });
+      }, 2000);
+    }
+  });
+}
+
+let lastText = null;
+
+function applySpec(s, animate = true) {
+  spec = Object.assign({}, spec, s);
+
+  const accent = spec.accentColor || '#4ade80';
+  document.documentElement.style.setProperty('--accent', accent);
+
+  if (!spec.enabled || !spec.text) {
+    if (activeTween) activeTween.kill();
+    if (holdTimeout) clearTimeout(holdTimeout);
+    gsap.to(wrapEl, { opacity: 0, duration: 0.3 });
+    lastText = null;
+    return;
+  }
+
+  const textChanged = spec.text !== lastText;
+
+  if (textChanged && lastText !== null && animate) {
+    // Fade out current text first, then reveal new
+    if (activeTween) activeTween.kill();
+    if (holdTimeout) clearTimeout(holdTimeout);
+    gsap.to(wrapEl, {
+      opacity: 0,
+      duration: 0.25,
+      ease: 'power2.in',
+      onComplete: () => {
+        lastText = spec.text;
+        revealText(spec, true);
+      }
+    });
+  } else {
+    lastText = spec.text;
+    revealText(spec, animate);
+  }
+}
+
+(function init() {
+  const injected = loadHFVariables();
+  if (injected) spec = Object.assign(spec, injected);
+  applySpec(spec, false);
+})();
+
+window.addEventListener('message', ({ data }) => {
+  if (!data) return;
+  if (data.type === 'composition-spec') applySpec(data.spec, data.animate !== false);
+});
+</script>
+</body>
+</html>

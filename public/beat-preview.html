@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Beat Preview — Preframe</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100vw; height: 100vh; overflow: hidden; background: #000; font-family: system-ui, sans-serif; }
+
+    #video-bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    /* ── Effect layers (all absolute, pointer-events: none) ── */
+    #fx { position: absolute; inset: 0; pointer-events: none; }
+
+    /* beat-slam */
+    #slam-grid {
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      display: grid;
+      grid-template-columns: repeat(3, 107px);
+      grid-template-rows: repeat(3, 107px);
+      gap: 8px;
+    }
+    .slam-cell {
+      width: 107px; height: 107px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      transform-origin: center bottom;
+    }
+    .slam-cell.l { border-color: rgba(74,222,128,0.18); background: rgba(74,222,128,0.025); }
+    #slam-ring {
+      position: absolute; left: 50%; top: 50%;
+      width: 500px; height: 500px; margin: -250px 0 0 -250px;
+      border-radius: 50%; border: 2px solid rgba(74,222,128,0);
+    }
+
+    /* bass-breathe */
+    #breathe-glow {
+      position: absolute; left: 50%; top: 50%;
+      width: 900px; height: 900px; margin: -450px 0 0 -450px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74,222,128,0.15) 0%, transparent 70%);
+      opacity: 0;
+    }
+    #breathe-vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 75% at 50% 50%, transparent 30%, rgba(0,0,0,0.85) 100%);
+    }
+
+    /* drop-cut */
+    #drop-flash   { position: absolute; inset: 0; background: #fff; opacity: 0; }
+    #drop-rgb-r   { position: absolute; inset: 0; background: rgba(255,30,30,0.25); mix-blend-mode: screen; opacity: 0; }
+    #drop-rgb-b   { position: absolute; inset: 0; background: rgba(30,30,255,0.25); mix-blend-mode: screen; opacity: 0; }
+
+    /* reverb-bloom */
+    .bloom-ring {
+      position: absolute; left: 50%; top: 50%;
+      border-radius: 50%; transform: translate(-50%, -50%) scale(0);
+      opacity: 0;
+    }
+
+    /* scan-pulse */
+    #scan-crt {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px);
+    }
+    .sweep-line {
+      position: absolute; left: 0; right: 0; top: -4px; height: 4px;
+      background: linear-gradient(to right, transparent 0%, rgba(255,255,255,0.5) 20%, rgba(74,222,128,0.9) 50%, rgba(255,255,255,0.5) 80%, transparent 100%);
+      opacity: 0;
+    }
+    #scan-bars {
+      position: absolute; bottom: 80px; left: 0; right: 0; height: 100px;
+      display: flex; align-items: flex-end; gap: 2px; padding: 0 40px;
+    }
+    .scan-bar { flex: 1; background: rgba(74,222,128,0.5); transform-origin: bottom; transform: scaleY(0); }
+
+    /* grid-glitch */
+    .glitch-band { position: absolute; left: 0; right: 0; overflow: hidden; }
+    #glitch-wrap { position: absolute; inset: 0; }
+
+    /* ── Controls ── */
+    #controls {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 14px 20px;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+      display: flex; align-items: center; gap: 12px;
+    }
+    #controls select, #controls button {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.8);
+      border-radius: 4px; padding: 6px 10px;
+      font-size: 11px; font-family: ui-monospace, monospace;
+      cursor: pointer; outline: none;
+    }
+    #controls select:hover, #controls button:hover { border-color: rgba(74,222,128,0.4); color: #fff; }
+    #play-btn { color: rgba(74,222,128,0.9); border-color: rgba(74,222,128,0.3); min-width: 60px; }
+    #beat-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(74,222,128,0.3); transition: background 0.05s;
+      margin-left: 4px;
+    }
+    #beat-dot.on { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+    label { font-size: 10px; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.1em; }
+  </style>
+</head>
+<body>
+
+<video id="video-bg" src="/out/lattices-gesture-recording-loop-v3.mp4" loop playsinline muted></video>
+
+<div id="fx">
+  <!-- beat-slam -->
+  <div id="slam-ring"></div>
+  <div id="slam-grid"></div>
+
+  <!-- bass-breathe -->
+  <div id="breathe-vignette"></div>
+  <div id="breathe-glow"></div>
+
+  <!-- drop-cut -->
+  <div id="drop-flash"></div>
+  <div id="drop-rgb-r"></div>
+  <div id="drop-rgb-b"></div>
+
+  <!-- reverb-bloom -->
+  <div id="bloom-wrap"></div>
+
+  <!-- scan-pulse -->
+  <div id="scan-crt"></div>
+  <div id="scan-bars"></div>
+
+  <!-- grid-glitch -->
+  <div id="glitch-wrap"></div>
+</div>
+
+<audio id="audio" crossorigin="anonymous"></audio>
+
+<div id="controls">
+  <button id="play-btn">▶ Play</button>
+  <div id="beat-dot"></div>
+  <label>Track</label>
+  <select id="track-select"></select>
+  <label>Effect</label>
+  <select id="effect-select">
+    <option value="beat-slam">Beat Slam</option>
+    <option value="bass-breathe">Bass Breathe</option>
+    <option value="drop-cut">Drop Cut</option>
+    <option value="reverb-bloom">Reverb Bloom</option>
+    <option value="scan-pulse" selected>Scan Pulse</option>
+    <option value="grid-glitch">Grid Glitch</option>
+    <option value="all">All Effects</option>
+  </select>
+</div>
+
+<script>
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const video      = document.getElementById('video-bg');
+const audioEl    = document.getElementById('audio');
+const playBtn    = document.getElementById('play-btn');
+const trackSel   = document.getElementById('track-select');
+const effectSel  = document.getElementById('effect-select');
+const beatDot    = document.getElementById('beat-dot');
+
+// ── Build beat-slam cells ─────────────────────────────────────────────────────
+const slamGrid = document.getElementById('slam-grid');
+const slamCells = [];
+for (let r = 0; r < 3; r++) {
+  for (let c = 0; c < 3; c++) {
+    const el = document.createElement('div');
+    el.className = 'slam-cell' + (c === 0 || r === 2 ? ' l' : '');
+    slamGrid.appendChild(el);
+    slamCells.push(el);
+  }
+}
+const slamLCells = slamCells.filter((_, i) => i % 3 === 0 || Math.floor(i / 3) === 2);
+const slamRing = document.getElementById('slam-ring');
+
+// ── Build bloom rings ─────────────────────────────────────────────────────────
+const bloomWrap = document.getElementById('bloom-wrap');
+const bloomRings = [
+  { size: 300, color: 'rgba(74,222,128,0.9)',  maxScale: 5.5, dur: 1.2 },
+  { size: 300, color: 'rgba(255,255,255,0.35)', maxScale: 8,   dur: 1.8 },
+  { size: 300, color: 'rgba(74,222,128,0.25)', maxScale: 12,  dur: 2.4 },
+].map(({ size, color, maxScale, dur }) => {
+  const el = document.createElement('div');
+  el.className = 'bloom-ring';
+  el.style.cssText = `width:${size}px;height:${size}px;border:2px solid ${color};`;
+  bloomWrap.appendChild(el);
+  return { el, maxScale, dur };
+});
+
+// ── Build scan bars ───────────────────────────────────────────────────────────
+const scanBarsEl = document.getElementById('scan-bars');
+const scanBars = [];
+for (let i = 0; i < 64; i++) {
+  const b = document.createElement('div');
+  b.className = 'scan-bar';
+  scanBarsEl.appendChild(b);
+  scanBars.push(b);
+}
+const sweepPool = [];
+for (let i = 0; i < 4; i++) {
+  const s = document.createElement('div');
+  s.className = 'sweep-line';
+  document.getElementById('fx').appendChild(s);
+  sweepPool.push(s);
+}
+let sweepIdx = 0;
+
+// ── Build glitch bands ────────────────────────────────────────────────────────
+const glitchWrap = document.getElementById('glitch-wrap');
+const glitchBands = [];
+for (let i = 0; i < 8; i++) {
+  const b = document.createElement('div');
+  b.className = 'glitch-band';
+  b.style.top = (i * 12.5) + '%';
+  b.style.height = '12.5%';
+  glitchWrap.appendChild(b);
+  glitchBands.push(b);
+}
+
+// ── Load tracks from catalog ──────────────────────────────────────────────────
+const _urlTrack = new URLSearchParams(location.search).get('track');
+fetch('/catalog-data.json').then(r => r.json()).then(data => {
+  const assets = data.audioAssets || [];
+  assets.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = '/' + a.path;
+    opt.textContent = a.songTitle || a.id;
+    if (_urlTrack) {
+      if (a.id === _urlTrack || a.path.includes(_urlTrack)) opt.selected = true;
+    } else {
+      if (a.id.includes('ref-adrian-quesada') || a.id.includes('47-jaar') || a.id.includes('dark-808') || a.id.includes('03-dark')) opt.selected = true;
+    }
+    trackSel.appendChild(opt);
+  });
+  if (assets.length) {
+    audioEl.src = trackSel.value;
+  }
+});
+
+// ── Web Audio setup ───────────────────────────────────────────────────────────
+let audioCtx, analyser, source, freqData;
+let playing = false;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+  analyser  = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.smoothingTimeConstant = 0.75;
+  source    = audioCtx.createMediaElementSource(audioEl);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  freqData  = new Uint8Array(analyser.frequencyBinCount);
+}
+
+// ── Beat detection ─────────────────────────────────────────────────────────────
+let beatThreshold = 0.35;
+let lastBeat = 0, lastDrop = 0;
+let prevAmp = 0;
+
+function getEnergy(lo, hi) {
+  let sum = 0;
+  for (let i = lo; i < hi && i < freqData.length; i++) sum += freqData[i];
+  return sum / ((hi - lo) * 255);
+}
+
+// ── Effect dispatch ────────────────────────────────────────────────────────────
+const fxLayers = {
+  'beat-slam':    [slamGrid, slamRing],
+  'bass-breathe': [document.getElementById('breathe-glow'), document.getElementById('breathe-vignette')],
+  'drop-cut':     [document.getElementById('drop-flash'), document.getElementById('drop-rgb-r'), document.getElementById('drop-rgb-b')],
+  'reverb-bloom': [bloomWrap],
+  'scan-pulse':   [document.getElementById('scan-crt'), scanBarsEl, ...sweepPool],
+  'grid-glitch':  [glitchWrap],
+};
+
+function setActiveEffect(name) {
+  Object.entries(fxLayers).forEach(([key, els]) => {
+    const show = name === 'all' || key === name;
+    els.forEach(el => { if (el) el.style.display = show ? '' : 'none'; });
+  });
+  // scan-crt always shows
+  document.getElementById('scan-crt').style.display = '';
+}
+
+effectSel.addEventListener('change', () => setActiveEffect(effectSel.value));
+setActiveEffect(effectSel.value);
+
+// ── Effect handlers ────────────────────────────────────────────────────────────
+function fxBeatSlam(amp, bass, beat, drop) {
+  gsap.to(slamRing, { borderColor: `rgba(74,222,128,${bass * 0.5})`, scale: 1 + bass * 0.8, duration: 0.1, overwrite: true });
+  if (drop) {
+    gsap.fromTo(slamCells,
+      { scaleY: 0, opacity: 0 },
+      { scaleY: 1, opacity: 1, duration: 0.18, ease: 'back.out(2)', stagger: { amount: 0.12, from: 'center' } }
+    );
+    gsap.to(slamLCells, { boxShadow: '0 0 40px rgba(74,222,128,0.7)', duration: 0.06, yoyo: true, repeat: 3 });
+  } else if (beat) {
+    gsap.to(slamCells, { scaleY: 0.75, duration: 0.05, ease: 'power3.in', stagger: { amount: 0.03, from: 'random' },
+      onComplete() { gsap.to(slamCells, { scaleY: 1, duration: 0.22, ease: 'elastic.out(1.2, 0.5)' }); }
+    });
+  }
+}
+
+let smoothBass = 0;
+function fxBassBreath(amp, bass, beat, drop) {
+  smoothBass += (bass - smoothBass) * 0.25;
+  const glow = document.getElementById('breathe-glow');
+  gsap.to(document.body, { scale: 1 + smoothBass * 0.04, duration: 0.12, overwrite: true });
+  gsap.to(glow, { opacity: smoothBass * 0.9, scale: 1 + smoothBass * 0.3, duration: 0.1, overwrite: true });
+  if (drop) {
+    gsap.fromTo(glow, { opacity: 1, scale: 0.5 }, { opacity: 0, scale: 2.5, duration: 0.8, ease: 'power2.out' });
+    gsap.fromTo(document.body, { scale: 1.06 }, { scale: 1, duration: 0.6, ease: 'elastic.out(1,0.4)' });
+  }
+}
+
+function fxDropCut(amp, bass, beat, drop) {
+  const flash = document.getElementById('drop-flash');
+  const rgbR  = document.getElementById('drop-rgb-r');
+  const rgbB  = document.getElementById('drop-rgb-b');
+  if (drop) {
+    const tl = gsap.timeline();
+    tl.to(flash, { opacity: 1, duration: 0.03 }).to(flash, { opacity: 0, duration: 0.12, ease: 'power2.out' });
+    tl.fromTo(rgbR, { x: 0, opacity: 0 }, { x: 18, opacity: 1, duration: 0.04 }, '<0.04')
+      .to(rgbR, { x: 0, opacity: 0, duration: 0.3 });
+    tl.fromTo(rgbB, { x: 0, opacity: 0 }, { x: -18, opacity: 1, duration: 0.04 }, '<')
+      .to(rgbB, { x: 0, opacity: 0, duration: 0.3 });
+  } else if (beat) {
+    gsap.fromTo(flash, { opacity: amp * 0.12 }, { opacity: 0, duration: 0.18, overwrite: true });
+  }
+}
+
+function fxReverbBloom(amp, bass, beat, drop) {
+  const intensity = drop ? 1.0 : amp * 0.8;
+  if (drop || beat) {
+    bloomRings.forEach(({ el, maxScale, dur }) => {
+      gsap.fromTo(el,
+        { scale: 0, opacity: intensity, transformOrigin: '50% 50%' },
+        { scale: maxScale * (0.7 + intensity * 0.3), opacity: 0, duration: dur * (0.8 + intensity * 0.4), ease: 'power1.out', overwrite: false }
+      );
+    });
+  }
+}
+
+function spawnSweep(intensity) {
+  const s = sweepPool[sweepIdx++ % sweepPool.length];
+  gsap.fromTo(s, { top: -4, opacity: intensity }, { top: window.innerHeight + 4, opacity: 0, duration: 0.15 + (1 - intensity) * 0.2, ease: 'none' });
+}
+
+function fxScanPulse(amp, bass, beat, drop, freqs) {
+  if (freqs) {
+    scanBars.forEach((b, i) => {
+      const bin = Math.floor((i / scanBars.length) * (freqs.length * 0.45));
+      gsap.to(b, { scaleY: (freqs[bin] || 0) / 255, duration: 0.06, overwrite: true });
+    });
+  }
+  if (drop) {
+    spawnSweep(1); setTimeout(() => spawnSweep(0.7), 80); setTimeout(() => spawnSweep(0.4), 160);
+    gsap.fromTo(scanBars, { scaleY: 1.4 }, { scaleY: 0, duration: 0.5, ease: 'power2.out', stagger: { amount: 0.1, from: 'center' } });
+  } else if (beat) {
+    spawnSweep(0.4 + amp * 0.6);
+  }
+}
+
+function fxGridGlitch(amp, bass, beat, drop) {
+  if (drop) {
+    glitchBands.forEach(b => {
+      const shift = (Math.random() - 0.5) * 80;
+      gsap.to(b, { x: shift, duration: 0.04, onComplete: () => gsap.to(b, { x: 0, duration: 0.15, ease: 'power2.out' }) });
+    });
+  } else if (beat) {
+    glitchBands.filter(() => Math.random() > 0.65).forEach(b => {
+      const shift = (Math.random() - 0.5) * amp * 25;
+      gsap.to(b, { x: shift, duration: 0.04, onComplete: () => gsap.to(b, { x: 0, duration: 0.1 }) });
+    });
+  }
+}
+
+// ── Animation loop ────────────────────────────────────────────────────────────
+function tick() {
+  requestAnimationFrame(tick);
+  if (!playing || !analyser) return;
+
+  analyser.getByteFrequencyData(freqData);
+
+  const bass = getEnergy(1, 6);
+  const mid  = getEnergy(6, 40);
+  const high = getEnergy(40, 120);
+  const amp  = getEnergy(0, freqData.length);
+
+  // Dynamic beat threshold — adapts to track loudness
+  beatThreshold += (amp * 1.4 - beatThreshold) * 0.02;
+
+  const now   = Date.now();
+  const beat  = bass > beatThreshold && (now - lastBeat) > 200;
+  const drop  = amp > 0.55 && prevAmp < 0.25 && (now - lastDrop) > 400;
+
+  if (beat) { lastBeat = now; beatDot.classList.add('on'); setTimeout(() => beatDot.classList.remove('on'), 80); }
+  if (drop) lastDrop = now;
+
+  prevAmp = amp;
+
+  const fx = effectSel.value;
+  if (fx === 'beat-slam'    || fx === 'all') fxBeatSlam(amp, bass, beat, drop);
+  if (fx === 'bass-breathe' || fx === 'all') fxBassBreath(amp, bass, beat, drop);
+  if (fx === 'drop-cut'     || fx === 'all') fxDropCut(amp, bass, beat, drop);
+  if (fx === 'reverb-bloom' || fx === 'all') fxReverbBloom(amp, bass, beat, drop);
+  if (fx === 'scan-pulse'   || fx === 'all') fxScanPulse(amp, bass, beat, drop, freqData);
+  if (fx === 'grid-glitch'  || fx === 'all') fxGridGlitch(amp, bass, beat, drop);
+}
+requestAnimationFrame(tick);
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+playBtn.addEventListener('click', () => {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (playing) {
+    audioEl.pause(); video.pause();
+    playing = false; playBtn.textContent = '▶ Play';
+  } else {
+    audioEl.play(); video.play();
+    playing = true; playBtn.textContent = '⏸ Pause';
+  }
+});
+
+trackSel.addEventListener('change', () => {
+  const wasPlaying = playing;
+  audioEl.pause();
+  audioEl.src = trackSel.value;
+  if (wasPlaying) audioEl.play();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #000000;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #f2f2f2;
+      }
+      .scene { position: absolute; inset: 0; }
+
+      #grid-stage {
+        display: flex; align-items: center; justify-content: center;
+        position: absolute; inset: 0;
+      }
+      #lattice-canvas {
+        position: absolute;
+      }
+      .logo-wrap {
+        position: absolute;
+        width: 420px; height: 420px;
+        left: 50%; top: 420px;
+        transform: translate(-50%, -50%);
+        display: flex; align-items: center; justify-content: center;
+      }
+      .logo-wrap svg {
+        width: 100%; height: 100%;
+      }
+
+      .brand-text {
+        position: absolute;
+        left: 50%; top: 720px;
+        transform: translateX(-50%);
+        text-align: center;
+        opacity: 0;
+      }
+      .brand-text h1 {
+        font-size: 64px; font-weight: 600;
+        letter-spacing: -0.03em; color: #f2f2f2;
+      }
+      .brand-text .tagline {
+        font-size: 17px; color: rgba(255,255,255,0.40);
+        margin-top: 10px; letter-spacing: 0.02em;
+      }
+
+      .grid-lines {
+        position: absolute; inset: 0; pointer-events: none;
+      }
+      .grid-line {
+        position: absolute;
+        background: rgba(255,255,255,0.08);
+      }
+      .grid-line.h { height: 1px; left: 0; right: 0; }
+      .grid-line.v { width: 1px; top: 0; bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="intro"
+      data-start="0"
+      data-duration="4"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="intro" class="scene clip" data-start="0" data-duration="4" data-track-index="1">
+        <div class="grid-lines">
+          <div class="grid-line h" style="top:33%"></div>
+          <div class="grid-line h" style="top:66%"></div>
+          <div class="grid-line v" style="left:33%"></div>
+          <div class="grid-line v" style="left:66%"></div>
+        </div>
+        <canvas id="lattice-canvas" width="1920" height="1080"></canvas>
+        <div class="logo-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+            <rect id="c-0-0" x="88"  y="88"  width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-0-1" x="203" y="88"  width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-0-2" x="318" y="88"  width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-1-0" x="88"  y="203" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-1-1" x="203" y="203" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-1-2" x="318" y="203" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-2-0" x="88"  y="318" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-2-1" x="203" y="318" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+            <rect id="c-2-2" x="318" y="318" width="107" height="107" rx="10" fill="rgba(255,255,255,0.18)"/>
+          </svg>
+        </div>
+        <div class="brand-text" id="brand-text">
+          <h1>lattices</h1>
+          <div class="tagline">The agentic workspace</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const bright = "#f2f2f2";
+      const dim = "rgba(255,255,255,0.18)";
+      const glow = "rgba(255,255,255,0.60)";
+
+      const brightCells = ["c-0-0", "c-1-0", "c-2-0", "c-2-1", "c-2-2"];
+      const dimCells = ["c-0-1", "c-0-2", "c-1-1", "c-1-2"];
+      const allCells = [...brightCells, ...dimCells];
+
+      // Grid lines in
+      tl.fromTo(".grid-line", { opacity: 0 }, { opacity: 1, duration: 0.5, stagger: 0.07 }, 0.1);
+
+      // Cells scale in
+      allCells.forEach((id, i) => {
+        const el = document.getElementById(id);
+        tl.fromTo(el, {
+          scale: 0.3, transformOrigin: "50% 50%", opacity: 0
+        }, {
+          scale: 1, opacity: 1, duration: 0.5,
+          ease: "back.out(1.6)",
+          delay: i * 0.04
+        }, 0.3);
+      });
+
+      // L-shape brightens
+      brightCells.forEach((id, i) => {
+        const el = document.getElementById(id);
+        tl.to(el, { fill: bright, duration: 0.3 }, 0.95 + i * 0.06);
+        tl.to(el, { fill: glow, duration: 0.12, yoyo: true, repeat: 1 }, 1.05 + i * 0.06);
+        tl.to(el, { fill: bright, duration: 0.18 }, 1.30 + i * 0.06);
+      });
+
+      // Dim cells ghost
+      dimCells.forEach((id, i) => {
+        tl.to(document.getElementById(id), { fill: dim, duration: 0.3 }, 1.25 + i * 0.04);
+      });
+
+      // Canvas glow behind logo — GSAP-driven
+      const c = document.getElementById("lattice-canvas");
+      const ctx = c.getContext("2d");
+      const cx = c.width / 2, cy = c.height / 2;
+      const cellSize = 107, gap = 8;
+      const offset = -cellSize * 1.5 - gap;
+      const glowProxy = { t: 0 };
+      tl.to(glowProxy, {
+        t: 1, duration: 1.5, ease: "none",
+        onUpdate: function() {
+          ctx.clearRect(0, 0, c.width, c.height);
+          for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 3; col++) {
+              if (!(col === 0 || row === 2)) continue;
+              const gx = cx + offset + col * (cellSize + gap) + cellSize/2;
+              const gy = cy + offset + row * (cellSize + gap) + cellSize/2 - 30;
+              const radius = cellSize * 0.6 * (1 + Math.sin(this.ratio * Math.PI * 5) * 0.2);
+              const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, radius);
+              grad.addColorStop(0, "rgba(255,255,255,0.07)");
+              grad.addColorStop(1, "rgba(255,255,255,0)");
+              ctx.fillStyle = grad;
+              ctx.fillRect(gx - radius, gy - radius, radius * 2, radius * 2);
+            }
+          }
+        }
+      }, 1.0);
+
+      // Text reveals
+      tl.fromTo("#brand-text", { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, duration: 0.7, ease: "power2.out" }, 2.0);
+      tl.fromTo("#brand-text .tagline", { opacity: 0 },
+        { opacity: 1, duration: 0.5 }, 2.4);
+
+      // Exit
+      tl.to("#brand-text", { opacity: 0, duration: 0.35 }, 3.0);
+      tl.to(".logo-wrap", { opacity: 0, scale: 0.96, duration: 0.45 }, 3.1);
+      tl.to(".grid-line", { opacity: 0, duration: 0.35 }, 3.2);
+
+      window.__timelines["intro"] = tl;
+    </script>
+  </body>
+</html>

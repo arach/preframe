@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #000000;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #f2f2f2;
+      }
+      .scene { position: absolute; inset: 0; }
+      .video-wrap {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .video-wrap video {
+        position: absolute; inset: 0;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        opacity: 0;
+      }
+      .chapter {
+        position: absolute;
+        left: 80px; bottom: 80px;
+        opacity: 0; z-index: 10;
+      }
+      .chapter h3 { font-size: 14px; font-weight: 500; color: #4ade80; letter-spacing: 0.06em; text-transform: uppercase; }
+      .chapter h2 { font-size: 48px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; }
+      .chapter p { font-size: 16px; color: rgba(255,255,255,0.40); margin-top: 6px; }
+      .chapter .line { width: 32px; height: 2px; background: #4ade80; margin-top: 14px; }
+      .grid-bg { position: absolute; inset: 0; z-index: -1; }
+      .grid-line { position: absolute; background: rgba(255,255,255,0.04); }
+      .grid-line.h { height: 1px; left: 0; right: 0; }
+      .grid-line.v { width: 1px; top: 0; bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="demo" data-start="0" data-duration="26.5" data-width="1920" data-height="1080">
+      <div class="grid-bg">
+        <div class="grid-line h" style="top:33%"></div>
+        <div class="grid-line h" style="top:66%"></div>
+        <div class="grid-line v" style="left:33%"></div>
+        <div class="grid-line v" style="left:66%"></div>
+      </div>
+      <div id="demo" class="scene clip" data-start="0" data-duration="26.5" data-track-index="1">
+        <div class="video-wrap">
+          <video id="v1" src="../../effects/lattice-intro/lattice-intro-draft.mp4" muted playsinline data-start="0" data-duration="4"></video>
+        </div>
+        <div class="video-wrap">
+          <video id="v2" src="../../effects/tiling-transition/tiling-draft.mp4" muted playsinline data-start="3.5" data-duration="2.5"></video>
+        </div>
+        <div class="video-wrap">
+          <video id="v3" src="../../effects/terminal-assembly/terminal-draft.mp4" muted playsinline data-start="5.8" data-duration="3.5"></video>
+        </div>
+        <div class="video-wrap">
+          <video id="v4" src="../../effects/gesture-trail/gesture-trail-draft.mp4" muted playsinline data-start="8.8" data-duration="8"></video>
+        </div>
+        <div class="video-wrap">
+          <video id="v5" src="../../effects/waveform-lattice/waveform-draft.mp4" muted playsinline data-start="16.3" data-duration="6"></video>
+        </div>
+        <div id="outro" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:0;">
+          <h1 style="font-size:56px;font-weight:600;letter-spacing:-0.03em;">lattices</h1>
+          <p style="font-size:18px;color:rgba(255,255,255,0.40);margin-top:12px;">motion toolkit for hyperframes</p>
+          <div style="width:32px;height:2px;background:#4ade80;margin-top:16px;"></div>
+        </div>
+        <div class="chapter" id="ch-tiling"><h3>01</h3><h2>Tiling Transition</h2><p>Window snap-to-grid with flash effects</p><div class="line"></div></div>
+        <div class="chapter" id="ch-terminal"><h3>02</h3><h2>Terminal Assembly</h2><p>Tmux pane borders draw in with typewriter code</p><div class="line"></div></div>
+        <div class="chapter" id="ch-gesture"><h3>03</h3><h2>Gesture Trail</h2><p>Mouse cursor traces L-shape across live footage</p><div class="line"></div></div>
+        <div class="chapter" id="ch-waveform"><h3>04</h3><h2>Waveform Lattice</h2><p>Audio-reactive bars in 3-column grid formation</p><div class="line"></div></div>
+      </div>
+    </div>
+    <script>
+      window.__timelines = {};
+      const tl = gsap.timeline({ paused: true });
+      tl.set(["#v1","#v2","#v3","#v4","#v5"], { opacity: 0 });
+      // Lattice Intro (0-4s)
+      tl.to("#v1", { opacity: 1, duration: 0.3 }, 0.0);
+      tl.to("#v1", { opacity: 0, duration: 0.5 }, 3.5);
+      // Tiling (3.5-6s)
+      tl.to("#v2", { opacity: 1, duration: 0.3 }, 3.5);
+      tl.fromTo("#ch-tiling", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 3.6);
+      tl.to("#ch-tiling", { opacity: 0, duration: 0.3 }, 5.5);
+      tl.to("#v2", { opacity: 0, duration: 0.5 }, 5.5);
+      // Terminal (5.8-9.3s)
+      tl.to("#v3", { opacity: 1, duration: 0.3 }, 5.8);
+      tl.fromTo("#ch-terminal", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 5.9);
+      tl.to("#ch-terminal", { opacity: 0, duration: 0.3 }, 8.8);
+      tl.to("#v3", { opacity: 0, duration: 0.5 }, 8.8);
+      // Gesture (8.8-16.8s)
+      tl.to("#v4", { opacity: 1, duration: 0.3 }, 8.8);
+      tl.fromTo("#ch-gesture", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 8.9);
+      tl.to("#ch-gesture", { opacity: 0, duration: 0.3 }, 15.8);
+      tl.to("#v4", { opacity: 0, duration: 0.5 }, 16.0);
+      // Waveform (16.3-22.3s)
+      tl.to("#v5", { opacity: 1, duration: 0.3 }, 16.3);
+      tl.fromTo("#ch-waveform", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 }, 16.4);
+      tl.to("#ch-waveform", { opacity: 0, duration: 0.3 }, 21.3);
+      tl.to("#v5", { opacity: 0, duration: 0.5 }, 21.8);
+      // Outro (21.8-26.5s)
+      tl.to("#outro", { opacity: 1, duration: 0.6, ease: "power2.out" }, 22.0);
+      tl.to("#outro", { opacity: 0, duration: 0.5 }, 25.5);
+      tl.to(".grid-line", { opacity: 0, duration: 0.3 }, 25.8);
+      window.__timelines["demo"] = tl;
+    </script>
+  </body>
+</html>

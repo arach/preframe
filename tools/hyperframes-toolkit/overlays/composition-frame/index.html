@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Composition Frame Overlay</title>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    :root {
+      --accent: #4ade80;
+      --ink: #f2f2f2;
+      --m: 2.1vw;
+      --bs: 2.5vw;
+      --bt: max(1.5px, 0.13vw);
+    }
+
+    /* ── Corner brackets ── */
+    .bracket {
+      position: absolute;
+      width: var(--bs); height: var(--bs);
+      color: var(--accent);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .bracket .bh {
+      position: absolute; height: var(--bt); width: 100%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+    .bracket .bv {
+      position: absolute; width: var(--bt); height: 100%;
+      background: currentColor;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    .bracket-tl { top: var(--m); left: var(--m); }
+    .bracket-tl .bh { top: 0; left: 0; }
+    .bracket-tl .bv { top: 0; left: 0; }
+
+    .bracket-tr { top: var(--m); right: var(--m); }
+    .bracket-tr .bh { top: 0; right: 0; left: auto; }
+    .bracket-tr .bv { top: 0; right: 0; left: auto; }
+
+    .bracket-bl { bottom: var(--m); left: var(--m); }
+    .bracket-bl .bh { bottom: 0; top: auto; left: 0; }
+    .bracket-bl .bv { bottom: 0; top: auto; left: 0; }
+
+    .bracket-br { bottom: var(--m); right: var(--m); }
+    .bracket-br .bh { bottom: 0; top: auto; right: 0; left: auto; }
+    .bracket-br .bv { bottom: 0; top: auto; right: 0; left: auto; }
+
+    /* ── Edge rails (connect brackets) ── */
+    .edge-rail {
+      position: absolute;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      opacity: 0;
+      pointer-events: none;
+    }
+    #edge-top    { top: var(--m); left: calc(var(--m) + var(--bs) + 0.4vw); right: calc(var(--m) + var(--bs) + 0.4vw); height: var(--bt); }
+    #edge-bottom { bottom: var(--m); left: calc(var(--m) + var(--bs) + 0.4vw); right: calc(var(--m) + var(--bs) + 0.4vw); height: var(--bt); }
+    #edge-left   { left: var(--m); top: calc(var(--m) + var(--bs) + 0.4vw); bottom: calc(var(--m) + var(--bs) + 0.4vw); width: var(--bt); }
+    #edge-right  { right: var(--m); top: calc(var(--m) + var(--bs) + 0.4vw); bottom: calc(var(--m) + var(--bs) + 0.4vw); width: var(--bt); }
+
+    /* ── Caption track ── */
+    #caption {
+      position: absolute;
+      bottom: 6.5vh;
+      left: 50%;
+      width: 82%;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) translateY(2vh);
+    }
+    #caption-text {
+      font-size: clamp(14px, 2.7vw, 72px);
+      font-weight: 500;
+      color: var(--ink);
+      line-height: 1.25;
+      text-shadow: 0 2px 32px rgba(0,0,0,0.95), 0 0 60px rgba(0,0,0,0.7);
+      letter-spacing: -0.01em;
+    }
+    #caption-accent {
+      width: 2vw; height: var(--bt);
+      background: var(--accent);
+      margin: 0.8vw auto 0;
+      transform: scaleX(0);
+      transform-origin: center;
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    /* ── Lower third ── */
+    #lower-third {
+      position: absolute;
+      bottom: 9vh;
+      left: 4.2vw;
+      opacity: 0;
+      transform: translateX(-2vw);
+      pointer-events: none;
+    }
+    #lt-accent-bar {
+      position: absolute;
+      left: -0.85vw;
+      top: 0.3vw;
+      bottom: 0.3vw;
+      width: var(--bt);
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    #lt-title {
+      font-size: clamp(14px, 2.5vw, 60px);
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 24px rgba(0,0,0,0.9);
+    }
+    #lt-subtitle {
+      font-size: clamp(9px, 1.25vw, 32px);
+      font-weight: 400;
+      color: rgba(242,242,242,0.52);
+      margin-top: 0.4vw;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Floating labels ── */
+    .label-el {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .label-text {
+      font-size: clamp(8px, 1.1vw, 26px);
+      font-weight: 500;
+      color: rgba(242,242,242,0.55);
+      font-family: ui-monospace, monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      text-shadow: 0 1px 12px rgba(0,0,0,0.9);
+      white-space: nowrap;
+    }
+
+    /* ── Tagline ── */
+    #tagline {
+      position: absolute;
+      top: 2.5vw;
+      right: 4.2vw;
+      font-family: ui-monospace, monospace;
+      font-size: clamp(7px, 0.9vw, 20px);
+      color: rgba(242,242,242,0.32);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      opacity: 0;
+      pointer-events: none;
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    /* ── Rule-of-thirds grid ── */
+    #grid-overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .gl { position: absolute; }
+    .gl.h { left: 0; right: 0; height: 1px; background: rgba(255,255,255,0.07); }
+    .gl.v { top: 0; bottom: 0; width: 1px;  background: rgba(255,255,255,0.07); }
+
+    /* ── Safe area ── */
+    #safe-area {
+      position: absolute;
+      inset: 5vh 5vw;
+      border: 1px solid rgba(255,255,255,0.08);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    /* ── Timecode ── */
+    #timecode {
+      position: absolute;
+      bottom: 2.5vw;
+      right: 4.2vw;
+      font-family: ui-monospace, monospace;
+      font-size: clamp(8px, 1vw, 22px);
+      color: rgba(255,255,255,0.28);
+      letter-spacing: 0.1em;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bracket bracket-tl" id="b-tl"><div class="bh"></div><div class="bv"></div></div>
+  <div class="bracket bracket-tr" id="b-tr"><div class="bh"></div><div class="bv"></div></div>
+  <div class="bracket bracket-bl" id="b-bl"><div class="bh"></div><div class="bv"></div></div>
+  <div class="bracket bracket-br" id="b-br"><div class="bh"></div><div class="bv"></div></div>
+
+  <div class="edge-rail" id="edge-top"></div>
+  <div class="edge-rail" id="edge-bottom"></div>
+  <div class="edge-rail" id="edge-left"></div>
+  <div class="edge-rail" id="edge-right"></div>
+
+  <div id="grid-overlay">
+    <div class="gl h" style="top:33.33%"></div>
+    <div class="gl h" style="top:66.66%"></div>
+    <div class="gl v" style="left:33.33%"></div>
+    <div class="gl v" style="left:66.66%"></div>
+  </div>
+
+  <div id="safe-area"></div>
+  <div id="tagline"></div>
+
+  <div class="label-el" id="label-0"><div class="label-text"></div></div>
+  <div class="label-el" id="label-1"><div class="label-text"></div></div>
+  <div class="label-el" id="label-2"><div class="label-text"></div></div>
+  <div class="label-el" id="label-3"><div class="label-text"></div></div>
+
+  <div id="caption">
+    <div id="caption-text"></div>
+    <div id="caption-accent"></div>
+  </div>
+
+  <div id="lower-third">
+    <div id="lt-accent-bar"></div>
+    <div id="lt-title"></div>
+    <div id="lt-subtitle"></div>
+  </div>
+
+  <div id="timecode">00:00:00:00</div>
+
+<script>
+// ── HyperFrames composition registration ─────────────────────────────────────
+// Register a seekable GSAP timeline so `hyperframes render` can capture this
+// as a deterministic video frame-by-frame. The timeline drives the visible
+// duration; postMessage spec updates work in both live preview and HF Studio.
+(function registerHFTimeline() {
+  if (typeof gsap === 'undefined') return;
+  const tl = gsap.timeline({ paused: true });
+  // Placeholder: extend to match the composition duration when embedded
+  tl.set({}, {}, 60);
+  window.__timelines = window.__timelines || {};
+  window.__timelines['composition-frame'] = tl;
+  window.__hf = { seek: t => tl.seek(t), duration: tl.duration() * 1000 };
+})();
+
+// ── HyperFrames variables (for CLI --variables injection) ─────────────────────
+// Usage: hyperframes render --variables '{"spec":{"brackets":{"enabled":true}}}'
+function loadHFVariables() {
+  try {
+    const vars = window.__hyperframes?.getVariables?.() ?? window.__hfVariables ?? {};
+    if (vars.spec) return JSON.parse(typeof vars.spec === 'string' ? vars.spec : JSON.stringify(vars.spec));
+  } catch {}
+  return null;
+}
+
+// ── Defaults ────────────────────────────────────────────────────────────────
+const LABEL_POSITIONS = {
+  'top-left':     { top: '4.2vw',  left: '4.2vw' },
+  'top-right':    { top: '4.2vw',  right: '4.2vw' },
+  'top-center':   { top: '4.2vw',  left: '50%', transform: 'translateX(-50%)' },
+  'center-left':  { top: '50%',    left: '4.2vw',  transform: 'translateY(-50%)' },
+  'center-right': { top: '50%',    right: '4.2vw', transform: 'translateY(-50%)' },
+  'bottom-left':  { bottom: '4.2vw', left: '4.2vw' },
+  'bottom-right': { bottom: '4.2vw', right: '4.2vw' },
+};
+
+let spec = {};
+let tcInterval = null;
+let tcStart = Date.now();
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const brackets  = ['tl','tr','bl','br'].map(s => document.getElementById('b-' + s));
+const edges     = ['top','bottom','left','right'].map(s => document.getElementById('edge-' + s));
+const captionEl = document.getElementById('caption');
+const captTxt   = document.getElementById('caption-text');
+const captAcc   = document.getElementById('caption-accent');
+const ltEl      = document.getElementById('lower-third');
+const ltTitle   = document.getElementById('lt-title');
+const ltSub     = document.getElementById('lt-subtitle');
+const labelEls  = [0,1,2,3].map(i => document.getElementById('label-' + i));
+const tagEl     = document.getElementById('tagline');
+const gridEl    = document.getElementById('grid-overlay');
+const safeEl    = document.getElementById('safe-area');
+const tcEl      = document.getElementById('timecode');
+
+// ── Apply spec ───────────────────────────────────────────────────────────────
+function applySpec(s, animate = true) {
+  spec = s;
+  const b = s.brackets || {};
+  const accent = b.color || '#4ade80';
+
+  // Color vars
+  document.documentElement.style.setProperty('--accent', accent);
+
+  // Brackets
+  const bOpacity = b.enabled ? (b.opacity ?? 0.85) : 0;
+  brackets.forEach((el, i) => {
+    el.style.color = accent;
+    const cur = gsap.getProperty(el, 'opacity');
+    if (animate && b.enabled && cur < 0.05) {
+      gsap.fromTo(el,
+        { opacity: 0, scale: 0.8 },
+        { opacity: bOpacity, scale: 1, duration: 0.45, ease: 'back.out(1.6)', delay: i * 0.07 }
+      );
+    } else {
+      gsap.to(el, { opacity: bOpacity, duration: 0.3 });
+    }
+  });
+
+  // Edge rails
+  const eOpacity = (b.enabled && b.edges) ? bOpacity * 0.55 : 0;
+  edges.forEach(el => {
+    el.style.background = accent;
+    gsap.to(el, { opacity: eOpacity, duration: 0.4 });
+  });
+
+  // Caption
+  const c = s.caption || {};
+  if (!c.enabled) {
+    gsap.to(captionEl, { opacity: 0, y: '2vh', duration: 0.25 });
+  } else {
+    captTxt.textContent = c.text || '';
+    const wasHidden = gsap.getProperty(captionEl, 'opacity') < 0.05;
+    if (animate && wasHidden) {
+      gsap.fromTo(captionEl,
+        { opacity: 0, y: '2vh' },
+        { opacity: 1, y: 0, duration: 0.5, ease: 'power3.out' }
+      );
+      if (c.accent !== false) {
+        gsap.fromTo(captAcc, { scaleX: 0 }, { scaleX: 1, duration: 0.55, delay: 0.2, ease: 'power2.out' });
+      }
+    } else {
+      captTxt.textContent = c.text || '';
+      gsap.to(captionEl, { opacity: 1, y: 0, duration: 0.2 });
+    }
+    captAcc.style.opacity = c.accent !== false ? '1' : '0';
+  }
+
+  // Lower third
+  const lt = s.lowerThird || {};
+  if (!lt.enabled) {
+    gsap.to(ltEl, { opacity: 0, x: '-2vw', duration: 0.3 });
+  } else {
+    ltTitle.textContent = lt.title || '';
+    ltSub.textContent   = lt.subtitle || '';
+    const wasHidden = gsap.getProperty(ltEl, 'opacity') < 0.05;
+    if (animate && wasHidden) {
+      gsap.fromTo(ltEl,
+        { opacity: 0, x: '-3vw' },
+        { opacity: 1, x: 0, duration: 0.55, ease: 'power3.out' }
+      );
+    } else {
+      gsap.to(ltEl, { opacity: 1, x: 0, duration: 0.2 });
+    }
+  }
+
+  // Labels
+  (s.labels || []).forEach((l, i) => {
+    const el = labelEls[i];
+    if (!el) return;
+    const txt = el.querySelector('.label-text');
+    txt.textContent = l.text || '';
+    setLabelPos(el, l.pos || 'top-left');
+    if (!l.enabled) {
+      gsap.to(el, { opacity: 0, duration: 0.25 });
+    } else {
+      const wasHidden = gsap.getProperty(el, 'opacity') < 0.05;
+      if (animate && wasHidden) {
+        gsap.fromTo(el, { opacity: 0, y: '0.8vh' }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out', delay: i * 0.05 });
+      } else {
+        gsap.to(el, { opacity: 1, duration: 0.2 });
+      }
+    }
+  });
+
+  // Tagline
+  const t = s.tagline || {};
+  tagEl.textContent = t.text || '';
+  gsap.to(tagEl, { opacity: t.enabled ? 1 : 0, duration: 0.3 });
+
+  // Grid
+  gsap.to(gridEl, { opacity: (s.grid?.enabled) ? 1 : 0, duration: 0.4 });
+
+  // Safe area
+  gsap.to(safeEl, { opacity: (s.safeArea?.enabled) ? 1 : 0, duration: 0.4 });
+
+  // Timecode
+  if (s.timecode?.enabled) {
+    gsap.to(tcEl, { opacity: 1, duration: 0.3 });
+    if (!tcInterval) {
+      tcStart = Date.now();
+      tcInterval = setInterval(tickTc, 1000 / 30);
+    }
+  } else {
+    gsap.to(tcEl, { opacity: 0, duration: 0.3 });
+    clearInterval(tcInterval);
+    tcInterval = null;
+  }
+}
+
+function setLabelPos(el, pos) {
+  const cfg = LABEL_POSITIONS[pos] || LABEL_POSITIONS['top-left'];
+  el.style.top = el.style.bottom = el.style.left = el.style.right = el.style.transform = '';
+  Object.assign(el.style, cfg);
+}
+
+function tickTc() {
+  const s = (Date.now() - tcStart) / 1000;
+  const h  = String(Math.floor(s / 3600)).padStart(2, '0');
+  const m  = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const sc = String(Math.floor(s % 60)).padStart(2, '0');
+  const fr = String(Math.floor((s % 1) * 30)).padStart(2, '0');
+  tcEl.textContent = `${h}:${m}:${sc}:${fr}`;
+}
+
+// ── Audio-reactive ────────────────────────────────────────────────────────────
+let lastBeat = 0;
+
+function onBeat() {
+  if (!spec.brackets?.enabled) return;
+  const now = Date.now();
+  if (now - lastBeat < 80) return;
+  lastBeat = now;
+  brackets.forEach(el => {
+    gsap.fromTo(el, { scale: 1.15 }, { scale: 1, duration: 0.28, ease: 'power2.out', overwrite: 'auto' });
+  });
+}
+
+function onDrop() {
+  if (spec.brackets?.enabled) {
+    brackets.forEach((el, i) => {
+      gsap.fromTo(el,
+        { scale: 1.35 },
+        { scale: 1, duration: 0.5, ease: 'elastic.out(1, 0.55)', delay: i * 0.04, overwrite: 'auto' }
+      );
+    });
+  }
+  if (spec.caption?.enabled) {
+    gsap.fromTo(captionEl, { x: '0.4vw' }, { x: 0, duration: 0.35, ease: 'power3.out' });
+  }
+}
+
+// ── Init: load from HF variables (--variables CLI flag) or defaults ──────────
+(function init() {
+  const injected = loadHFVariables();
+  if (injected) {
+    // Deep-merge injected spec over defaults
+    Object.assign(spec, injected);
+    if (injected.labels) spec.labels = injected.labels;
+  }
+  applySpec(spec, false);
+})();
+
+// ── postMessage ───────────────────────────────────────────────────────────────
+window.addEventListener('message', ({ data }) => {
+  if (!data) return;
+  if (data.type === 'composition-spec') applySpec(data.spec, data.animate !== false);
+  if (data.type === 'audio-frame') {
+    if (data.beat) onBeat();
+    if (data.drop) onDrop();
+  }
+});
+</script>
+</body>
+</html>

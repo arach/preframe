@@ -1,0 +1,129 @@
+<!-- hyperframes-registry-item: dark-neon -->
+<!-- shared: ../../shared/base.css -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+      [data-composition-id="dark-neon"] {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      /* Video pushed into dark, desaturated, cool-blue-shifted base */
+      #bg-video {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+        z-index: 0;
+        filter: brightness(0.45) saturate(0.3) contrast(1.4) hue-rotate(200deg); transition: filter 0.1s;
+      }
+
+      /* Neon accent pools — cyan lower-left, magenta upper-right */
+      #neon-overlay {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 20% 80%, rgba(0, 255, 220, 0.12) 0%, transparent 50%),
+          radial-gradient(ellipse 60% 50% at 80% 20%, rgba(200, 0, 255, 0.10) 0%, transparent 45%);
+        mix-blend-mode: screen;
+        z-index: 1;
+      }
+
+      /* Subtle CRT scan-line texture */
+      #scan-lines {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          to bottom,
+          transparent 0px,
+          transparent 2px,
+          rgba(0, 0, 0, 0.04) 2px,
+          rgba(0, 0, 0, 0.04) 3px
+        );
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      #ui-layer {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="dark-neon"
+      data-start="0"
+      data-duration="8"
+      data-width="1920"
+      data-height="1080"
+    >
+      <video id="bg-video" muted playsinline></video>
+
+      <div id="neon-overlay"></div>
+      <div id="scan-lines"></div>
+
+      <div id="ui-layer"></div>
+
+      <div
+        class="clip"
+        data-start="0"
+        data-duration="8"
+        data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+      ></div>
+    </div>
+
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        document.getElementById('bg-video').src =
+          root.dataset.videoSrc || '../../assets/sample.mp4';
+
+        window.__timelines = window.__timelines || {};
+        var tl = gsap.timeline({ paused: true });
+
+        var neonEl = document.getElementById('neon-overlay');
+
+        // Opacity drift: 0.6 → 1.0 → 0.6 over 8s
+        tl.fromTo(
+          '#neon-overlay',
+          { opacity: 0.6 },
+          { opacity: 1.0, duration: 4, ease: 'sine.inOut', yoyo: true, repeat: 1 },
+          0
+        );
+
+        // Slow hue rotation via proxy — GSAP drives deterministically
+        var proxy = { hue: 0 };
+        tl.to(
+          proxy,
+          {
+            hue: 20,
+            duration: 8,
+            ease: 'sine.inOut',
+            onUpdate: function () {
+              var neonOpacity = window.__params && window.__params.neon_opacity !== undefined ? window.__params.neon_opacity : 1.0;
+neonEl.style.filter = 'hue-rotate(' + (proxy.hue + (window.__params && window.__params.hue_shift !== undefined ? window.__params.hue_shift : 0)).toFixed(2) + 'deg)';
+document.getElementById('neon-overlay').style.opacity = neonOpacity;
+            },
+          },
+          0
+        );
+
+        window.__timelines['dark-neon'] = tl;
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1920, height=1080" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+
+    /* Vignette that breathes with bass */
+    #vignette {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 75% at 50% 50%,
+        transparent 30%, rgba(0,0,0,0.9) 100%);
+      mix-blend-mode: multiply;
+    }
+
+    /* Center glow */
+    #glow {
+      position: absolute; left: 50%; top: 50%;
+      width: 800px; height: 800px;
+      margin: -400px 0 0 -400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74,222,128,0.12) 0%, transparent 70%);
+      opacity: 0;
+    }
+
+    /* Edge pulse — 4 corner glows */
+    .corner-glow {
+      position: absolute; width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(74,222,128,0.08) 0%, transparent 60%);
+      opacity: 0;
+    }
+    #c-tl { top: -200px; left: -200px; }
+    #c-tr { top: -200px; right: -200px; }
+    #c-bl { bottom: -200px; left: -200px; }
+    #c-br { bottom: -200px; right: -200px; }
+
+    /* Scan line overlay — subtle */
+    #scanlines {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 3px,
+        rgba(0,0,0,0.04) 3px,
+        rgba(0,0,0,0.04) 4px
+      );
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="vignette"></div>
+  <div id="glow"></div>
+  <div class="corner-glow" id="c-tl"></div>
+  <div class="corner-glow" id="c-tr"></div>
+  <div class="corner-glow" id="c-bl"></div>
+  <div class="corner-glow" id="c-br"></div>
+  <div id="scanlines"></div>
+
+  <script>
+    const glow = document.getElementById('glow');
+    const vignette = document.getElementById('vignette');
+    const corners = document.querySelectorAll('.corner-glow');
+
+    // Smoothed bass value to avoid jitter
+    let smoothBass = 0;
+    let smoothAmp = 0;
+    let lastDrop = 0;
+
+    window.addEventListener('message', ({ data }) => {
+      if (!data || data.type !== 'audio-frame') return;
+      const { amplitude = 0, bass = 0, beat = false, drop = false } = data;
+
+      smoothBass += (bass - smoothBass) * 0.25;
+      smoothAmp += (amplitude - smoothAmp) * 0.2;
+
+      // Breathe the whole scene with bass — subtle scale pump
+      gsap.to(document.body, {
+        scale: 1 + smoothBass * 0.035,
+        duration: 0.12, overwrite: true, ease: 'power1.out'
+      });
+
+      // Center glow pulses with bass
+      gsap.to(glow, {
+        opacity: smoothBass * 0.9,
+        scale: 1 + smoothBass * 0.3,
+        duration: 0.1, overwrite: true
+      });
+
+      // Corner glows breathe inversely (edges contract as center expands)
+      gsap.to(corners, {
+        opacity: smoothBass * 0.6,
+        duration: 0.15, overwrite: true
+      });
+
+      // On drop: flash the glow and slam scale
+      if (drop && Date.now() - lastDrop > 400) {
+        lastDrop = Date.now();
+        gsap.fromTo(glow,
+          { opacity: 1, scale: 0.5 },
+          { opacity: 0, scale: 2.5, duration: 0.8, ease: 'power2.out' }
+        );
+        gsap.fromTo(document.body,
+          { scale: 1.06 },
+          { scale: 1, duration: 0.6, ease: 'elastic.out(1, 0.4)' }
+        );
+      }
+    });
+  </script>
+</body>
+</html>

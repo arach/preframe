@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #0a0a0f;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #e8e8f0;
+      }
+      .scene {
+        position: absolute; inset: 0;
+      }
+
+      /* Title scene */
+      .title-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 14px; text-align: center;
+      }
+      .title-scene h1 { font-size: 56px; font-weight: 650; letter-spacing: -0.03em; }
+      .title-scene p { font-size: 18px; color: #8a8a9a; max-width: 520px; line-height: 1.5; }
+      .title-scene .meta {
+        margin-top: 28px; font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #5a5a6a; letter-spacing: 0.02em;
+      }
+      .title-scene .accent {
+        width: 32px; height: 2px; background: #4ade80; margin-top: 4px;
+      }
+
+      /* Video scene */
+      .video-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }
+      .video-wrap {
+        position: relative;
+        width: 1280px; height: 800px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .video-wrap video {
+        width: 1152px; height: 720px;
+        border-radius: 12px;
+        border: 1px solid #1e1e2a;
+        background: #111118;
+      }
+      .video-meta {
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+        font-size: 11px; font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #5a5a6a; letter-spacing: 0.04em;
+        opacity: 0;
+      }
+      .bar {
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 64px; display: flex; align-items: center;
+        padding: 0 40px;
+      }
+      .bar .logo { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: #e8e8f0; }
+      .bar .spacer { flex: 1; }
+      .bar .tag {
+        font-size: 11px; font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #5a5a6a; text-transform: uppercase; letter-spacing: 0.06em;
+      }
+
+      /* End scene */
+      .end-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 12px; text-align: center;
+      }
+      .end-scene h2 { font-size: 24px; font-weight: 500; color: #8a8a9a; }
+      .end-scene .word { font-size: 42px; font-weight: 650; letter-spacing: -0.02em; color: #e8e8f0; }
+      .end-scene .line {
+        width: 24px; height: 2px; background: #4ade80; margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1920"
+      data-height="1080"
+    >
+
+      <!-- Scene 1: Title -->
+      <div id="title" class="scene title-scene clip" data-start="0" data-duration="2.5" data-track-index="1">
+        <h1>Codex</h1>
+        <p>Voice-to-code interface — mouse-only prompt mode</p>
+        <div class="accent"></div>
+        <div class="meta">
+          gesture-completion-matrix.mp4 · 720x450@30fps · Remotion 4.0
+        </div>
+      </div>
+
+      <!-- Scene 2: Video -->
+      <div id="vidscene" class="scene video-scene clip" data-start="2.5" data-duration="11.5" data-track-index="1">
+        <div class="bar">
+          <span class="logo">Codex</span>
+          <span class="spacer"></span>
+          <span class="tag">mouse-only prompt</span>
+        </div>
+        <div class="video-wrap">
+          <video id="mainvid" src="assets/combined.mp4" muted playsinline data-start="2.5" data-duration="11.5"></video>
+          <div class="video-meta">gesture-completion-matrix · 12s · with music</div>
+        </div>
+      </div>
+
+      <!-- Scene 3: End -->
+      <div id="end" class="scene end-scene clip" data-start="14" data-duration="1" data-track-index="1">
+        <h2>built with</h2>
+        <div class="word">lattices</div>
+        <div class="line"></div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* --- Scene 1: Title (0–2.5s) --- */
+      tl.fromTo("#title h1",     { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.8 }, 0.1);
+      tl.fromTo("#title p",      { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6 }, 0.3);
+      tl.fromTo("#title .accent",{ opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.4, ease: "power2.out" }, 0.5);
+      tl.fromTo("#title .meta",  { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.7);
+      tl.to("#title", { opacity: 0, duration: 0.3 }, 2.0);
+
+      /* --- Scene 2: Video (2.5–14s) --- */
+      tl.fromTo("#vidscene .bar",     { opacity: 0 }, { opacity: 1, duration: 0.4 }, 2.6);
+      tl.fromTo("#mainvid",          { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6 }, 2.7);
+      tl.fromTo("#vidscene .video-meta", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 3.2);
+      tl.to("#vidscene", { opacity: 0, duration: 0.3 }, 13.5);
+
+      /* --- Scene 3: End (14–15s) --- */
+      tl.fromTo("#end h2",    { opacity: 0, y: -12 }, { opacity: 1, y: 0, duration: 0.4 }, 14.1);
+      tl.fromTo("#end .word", { opacity: 0, y: -8 },  { opacity: 1, y: 0, duration: 0.4 }, 14.2);
+      tl.fromTo("#end .line", { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.3, ease: "power2.out" }, 14.4);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #000000;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #f2f2f2;
+      }
+      .scene { position: absolute; inset: 0; }
+
+      .wave-stage {
+        position: absolute;
+        left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        width: 1200px; height: 600px;
+      }
+      .col {
+        position: absolute; top: 0; bottom: 0;
+        display: flex; flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 6px;
+        padding-bottom: 40px;
+      }
+
+      .bar {
+        width: 80px; height: 12px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.10);
+        transform-origin: center bottom;
+        transform: scaleY(0);
+      }
+      .bar.lit {
+        background: rgba(74,222,128,0.5);
+      }
+
+      /* Base row — the L-shape bottom */
+      .base-row {
+        position: absolute;
+        bottom: 40px; left: 0; right: 0;
+        height: 12px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0 40px;
+      }
+      .base-cell {
+        width: 80px; height: 12px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.10);
+      }
+
+      .center-text {
+        position: absolute;
+        left: 50%; top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        opacity: 0;
+        z-index: 10;
+      }
+      .center-text h2 {
+        font-size: 42px; font-weight: 600;
+        letter-spacing: -0.02em;
+        color: #f2f2f2;
+      }
+      .center-text p {
+        font-size: 15px; color: rgba(255,255,255,0.35);
+        margin-top: 8px;
+      }
+
+      /* Grid lines */
+      .grid-bg {
+        position: absolute; inset: 0;
+      }
+      .grid-line {
+        position: absolute;
+        background: rgba(255,255,255,0.06);
+      }
+      .grid-line.h { height: 1px; left: 0; right: 0; }
+      .grid-line.v { width: 1px; top: 0; bottom: 0; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="waveform"
+      data-start="0"
+      data-duration="6"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="waveform" class="scene clip" data-start="0" data-duration="6" data-track-index="1">
+        <div class="grid-bg">
+          <div class="grid-line h" style="top:33%"></div>
+          <div class="grid-line h" style="top:66%"></div>
+          <div class="grid-line v" style="left:33%"></div>
+          <div class="grid-line v" style="left:66%"></div>
+        </div>
+
+        <div class="wave-stage">
+          <!-- Column 0 (left) — 12 bars -->
+          <div class="col" id="col-0" style="left:60px;width:280px;">
+            <div class="bar" id="b-0-0"></div><div class="bar" id="b-0-1"></div>
+            <div class="bar" id="b-0-2"></div><div class="bar" id="b-0-3"></div>
+            <div class="bar" id="b-0-4"></div><div class="bar" id="b-0-5"></div>
+            <div class="bar" id="b-0-6"></div><div class="bar" id="b-0-7"></div>
+            <div class="bar" id="b-0-8"></div><div class="bar" id="b-0-9"></div>
+            <div class="bar" id="b-0-10"></div><div class="bar" id="b-0-11"></div>
+          </div>
+          <!-- Column 1 (center) — 12 bars -->
+          <div class="col" id="col-1" style="left:460px;width:280px;">
+            <div class="bar" id="b-1-0"></div><div class="bar" id="b-1-1"></div>
+            <div class="bar" id="b-1-2"></div><div class="bar" id="b-1-3"></div>
+            <div class="bar" id="b-1-4"></div><div class="bar" id="b-1-5"></div>
+            <div class="bar" id="b-1-6"></div><div class="bar" id="b-1-7"></div>
+            <div class="bar" id="b-1-8"></div><div class="bar" id="b-1-9"></div>
+            <div class="bar" id="b-1-10"></div><div class="bar" id="b-1-11"></div>
+          </div>
+          <!-- Column 2 (right) — 12 bars -->
+          <div class="col" id="col-2" style="left:860px;width:280px;">
+            <div class="bar" id="b-2-0"></div><div class="bar" id="b-2-1"></div>
+            <div class="bar" id="b-2-2"></div><div class="bar" id="b-2-3"></div>
+            <div class="bar" id="b-2-4"></div><div class="bar" id="b-2-5"></div>
+            <div class="bar" id="b-2-6"></div><div class="bar" id="b-2-7"></div>
+            <div class="bar" id="b-2-8"></div><div class="bar" id="b-2-9"></div>
+            <div class="bar" id="b-2-10"></div><div class="bar" id="b-2-11"></div>
+          </div>
+        </div>
+
+        <!-- L-shape base row at bottom -->
+        <div class="base-row">
+          <div class="base-cell" id="base-0"></div>
+          <div class="base-cell" id="base-1"></div>
+          <div class="base-cell" id="base-2"></div>
+          <div class="base-cell" id="base-3"></div>
+          <div class="base-cell" id="base-4"></div>
+          <div class="base-cell" id="base-5"></div>
+          <div class="base-cell" id="base-6"></div>
+          <div class="base-cell" id="base-7"></div>
+          <div class="base-cell" id="base-8"></div>
+        </div>
+
+        <div class="center-text" id="wave-text">
+          <h2>lattices</h2>
+          <p>reactive audio lattice · generated</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const numBars = 12;
+      const numCols = 3;
+
+      // Seedable pseudo-random for deterministic animation
+      let seed = 12345;
+      const rng = () => {
+        seed = (seed * 16807 + 0) % 2147483647;
+        return (seed - 1) / 2147483646;
+      };
+
+      // Generate beat pattern
+      const beatTimes = [0.3, 0.7, 1.1, 1.5, 2.0, 2.4, 2.8, 3.3, 3.7, 4.1, 4.6, 5.0, 5.4];
+
+      // Build bar animations across cols
+      for (let col = 0; col < numCols; col++) {
+        for (let bar = 0; bar < numBars; bar++) {
+          const id = "#b-" + col + "-" + bar;
+          const barIdx = col * numBars + bar;
+
+          // Staggered entrance
+          tl.fromTo(id, { scaleY: 0 }, {
+            scaleY: 0.3 + rng() * 0.5,
+            duration: 0.4,
+            ease: "back.out(1.4)"
+          }, 0.2 + barIdx * 0.015);
+
+          // Random pulsing throughout
+          beatTimes.forEach((bt, bi) => {
+            if (bi % 3 !== col) return; // columns react on staggered beats
+            const intensity = 0.4 + rng() * 0.8;
+            const color = intensity > 0.7 ? "rgba(74,222,128,0.6)" : "rgba(255,255,255,0.15)";
+            tl.to(id, {
+              scaleY: intensity,
+              background: color,
+              duration: 0.15,
+              ease: "power2.out",
+              yoyo: true,
+              repeat: 1
+            }, bt + bar * 0.04);
+          });
+        }
+      }
+
+      // Base cells — L-shape brightness
+      const lShapeBase = [0, 1, 2, 3, 4]; // left + bottom of base row
+      const brightBase = [5, 6, 7, 8]; // also lit to form L visually
+      const allBase = [...Array(9).keys()];
+
+      allBase.forEach((i) => {
+        const isBright = i < 5;
+        tl.fromTo("#base-" + i, {
+          scaleX: 0, opacity: 0, transformOrigin: "center"
+        }, {
+          scaleX: 1, opacity: 1,
+          background: isBright ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)",
+          duration: 0.3, ease: "back.out(1.2)"
+        }, 0.5 + i * 0.05);
+      });
+
+      // Pulse base on beats
+      beatTimes.forEach((bt) => {
+        lShapeBase.forEach((i) => {
+          tl.to("#base-" + i, {
+            background: "rgba(74,222,128,0.4)",
+            duration: 0.1, yoyo: true, repeat: 1
+          }, bt);
+        });
+      });
+
+      // Text reveal
+      tl.fromTo("#wave-text", { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.5);
+      tl.fromTo("#wave-text p", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 1.9);
+
+      // Exit
+      tl.to("#wave-text", { opacity: 0, duration: 0.3 }, 4.8);
+      tl.to(".bar", { scaleY: 0.1, opacity: 0.3, duration: 0.5, stagger: 0.01 }, 5.0);
+      tl.to(".base-cell", { scaleX: 0, opacity: 0, duration: 0.3, stagger: 0.02 }, 5.2);
+      tl.to(".grid-line", { opacity: 0, duration: 0.3 }, 5.4);
+
+      window.__timelines["waveform"] = tl;
+    </script>
+  </body>
+</html>

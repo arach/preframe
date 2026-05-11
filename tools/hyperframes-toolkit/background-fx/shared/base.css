@@ -1,0 +1,51 @@
+/*
+  background-fx shared base
+  All compositions in this namespace inherit these tokens and layout rules.
+
+  Layout contract:
+  - 1920x1080 canvas
+  - #bg-video fills the full canvas behind everything
+  - #fx-canvas (WebGL) overlays the video at full size
+  - #ui-layer sits on top of both — this is where product UI goes
+*/
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #000;
+}
+
+[data-composition-id] {
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  position: relative;
+}
+
+#bg-video {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  object-fit: cover;
+  z-index: 0;
+}
+
+#fx-canvas {
+  position: absolute;
+  inset: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#ui-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}

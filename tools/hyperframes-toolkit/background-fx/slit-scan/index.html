@@ -1,0 +1,138 @@
+<!-- hyperframes-registry-item: slit-scan -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; z-index: 0; }
+      #fx-canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 1; }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="slit-scan" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+      <div id="driver" class="clip" data-start="0" data-duration="8" data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
+    </div>
+    <script>
+    (function() {
+      var root = document.getElementById('root');
+      var video = document.getElementById('bg-video');
+      video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+      video.load();
+      var canvas = document.getElementById('fx-canvas');
+      var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+      window.__timelines = window.__timelines || {};
+      if (!gl) {
+        window.__timelines['slit-scan'] = gsap.timeline({ paused: true });
+        return;
+      }
+      gl.viewport(0, 0, 1920, 1080);
+
+      var vertSrc =
+        'attribute vec2 a_pos; varying vec2 v_uv; void main(){' +
+        'v_uv = a_pos * 0.5 + 0.5; v_uv.y = 1.0 - v_uv.y; gl_Position = vec4(a_pos, 0.0, 1.0);}';
+
+      var fragSrc =
+        'precision mediump float;' +
+        'varying vec2 v_uv;' +
+        'uniform sampler2D u_video;' +
+        'uniform float u_time;' +
+        'uniform vec2 u_resolution;' +
+        'uniform float u_phase_amount;' +
+        'uniform float u_chroma_split;' +
+        'uniform float u_scan_tilt;' +
+        'void main() {' +
+        '  float phase = v_uv.x * 6.283 * 2.0;' +
+        '  float scanSpeed = u_time * 0.4;' +
+        '  float vertShift = (sin(phase + scanSpeed) * 0.08' +
+        '                  + sin(phase * 0.5 + scanSpeed * 1.3) * 0.04) * u_phase_amount;' +
+        '  float horizShift = cos(phase * 0.7 + scanSpeed * 0.8) * 0.012 * u_scan_tilt;' +
+        '  vec2 scanUV = vec2(v_uv.x + horizShift, v_uv.y + vertShift);' +
+        '  scanUV = clamp(scanUV, 0.0, 1.0);' +
+        '  vec4 col = texture2D(u_video, scanUV);' +
+        '  float dispMag = abs(vertShift) / 0.08;' +
+        '  float fringe = 0.006 * dispMag * u_chroma_split;' +
+        '  float r = texture2D(u_video, clamp(scanUV + vec2(fringe, 0.0), 0.0, 1.0)).r;' +
+        '  float b = texture2D(u_video, clamp(scanUV - vec2(fringe, 0.0), 0.0, 1.0)).b;' +
+        '  col.r = r;' +
+        '  col.b = b;' +
+        '  float edge = abs(cos(phase + scanSpeed)) * 0.1;' +
+        '  col.rgb += edge * vec3(0.05, 0.08, 0.1);' +
+        '  gl_FragColor = vec4(clamp(col.rgb, 0.0, 1.0), 1.0);' +
+        '}';
+
+      var quadBuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+      function compileShader(src, type) {
+        var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('slit-scan:', gl.getShaderInfoLog(s));
+        return s;
+      }
+      function mkProg(fSrc) {
+        var p = gl.createProgram();
+        gl.attachShader(p, compileShader(vertSrc, gl.VERTEX_SHADER));
+        gl.attachShader(p, compileShader(fSrc, gl.FRAGMENT_SHADER));
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error('slit-scan link:', gl.getProgramInfoLog(p));
+        return p;
+      }
+
+      var prog = mkProg(fragSrc);
+      var uVideo      = gl.getUniformLocation(prog, 'u_video');
+      var uTime       = gl.getUniformLocation(prog, 'u_time');
+      var uResolution = gl.getUniformLocation(prog, 'u_resolution');
+
+      var videoTex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, videoTex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+
+      gl.useProgram(prog);
+      gl.uniform2f(uResolution, 1920.0, 1080.0);
+
+      function draw(t) {
+        if (video.readyState >= 2) {
+          gl.bindTexture(gl.TEXTURE_2D, videoTex);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+        }
+        gl.useProgram(prog);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.uniform1i(uVideo, 0);
+        gl.uniform1f(uTime, t);
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_phase_amount'), (window.__params && window.__params.phase_amount !== undefined ? window.__params.phase_amount : 1.0));
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_chroma_split'), (window.__params && window.__params.chroma_split !== undefined ? window.__params.chroma_split : 1.0));
+        gl.uniform1f(gl.getUniformLocation(prog, 'u_scan_tilt'), (window.__params && window.__params.scan_tilt !== undefined ? window.__params.scan_tilt : 1.0));
+        var pos = gl.getAttribLocation(prog, 'a_pos');
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.enableVertexAttribArray(pos);
+        gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      }
+
+      draw(0);
+      var tl = gsap.timeline({ paused: true, onUpdate: function(){ draw(tl.time() * (window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0)); } });
+      tl.to({ t: 0 }, { t: 8, duration: 8, ease: 'none' }, 0);
+      window.__timelines['slit-scan'] = tl;
+    })();
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

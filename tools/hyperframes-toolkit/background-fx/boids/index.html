@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+    [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+    #bg-video {
+      position: absolute; inset: 0;
+      width: 1920px; height: 1080px;
+      object-fit: cover; z-index: 0;
+    }
+    #fx-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 1920px; height: 1080px;
+      pointer-events: none; z-index: 2;
+    }
+    #ui-layer {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"
+    data-composition-id="boids"
+    data-start="0"
+    data-duration="8"
+    data-width="1920"
+    data-height="1080"
+  >
+    <video id="bg-video" muted playsinline></video>
+    <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+    <div id="ui-layer"></div>
+
+    <div class="clip"
+      data-start="0"
+      data-duration="8"
+      data-track-index="0"
+      style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"
+    ></div>
+  </div>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    var root = document.getElementById('root');
+    var video = document.getElementById('bg-video');
+    video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+
+    var canvas = document.getElementById('fx-canvas');
+    var ctx = canvas.getContext('2d');
+
+    // Offscreen canvas for video color sampling
+    var sampleCanvas = document.createElement('canvas');
+    sampleCanvas.width = 96; sampleCanvas.height = 54;
+    var sampleCtx = sampleCanvas.getContext('2d');
+
+    // Deterministic LCG
+    function makeLCG(seed) {
+      var s = seed;
+      return function() { s = (1664525 * s + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+    }
+    var rng = makeLCG(1337);
+
+    var NUM = 200;
+    var boids = [];
+    for (var i = 0; i < NUM; i++) {
+      boids.push({
+        bx: rng() * 1920, by: rng() * 1080,
+        ax1: (rng()-0.5)*300, fx1: rng()*0.4+0.1, px1: rng()*Math.PI*2,
+        ax2: (rng()-0.5)*150, fx2: rng()*0.8+0.2, px2: rng()*Math.PI*2,
+        ax3: (rng()-0.5)*80,  fx3: rng()*1.6+0.4, px3: rng()*Math.PI*2,
+        ay1: (rng()-0.5)*300, fy1: rng()*0.4+0.1, py1: rng()*Math.PI*2,
+        ay2: (rng()-0.5)*150, fy2: rng()*0.8+0.2, py2: rng()*Math.PI*2,
+        ay3: (rng()-0.5)*80,  fy3: rng()*1.6+0.4, py3: rng()*Math.PI*2,
+        size: rng() * 2 + 1.5
+      });
+    }
+
+    function boidPos(b, t) {
+      return {
+        x: b.bx + b.ax1*Math.sin(b.fx1*t+b.px1) + b.ax2*Math.sin(b.fx2*t+b.px2) + b.ax3*Math.sin(b.fx3*t+b.px3),
+        y: b.by + b.ay1*Math.sin(b.fy1*t+b.py1) + b.ay2*Math.sin(b.fy2*t+b.py2) + b.ay3*Math.sin(b.fy3*t+b.py3)
+      };
+    }
+
+    function sampleVideoColor(px, py) {
+      var sx = Math.max(0, Math.min(95, Math.floor(px / 1920 * 96)));
+      var sy = Math.max(0, Math.min(53, Math.floor(py / 1080 * 54)));
+      var idx = (sy * 96 + sx) * 4;
+      return { r: pixelData[idx], g: pixelData[idx+1], b: pixelData[idx+2] };
+    }
+
+    var pixelData = new Uint8ClampedArray(96 * 54 * 4);
+
+    function draw(t) {
+      var speed = window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0;
+      var t2 = t * speed;
+      ctx.clearRect(0, 0, 1920, 1080);
+
+      // Sample video colors
+      if (video.readyState >= 2) {
+        sampleCtx.drawImage(video, 0, 0, 96, 54);
+        pixelData = sampleCtx.getImageData(0, 0, 96, 54).data;
+      }
+
+      // Compute positions
+      var positions = [];
+      for (var i = 0; i < NUM; i++) {
+        positions.push(boidPos(boids[i], t2));
+      }
+
+      // Draw connections to nearest neighbor
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 0.5;
+      ctx.globalCompositeOperation = 'source-over';
+      for (var i = 0; i < NUM; i++) {
+        var p = positions[i];
+        var nearDist = Infinity, nearJ = -1;
+        for (var j = 0; j < NUM; j++) {
+          if (i === j) continue;
+          var q = positions[j];
+          var dx = p.x - q.x, dy = p.y - q.y;
+          var d = dx*dx + dy*dy;
+          if (d < nearDist) { nearDist = d; nearJ = j; }
+        }
+        if (nearJ >= 0 && nearDist < 80*80) {
+          var q = positions[nearJ];
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+        }
+      }
+
+      // Draw boids
+      for (var i = 0; i < NUM; i++) {
+        var p = positions[i];
+        var col = sampleVideoColor(p.x, p.y);
+        var r = col.r, g = col.g, b = boids[i];
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        var sz = boids[i].size;
+        var grd = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sz * 3);
+        grd.addColorStop(0, 'rgba('+col.r+','+col.g+','+col.b+',' + (window.__params && window.__params.opacity !== undefined ? window.__params.opacity : 0.85) + ')');
+        grd.addColorStop(1, 'rgba('+col.r+','+col.g+','+col.b+',0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath(); ctx.arc(p.x, p.y, sz * 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    var proxy = { t: 0 };
+    var tl = gsap.timeline({ paused: true,
+      onUpdate: function() { draw(proxy.t); }
+    });
+    tl.to(proxy, { t: 8, duration: 8, ease: 'none' }, 0);
+    window.__timelines['boids'] = tl;
+  </script>
+</body>
+</html>

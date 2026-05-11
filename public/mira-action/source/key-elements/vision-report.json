@@ -1,0 +1,308 @@
+{
+  "kind": "demo-key-elements",
+  "video": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/action-mira-polished-demo.mov",
+  "verdict": "needs-tuning",
+  "summary": {
+    "score": 80,
+    "badMoments": 0,
+    "watchMoments": 2
+  },
+  "keyElements": [
+    "target text box",
+    "Mira persona",
+    "visible teaching cursor"
+  ],
+  "distanceRubric": {
+    "greatPx": 100,
+    "finePx": 200,
+    "tooFarPx": 400
+  },
+  "moments": [
+    {
+      "time": "8",
+      "label": "Google_search",
+      "targetName": "google-search",
+      "grade": "watch",
+      "notes": [
+        "Mira is pushing the edge of proximity (295px from the text box)"
+      ],
+      "frameSize": {
+        "width": 1720,
+        "height": 1410
+      },
+      "target": {
+        "x": 516,
+        "y": 472,
+        "width": 688,
+        "height": 99,
+        "center": {
+          "x": 860,
+          "y": 522
+        }
+      },
+      "mira": {
+        "x": 855,
+        "y": 126,
+        "width": 94,
+        "height": 102,
+        "center": {
+          "x": 902,
+          "y": 177
+        },
+        "matchScore": 0.9657,
+        "scale": 0.494
+      },
+      "cursor": {
+        "x": 1675,
+        "y": 95,
+        "width": 45,
+        "height": 57,
+        "center": {
+          "x": 1698,
+          "y": 124
+        },
+        "tip": {
+          "x": 1681,
+          "y": 101
+        },
+        "matchScore": 0.8244,
+        "scale": 0.75
+      },
+      "miraGapPx": 295.4,
+      "cursorGapPx": null,
+      "verticalDeltaPx": -344.7,
+      "targetOverlapPercent": 0.0,
+      "frame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/frames/01-google-search.png",
+      "annotatedFrame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/annotated/01-google-search-annotated.png"
+    },
+    {
+      "time": "14",
+      "label": "Google_typing",
+      "targetName": "google-search",
+      "grade": "good",
+      "notes": [
+        "Mira/cursor are visually tied to the text box without covering it"
+      ],
+      "frameSize": {
+        "width": 1720,
+        "height": 1410
+      },
+      "target": {
+        "x": 516,
+        "y": 472,
+        "width": 688,
+        "height": 99,
+        "center": {
+          "x": 860,
+          "y": 522
+        }
+      },
+      "mira": {
+        "x": 938,
+        "y": 566,
+        "width": 94,
+        "height": 102,
+        "center": {
+          "x": 985,
+          "y": 617
+        },
+        "matchScore": 0.9655,
+        "scale": 0.494
+      },
+      "cursor": {
+        "x": 328,
+        "y": 789,
+        "width": 64,
+        "height": 79,
+        "center": {
+          "x": 360,
+          "y": 828
+        },
+        "tip": {
+          "x": 336,
+          "y": 797
+        },
+        "matchScore": 0.8232,
+        "scale": 1.05
+      },
+      "miraGapPx": 45.9,
+      "cursorGapPx": null,
+      "verticalDeltaPx": 95.3,
+      "targetOverlapPercent": 0.7,
+      "frame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/frames/02-google-typing.png",
+      "annotatedFrame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/annotated/02-google-typing-annotated.png"
+    },
+    {
+      "time": "25",
+      "label": "Prompt_resolve",
+      "targetName": "midjourney-prompt",
+      "grade": "watch",
+      "notes": [
+        "Mira is too tucked into the text box (26px gap)",
+        "cursor was not confidently detected in this captured frame"
+      ],
+      "frameSize": {
+        "width": 1720,
+        "height": 1410
+      },
+      "target": {
+        "x": 224,
+        "y": 78,
+        "width": 1170,
+        "height": 73,
+        "center": {
+          "x": 808,
+          "y": 114
+        }
+      },
+      "mira": {
+        "x": 855,
+        "y": 126,
+        "width": 94,
+        "height": 102,
+        "center": {
+          "x": 902,
+          "y": 177
+        },
+        "matchScore": 0.9652,
+        "scale": 0.494
+      },
+      "cursor": {
+        "x": 734,
+        "y": 876,
+        "width": 115,
+        "height": 144,
+        "center": {
+          "x": 792,
+          "y": 948
+        },
+        "tip": {
+          "x": 749,
+          "y": 891
+        },
+        "matchScore": 0.8247,
+        "scale": 1.9
+      },
+      "miraGapPx": 26.1,
+      "cursorGapPx": null,
+      "verticalDeltaPx": 62.8,
+      "targetOverlapPercent": 2.7,
+      "frame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/frames/03-prompt-resolve.png",
+      "annotatedFrame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/annotated/03-prompt-resolve-annotated.png"
+    },
+    {
+      "time": "35",
+      "label": "Prompt_typing",
+      "targetName": "midjourney-prompt",
+      "grade": "good",
+      "notes": [
+        "Mira/cursor are visually tied to the text box without covering it"
+      ],
+      "frameSize": {
+        "width": 1720,
+        "height": 1410
+      },
+      "target": {
+        "x": 224,
+        "y": 78,
+        "width": 1170,
+        "height": 73,
+        "center": {
+          "x": 808,
+          "y": 114
+        }
+      },
+      "mira": {
+        "x": 930,
+        "y": 244,
+        "width": 94,
+        "height": 102,
+        "center": {
+          "x": 977,
+          "y": 295
+        },
+        "matchScore": 0.9458,
+        "scale": 0.494
+      },
+      "cursor": {
+        "x": 734,
+        "y": 876,
+        "width": 115,
+        "height": 144,
+        "center": {
+          "x": 792,
+          "y": 948
+        },
+        "tip": {
+          "x": 749,
+          "y": 891
+        },
+        "matchScore": 0.8247,
+        "scale": 1.9
+      },
+      "miraGapPx": 144.1,
+      "cursorGapPx": null,
+      "verticalDeltaPx": 180.8,
+      "targetOverlapPercent": 0.0,
+      "frame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/frames/04-prompt-typing.png",
+      "annotatedFrame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/annotated/04-prompt-typing-annotated.png"
+    },
+    {
+      "time": "42",
+      "label": "Prompt_submit",
+      "targetName": "midjourney-prompt",
+      "grade": "good",
+      "notes": [
+        "Mira/cursor are visually tied to the text box without covering it"
+      ],
+      "frameSize": {
+        "width": 1720,
+        "height": 1410
+      },
+      "target": {
+        "x": 224,
+        "y": 78,
+        "width": 1170,
+        "height": 73,
+        "center": {
+          "x": 808,
+          "y": 114
+        }
+      },
+      "mira": {
+        "x": 930,
+        "y": 244,
+        "width": 94,
+        "height": 102,
+        "center": {
+          "x": 977,
+          "y": 295
+        },
+        "matchScore": 0.946,
+        "scale": 0.494
+      },
+      "cursor": {
+        "x": 818,
+        "y": 120,
+        "width": 67,
+        "height": 83,
+        "center": {
+          "x": 852,
+          "y": 162
+        },
+        "tip": {
+          "x": 827,
+          "y": 129
+        },
+        "matchScore": 0.9828,
+        "scale": 1.1
+      },
+      "miraGapPx": 144.1,
+      "cursorGapPx": 0.0,
+      "verticalDeltaPx": 180.8,
+      "targetOverlapPercent": 0.0,
+      "frame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/frames/05-prompt-submit.png",
+      "annotatedFrame": "/Users/art/dev/action/artifacts/captures/mira-production-take-20260509-221001/key-elements/annotated/05-prompt-submit-annotated.png"
+    }
+  ]
+}

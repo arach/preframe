@@ -1,0 +1,132 @@
+<!-- hyperframes-registry-item: god-rays -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      [data-composition-id] { width: 1920px; height: 1080px; overflow: hidden; position: relative; }
+      #bg-video { position: absolute; inset: 0; width: 1920px; height: 1080px; object-fit: cover; z-index: 0; }
+      #fx-canvas { position: absolute; inset: 0; width: 1920px; height: 1080px; pointer-events: none; z-index: 1; }
+      #ui-layer { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="god-rays" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <video id="bg-video" muted playsinline></video>
+      <canvas id="fx-canvas" width="1920" height="1080"></canvas>
+      <div id="ui-layer"></div>
+      <div id="driver" class="clip" data-start="0" data-duration="8" data-track-index="0"
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
+    </div>
+    <script>
+      (function() {
+        var root = document.getElementById('root');
+        var video = document.getElementById('bg-video');
+        video.src = root.dataset.videoSrc || '../../assets/sample.mp4';
+        var canvas = document.getElementById('fx-canvas');
+        var gl = canvas.getContext('webgl', { preserveDrawingBuffer: true });
+        window.__timelines = window.__timelines || {};
+        if (!gl) {
+          console.warn('god-rays: WebGL not available');
+          window.__timelines['god-rays'] = gsap.timeline({ paused: true });
+          return;
+        }
+        gl.viewport(0, 0, 1920, 1080);
+
+        var vertSrc = 'attribute vec2 a_pos; varying vec2 v_uv; void main(){v_uv = a_pos * 0.5 + 0.5; v_uv.y = 1.0 - v_uv.y; gl_Position = vec4(a_pos, 0.0, 1.0);}';
+
+        var fragSrc =
+          'precision mediump float;' +
+          'varying vec2 v_uv;' +
+          'uniform sampler2D u_video;' +
+          'uniform float u_time;' +
+          'uniform vec2 u_resolution;' +
+          'uniform float u_intensity;' +
+          'uniform float u_decay;' +
+          'uniform float u_threshold;' +
+          'void main() {' +
+          '  vec4 col = texture2D(u_video, v_uv);' +
+          '  vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);' +
+          '  vec2 lightPos = vec2(0.5 + sin(u_time * 0.15) * 0.2, 0.22);' +
+          '  vec2 delta = (v_uv - lightPos) / 64.0;' +
+          '  vec2 uv = v_uv;' +
+          '  float rays = 0.0;' +
+          '  float dec = 1.0;' +
+          '  for (int i = 0; i < 64; i++) {' +
+          '    uv -= delta;' +
+          '    vec3 s = texture2D(u_video, clamp(uv, 0.0, 1.0)).rgb;' +
+          '    float lum = dot(s, vec3(0.299, 0.587, 0.114));' +
+          '    rays += max(0.0, lum - u_threshold) * dec * 0.016;' +
+          '    dec *= u_decay;' +
+          '  }' +
+          '  float distToLight = length((v_uv - lightPos) * vec2(aspect.x, 1.0));' +
+          '  float falloff = 1.0 - smoothstep(0.0, 1.2, distToLight);' +
+          '  vec3 rayColor = vec3(1.0, 0.95, 0.75) * rays * falloff * 1.2 * u_intensity;' +
+          '  gl_FragColor = vec4(clamp(col.rgb + rayColor, 0.0, 1.0), 1.0);' +
+          '}';
+
+        var quadBuf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+
+        function compileShader(src, type) {
+          var s = gl.createShader(type);
+          gl.shaderSource(s, src); gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.error('god-rays shader:', gl.getShaderInfoLog(s));
+          return s;
+        }
+        function mkProg(fSrc) {
+          var p = gl.createProgram();
+          gl.attachShader(p, compileShader(vertSrc, gl.VERTEX_SHADER));
+          gl.attachShader(p, compileShader(fSrc, gl.FRAGMENT_SHADER));
+          gl.linkProgram(p);
+          if (!gl.getProgramParameter(p, gl.LINK_STATUS)) console.error('god-rays link:', gl.getProgramInfoLog(p));
+          return p;
+        }
+
+        var prog = mkProg(fragSrc);
+        var videoTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, videoTex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0,0,0,255]));
+
+        function draw(t) {
+          if (video.readyState >= 2) {
+            gl.bindTexture(gl.TEXTURE_2D, videoTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+          }
+          gl.useProgram(prog);
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(gl.TEXTURE_2D, videoTex);
+          gl.uniform1i(gl.getUniformLocation(prog, 'u_video'), 0);
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), t);
+          gl.uniform2f(gl.getUniformLocation(prog, 'u_resolution'), 1920.0, 1080.0);
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_intensity'), (window.__params && window.__params.intensity !== undefined ? window.__params.intensity : 1.0));
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_decay'), (window.__params && window.__params.decay !== undefined ? window.__params.decay : 0.97));
+          gl.uniform1f(gl.getUniformLocation(prog, 'u_threshold'), (window.__params && window.__params.threshold !== undefined ? window.__params.threshold : 0.55));
+          var pos = gl.getAttribLocation(prog, 'a_pos');
+          gl.bindBuffer(gl.ARRAY_BUFFER, quadBuf);
+          gl.enableVertexAttribArray(pos);
+          gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+          gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        }
+
+        draw(0);
+        var tl = gsap.timeline({ paused: true, onUpdate: function(){ draw(tl.time() * (window.__params && window.__params.speed !== undefined ? window.__params.speed : 1.0)); } });
+        tl.to({ t: 0 }, { t: 8, duration: 8, ease: 'none' }, 0);
+        window.__timelines['god-rays'] = tl;
+      })();
+        window.__params = window.__params || {};
+        window.__setParam = function(name, value) { window.__params[name] = value; };
+        window.addEventListener('message', function(e) {
+          if (e.data && e.data.type === 'fx-param') window.__params[e.data.name] = e.data.value;
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #000000;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .scene { position: absolute; inset: 0; }
+
+      .grid-lines {
+        position: absolute; inset: 0;
+      }
+      .grid-line {
+        position: absolute;
+        background: rgba(255,255,255,0.08);
+        transform: scaleX(0) scaleY(0);
+        transform-origin: center;
+      }
+      .grid-line.h { height: 1px; left: 0; right: 0; }
+      .grid-line.v { width: 1px; top: 0; bottom: 0; }
+
+      .pane {
+        position: absolute;
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 8px;
+        background: #0a0a0f;
+        overflow: hidden;
+        opacity: 0;
+      }
+      .pane .chrome {
+        height: 28px; background: #111118;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        display: flex; align-items: center; gap: 6px; padding: 0 12px;
+      }
+      .pane .chrome .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+      .pane .chrome .title {
+        flex: 1; text-align: center;
+        font-size: 10px; color: rgba(255,255,255,0.25);
+        font-family: ui-monospace, monospace;
+      }
+      .pane .content {
+        padding: 12px;
+        font-family: ui-monospace, monospace;
+        font-size: 9px; line-height: 1.6;
+        color: rgba(255,255,255,0.12);
+      }
+
+      /* snap flash */
+      .snap-flash {
+        position: absolute;
+        border: 1px solid #4ade80;
+        border-radius: 8px;
+        opacity: 0; pointer-events: none;
+      }
+
+      /* chapter text reveals from within a pane */
+      .chapter-text {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 8px; text-align: center;
+        opacity: 0;
+      }
+      .chapter-text h2 { font-size: 32px; font-weight: 600; color: #f2f2f2; letter-spacing: -0.02em; }
+      .chapter-text p { font-size: 15px; color: rgba(255,255,255,0.40); }
+      .chapter-text .line { width: 24px; height: 2px; background: #4ade80; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="tiling"
+      data-start="0"
+      data-duration="2.5"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div id="tile" class="scene clip" data-start="0" data-duration="2.5" data-track-index="1">
+        <div class="grid-lines">
+          <div class="grid-line h" style="top:33%"></div>
+          <div class="grid-line h" style="top:66%"></div>
+          <div class="grid-line v" style="left:33%"></div>
+          <div class="grid-line v" style="left:66%"></div>
+        </div>
+
+        <!-- Four panes that fly in and snap to quadrants -->
+        <div class="pane" id="p-tl" style="left:-400px;top:-300px;width:600px;height:340px;">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">README.md</span></div>
+          <div class="content"># lattices<br/>The agentic workspace...</div>
+        </div>
+        <div class="pane" id="p-tr" style="left:2200px;top:-300px;width:600px;height:340px;">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">index.ts</span></div>
+          <div class="content">export { WindowManager } from './wm';<br/>export { LayoutEngine } from './layout';</div>
+        </div>
+        <div class="pane" id="p-bl" style="left:-400px;top:1200px;width:600px;height:340px;">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">agent.ts</span></div>
+          <div class="content">async function handleCommand(cmd: string) {<br/>&nbsp;&nbsp;const ctx = await getWorkspace();</div>
+        </div>
+        <div class="pane" id="p-br" style="left:2200px;top:1200px;width:600px;height:340px;">
+          <div class="chrome"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">config.json</span></div>
+          <div class="content">{<br/>&nbsp;&nbsp;&quot;gridSize&quot;: 3,<br/>&nbsp;&nbsp;&quot;cellGap&quot;: 8,<br/>&nbsp;&nbsp;&quot;agent&quot;: true</div>
+        </div>
+
+        <!-- Snap flashes -->
+        <div class="snap-flash" id="flash-tl" style="left:60px;top:40px;width:600px;height:340px;"></div>
+        <div class="snap-flash" id="flash-tr" style="left:1260px;top:40px;width:600px;height:340px;"></div>
+        <div class="snap-flash" id="flash-bl" style="left:60px;top:700px;width:600px;height:340px;"></div>
+        <div class="snap-flash" id="flash-br" style="left:1260px;top:700px;width:600px;height:340px;"></div>
+
+        <!-- Chapter text overlay -->
+        <div class="chapter-text" id="ch-text">
+          <h2 id="ch-title">Work Session</h2>
+          <p id="ch-sub">HyperFrames, Lattices, Cursor</p>
+          <div class="line"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const positions = {
+        "p-tl": { left: 60,  top: 40 },
+        "p-tr": { left: 1260, top: 40 },
+        "p-bl": { left: 60,  top: 700 },
+        "p-br": { left: 1260, top: 700 }
+      };
+
+      // Grid lines draw in from center
+      tl.fromTo(".grid-line", {
+        scaleX: 0, scaleY: 0, opacity: 0
+      }, {
+        scaleX: 1, scaleY: 1, opacity: 1, duration: 0.4, stagger: 0.06, ease: "power2.out"
+      }, 0.1);
+
+      // Panes fly in with stagger and snap
+      const paneIds = ["p-tl", "p-tr", "p-bl", "p-br"];
+      const flashIds = ["flash-tl", "flash-tr", "flash-bl", "flash-br"];
+
+      paneIds.forEach((id, i) => {
+        const pos = positions[id];
+        // fly in
+        tl.fromTo("#" + id,
+          { opacity: 0, scale: 0.92 },
+          { opacity: 1, scale: 1, left: pos.left, top: pos.top,
+            duration: 0.45, ease: "back.out(1.2)" },
+          0.3 + i * 0.12
+        );
+        // snap flash
+        tl.fromTo("#" + flashIds[i],
+          { opacity: 0.6, scale: 1.05 },
+          { opacity: 0, scale: 1, duration: 0.25, ease: "power2.out" },
+          0.55 + i * 0.12
+        );
+      });
+
+      // Chapter text reveals in center "pane" space
+      tl.fromTo("#ch-text", { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, 1.2);
+      tl.fromTo("#ch-text .line", { scaleX: 0 },
+        { scaleX: 1, duration: 0.3, ease: "power2.out" }, 1.5);
+
+      // Exit: panes slide to edges, text fades
+      tl.to("#ch-text", { opacity: 0, duration: 0.3 }, 1.8);
+      tl.to("#p-tl", { left: -700, duration: 0.35, ease: "power2.in" }, 1.9);
+      tl.to("#p-tr", { left: 2500, duration: 0.35, ease: "power2.in" }, 1.95);
+      tl.to("#p-bl", { left: -700, duration: 0.35, ease: "power2.in" }, 2.0);
+      tl.to("#p-br", { left: 2500, duration: 0.35, ease: "power2.in" }, 2.05);
+      tl.to(".grid-line", { opacity: 0, duration: 0.2 }, 2.2);
+
+      window.__timelines["tiling"] = tl;
+    </script>
+  </body>
+</html>

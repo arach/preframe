@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0a0c10; }
+      #root { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+      .backdrop { width: 100%; height: 100%; object-fit: cover; }
+
+      /* Barrel distortion simulation — corners pushed outward */
+      #barrel-wrap {
+        position: absolute; inset: -3%; z-index: 39; pointer-events: none;
+        border-radius: 4px;
+        opacity: 0;
+      }
+      #barrel-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+      /* Warm color grade — film print warmth */
+      #warm-grade {
+        position: absolute; inset: 0; z-index: 40; pointer-events: none;
+        background: rgba(200,130,60,0.10);
+        mix-blend-mode: overlay;
+        opacity: 0;
+      }
+      /* Lift blacks slightly */
+      #lift-black {
+        position: absolute; inset: 0; z-index: 41; pointer-events: none;
+        background: rgba(20,15,10,0.12);
+        mix-blend-mode: multiply;
+        opacity: 0;
+      }
+      #vignette {
+        position: absolute; inset: 0; z-index: 42; pointer-events: none;
+        background: radial-gradient(ellipse 90% 85% at 50% 50%, transparent 20%, rgba(0,0,0,0.90) 100%);
+        opacity: 0;
+      }
+
+      .seg-bar {
+        position: absolute; bottom: 0; left: 0; right: 0; height: 64px;
+        background: rgba(10,12,16,0.88); backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(255,255,255,0.07);
+        display: flex; align-items: center; padding: 0 40px; gap: 24px;
+        z-index: 50; opacity: 0;
+      }
+      .seg-num { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.20em; color: rgba(255,255,255,0.22); text-transform: uppercase; }
+      .seg-name { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.30em; color: rgba(255,255,255,0.80); text-transform: uppercase; }
+      .seg-line { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+      .seg-desc { font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 300; color: rgba(255,255,255,0.25); letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="8" data-width="1920" data-height="1080">
+      <div id="barrel-wrap">
+        <img id="backdrop" class="clip" data-start="0" data-duration="8"
+             src="/inventory/images/hudson-glass-backdrop.png" style="opacity:0; transform: scale(1.06); transform-origin: center;" />
+      </div>
+      <div id="warm-grade" class="clip" data-start="0" data-duration="8"></div>
+      <div id="lift-black" class="clip" data-start="0" data-duration="8"></div>
+      <div id="vignette" class="clip" data-start="0" data-duration="8"></div>
+
+      <div class="seg-bar clip" data-start="0" data-duration="8">
+        <div class="seg-num">10</div>
+        <div class="seg-name">LENS DISTORTION</div>
+        <div class="seg-line"></div>
+        <div class="seg-desc">Barrel warp · Warm print · Soft optical falloff</div>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.to("#backdrop", { opacity: 0.90, scale: 1.06, duration: 1.2, ease: "power2.out" }, 0);
+      tl.to("#barrel-wrap", { opacity: 1, duration: 0.5 }, 0.2);
+      tl.to("#warm-grade", { opacity: 1, duration: 1.5, ease: "power2.out" }, 0.3);
+      tl.to("#lift-black", { opacity: 1, duration: 1.5, ease: "power2.out" }, 0.5);
+      tl.to("#vignette", { opacity: 1, duration: 1.2, ease: "power2.out" }, 0.7);
+      tl.fromTo(".seg-bar", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 1.0);
+
+      // Lens breathes — subtle scale shift
+      tl.to("#backdrop", { scale: 1.04, duration: 2.0, ease: "sine.inOut" }, 2.5);
+      tl.to("#backdrop", { scale: 1.06, duration: 2.5, ease: "sine.inOut" }, 4.5);
+
+      tl.to(".seg-bar", { opacity: 0, duration: 0.6 }, 7.0);
+      tl.to("#vignette", { opacity: 0, duration: 0.5 }, 7.1);
+      tl.to("#warm-grade, #lift-black", { opacity: 0, duration: 0.4 }, 7.2);
+      tl.to("#barrel-wrap", { opacity: 0, duration: 0.5 }, 7.3);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

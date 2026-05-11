@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #0a0a0f;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #e8e8f0;
+      }
+      .scene { position: absolute; inset: 0; }
+
+      /* Title */
+      .title-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 14px; text-align: center;
+      }
+      .title-scene h1 { font-size: 56px; font-weight: 650; letter-spacing: -0.03em; }
+      .title-scene p { font-size: 18px; color: #8a8a9a; max-width: 520px; line-height: 1.5; }
+      .title-scene .accent { width: 32px; height: 2px; background: #4ade80; margin-top: 4px; }
+      .title-scene .meta {
+        margin-top: 28px; font-size: 12px;
+        font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #5a5a6a; letter-spacing: 0.02em;
+      }
+
+      /* Chapters */
+      .chapter {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 8px; text-align: center;
+      }
+      .chapter h2 { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; }
+      .chapter p { font-size: 16px; color: #8a8a9a; }
+      .chapter .line { width: 24px; height: 2px; background: #4ade80; margin-top: 8px; }
+
+      /* Video scenes */
+      .video-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }
+      .bar {
+        position: absolute; top: 0; left: 0; right: 0;
+        height: 56px; display: flex; align-items: center;
+        padding: 0 36px; z-index: 10;
+      }
+      .bar .logo { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: #e8e8f0; }
+      .bar .spacer { flex: 1; }
+      .bar .tag {
+        font-size: 11px; font-family: ui-monospace, SFMono-Regular, monospace;
+        color: #5a5a6a; text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .video-wrap {
+        position: relative;
+        width: 1280px; height: 720px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .video-wrap video {
+        max-width: 100%; max-height: 100%;
+        border-radius: 12px;
+        border: 1px solid #1e1e2a;
+        background: #111118;
+      }
+
+      /* Tall video crop scene */
+      .tall-scene {
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+      }
+      .tall-wrap {
+        position: relative;
+        width: 1480px; height: 960px;
+        overflow: hidden;
+        border-radius: 12px;
+        border: 1px solid #1e1e2a;
+        background: #111118;
+      }
+      .tall-wrap video {
+        position: absolute; top: 0; left: 0;
+        width: 1480px; height: 2820px;
+        object-fit: cover;
+        object-position: top;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="41"
+      data-width="1920"
+      data-height="1080"
+    >
+
+      <!-- 1. Title -->
+      <div id="title" class="scene title-scene clip" data-start="0" data-duration="2.5" data-track-index="1">
+        <h1>Work Session</h1>
+        <p>HyperFrames, Lattices, Cursor — May 2026</p>
+        <div class="accent"></div>
+        <div class="meta">4 clips · 41s · ambient audio</div>
+      </div>
+
+      <!-- 2. Chapter: Codex -->
+      <div id="ch1" class="scene chapter clip" data-start="2.5" data-duration="1.5" data-track-index="1">
+        <h2>Codex</h2>
+        <p>voice-to-code interface</p>
+        <div class="line"></div>
+      </div>
+
+      <!-- 3. Clip: Gesture completion matrix -->
+      <div id="codex" class="scene video-scene clip" data-start="4" data-duration="12" data-track-index="1">
+        <div class="bar">
+          <span class="logo">Codex</span>
+          <span class="spacer"></span>
+          <span class="tag">mouse-only prompt</span>
+        </div>
+        <div class="video-wrap">
+          <video id="v-codex" src="assets/gesture-completion-matrix.mp4"
+                 muted playsinline data-start="4" data-duration="12"></video>
+        </div>
+      </div>
+
+      <!-- 4. Chapter: Desktop -->
+      <div id="ch2" class="scene chapter clip" data-start="16" data-duration="1.5" data-track-index="1">
+        <h2>Desktop</h2>
+        <p>hyperframes docs · cursor IDE</p>
+        <div class="line"></div>
+      </div>
+
+      <!-- 5. Clip: Wide desktop (2D33) -->
+      <div id="wide" class="scene video-scene clip" data-start="17.5" data-duration="11" data-track-index="1">
+        <div class="bar">
+          <span class="logo">Cursor &amp; GitHub</span>
+          <span class="spacer"></span>
+          <span class="tag">3440x1440 ultrawide</span>
+        </div>
+        <div class="video-wrap">
+          <video id="v-wide" src="assets/clip_2D33FB8D-9BA1-4F12-AA9A-E151967D68D3.mp4"
+                 muted playsinline data-start="17.5" data-duration="11"
+                 style="width: 1536px; height: 640px;"></video>
+        </div>
+      </div>
+
+      <!-- 6. Chapter: Cursor -->
+      <div id="ch3" class="scene chapter clip" data-start="28.5" data-duration="1.5" data-track-index="1">
+        <h2>Cursor</h2>
+        <p>fixing tailwind · testing moondream</p>
+        <div class="line"></div>
+      </div>
+
+      <!-- 7. Clip: Tall Cursor (BC24) -->
+      <div id="tall" class="scene tight-scene clip" data-start="30" data-duration="8" data-track-index="1">
+        <div class="bar">
+          <span class="logo">Run1 terminal · Claude 3.5 Sonnet</span>
+          <span class="spacer"></span>
+          <span class="tag">Extra High</span>
+        </div>
+        <div class="tall-wrap">
+          <video id="v-tall" src="assets/clip_BC245ABA-B171-41FF-B469-AEC865D00A2D.mp4"
+                 muted playsinline data-start="30" data-duration="8"></video>
+        </div>
+      </div>
+
+      <!-- 8. End -->
+      <div id="end" class="scene title-scene clip" data-start="38" data-duration="3" data-track-index="1">
+        <h1>lattices</h1>
+        <p>gesture framework for human&mdash;agent collaboration</p>
+        <div class="accent"></div>
+        <div class="meta">arts-mac-mini.local · May 2026</div>
+      </div>
+
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      /* Title */
+      tl.fromTo("#title h1", { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.8 }, 0.1);
+      tl.fromTo("#title p", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6 }, 0.3);
+      tl.fromTo("#title .accent", { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.4 }, 0.5);
+      tl.fromTo("#title .meta", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 0.7);
+      tl.to("#title", { opacity: 0, duration: 0.3 }, 2.0);
+
+      /* Chapter 1 */
+      tl.fromTo("#ch1 h2", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.5 }, 2.7);
+      tl.fromTo("#ch1 p", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4 }, 2.8);
+      tl.to("#ch1", { opacity: 0, duration: 0.3 }, 3.7);
+      tl.set("#ch1", { opacity: 0 }, 4.00);
+
+      /* Codex clip scene */
+      tl.fromTo("#codex .bar", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 4.1);
+      tl.fromTo("#v-codex", { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6 }, 4.2);
+      tl.to("#codex", { opacity: 0, duration: 0.3 }, 15.5);
+
+      /* Chapter 2 */
+      tl.fromTo("#ch2 h2", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.5 }, 16.2);
+      tl.fromTo("#ch2 p", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4 }, 16.3);
+      tl.to("#ch2", { opacity: 0, duration: 0.3 }, 17.2);
+      tl.set("#ch2", { opacity: 0 }, 17.50);
+
+      /* Wide clip scene */
+      tl.fromTo("#wide .bar", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 17.6);
+      tl.fromTo("#v-wide", { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6 }, 17.7);
+      tl.to("#wide", { opacity: 0, duration: 0.3 }, 27.5);
+
+      /* Chapter 3 */
+      tl.fromTo("#ch3 h2", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.5 }, 28.7);
+      tl.fromTo("#ch3 p", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.4 }, 28.8);
+      tl.to("#ch3", { opacity: 0, duration: 0.3 }, 29.7);
+      tl.set("#ch3", { opacity: 0 }, 30.00);
+
+      /* Tall clip scene */
+      tl.fromTo("#tall .bar", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 30.1);
+      tl.fromTo("#v-tall", { opacity: 0, scale: 0.98 }, { opacity: 1, scale: 1, duration: 0.6 }, 30.2);
+      tl.to("#tall", { opacity: 0, duration: 0.3 }, 37.5);
+
+      /* End */
+      tl.fromTo("#end h1", { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.8 }, 38.1);
+      tl.fromTo("#end p", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6 }, 38.3);
+      tl.fromTo("#end .accent", { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.4 }, 38.5);
+      tl.fromTo("#end .meta", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 38.7);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
