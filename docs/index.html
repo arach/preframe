@@ -454,6 +454,7 @@
     .status-card strong {
       color: var(--paper);
       font-weight: 500;
+      overflow-wrap: anywhere;
     }
 
     .demo-list {
@@ -779,25 +780,25 @@
       </header>
 
       <section class="hero" id="player">
-        <div class="hudson-window" aria-label="Hudson demo player">
+        <div class="hudson-window" aria-label="Hudson player embed">
           <div class="window-head">
             <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
-            <span>preframe / hudson demo player</span>
-            <span data-current-status>effects bench ready</span>
+            <span>preframe / hudson surface: player</span>
+            <span data-current-status>embed surface ready</span>
           </div>
 
           <div class="workspace">
             <aside class="sidebar">
-              <div class="rail-label"><span>apps</span><span>shell</span></div>
+              <div class="rail-label"><span>apps</span><span>hudson</span></div>
               <div class="rail-list">
                 <span class="rail-item active">Player</span>
                 <span class="rail-item">Sources</span>
                 <span class="rail-item">Effects</span>
-                <span class="rail-item">Render</span>
+                <span class="rail-item">Review</span>
               </div>
             </aside>
 
-              <div class="player-area">
+            <div class="player-area">
               <div class="tabs" aria-label="Open workspace tabs">
                 <button class="view-button" type="button" data-view-target="watch" aria-pressed="true">Watch</button>
                 <button class="view-button" type="button" data-view-target="review" aria-pressed="false">Review</button>
@@ -824,7 +825,7 @@
                   <div>
                     <p class="eyebrow" data-current-kind>Mira demo</p>
                     <h1 data-current-title>Your cut, before the cut.</h1>
-                    <p data-current-description>Preframe stages source clips, motion prompts, and output loops inside Hudson before the timeline ever opens. The homepage is a player first: demos today, effects passes next.</p>
+                    <p data-current-description>Preframe stages source clips, motion prompts, and output loops inside a Hudson AppShell. The public page is a player first; the runtime surface is the limited Preframe player embed.</p>
                     <div class="actions">
                       <a class="button-link primary" href="https://github.com/arach/preframe">View on GitHub</a>
                       <a class="button-link" href="#loop">Inspect the loop</a>
@@ -832,48 +833,50 @@
                   </div>
                   <div class="status-card">
                     <span>current slot</span>
-                    <strong data-current-slot>demo-player</strong>
+                    <strong data-current-slot>preframe.player</strong>
                     <span>source</span>
                     <strong data-current-source>Mira control lanes</strong>
+                    <span>route</span>
+                    <strong>/embed/preframe/player</strong>
                   </div>
                 </div>
               </div>
             </div>
 
             <aside class="inspector">
-              <div class="rail-label"><span>playlist</span><span>native video</span></div>
+              <div class="rail-label"><span>playlist</span><span>embed media</span></div>
               <div class="demo-list" data-demo-list></div>
               <div class="meter" aria-label="Workspace status">
-                <div class="meter-row"><span>demos</span><strong>3</strong></div>
-                <div class="meter-row"><span>effects</span><strong>3</strong></div>
-                <div class="meter-row"><span>next source</span><strong>Talkie</strong></div>
+                <div class="meter-row"><span>surface</span><strong>player</strong></div>
+                <div class="meter-row"><span>enabled</span><strong>3 views</strong></div>
+                <div class="meter-row"><span>locked</span><strong>AI/render</strong></div>
               </div>
             </aside>
           </div>
 
           <div class="window-foot">
-            <span>Hudson shell -> player embed -> effects pass -> review loop</span>
+            <span>Hudson AppShell -> AppExports.embeds -> preframe.player -> watch / review / effects</span>
             <span>read-only landing preview</span>
           </div>
         </div>
 
         <div class="copy-band" id="loop">
           <div>
-            <p class="eyebrow">Demo media, then effect passes</p>
+            <p class="eyebrow">Hudson surface, limited capability</p>
             <h2>The player is the landing page.</h2>
           </div>
           <div class="copy-grid">
             <div class="copy-note">
               <strong>Use our footage first</strong>
-              <p>The page runs local Preframe/Mira/Hudson clips today. It is structured so a Talkie walkthrough can become the next main source clip without changing the page design.</p>
+              <p>The page runs local Preframe/Mira/Hudson clips today. It is structured so a Talkie walkthrough can become the next main source clip without changing the player surface.</p>
             </div>
             <div class="copy-note">
-              <strong>Make effects comparable</strong>
-              <p>The effects bench wants one consistent base video, then multiple treatments. That makes grain, glass, scan, lattice, and render styles easy to judge.</p>
+              <strong>Use the embed contract</strong>
+              <p>The app now declares a Hudson embed surface named player. The hosted app route can expose watch, review, and effects without exposing revise or render actions.</p>
             </div>
             <div class="copy-note">
               <strong>Keep Hudson visible</strong>
-              <p>The shell is the frame around the media work: sources, player, effects, render queue. The embed stays a real video player, not a fake app demo.</p>
+              <p>The shell remains the frame around the media work: playlist, player, effects, and review. The landing preview follows the same shape as the runtime Hudson surface.</p>
             </div>
           </div>
         </div>
@@ -894,12 +897,12 @@
         badge: 'demo',
         title: 'Your cut, before the cut.',
         kind: 'Mira demo',
-        slot: 'demo-player',
+        slot: 'preframe.player',
         source: 'Mira control lanes',
-        status: 'demo source loaded',
+        status: 'embed source loaded',
         src: 'media/mira-control-lanes-demo.mp4',
         poster: 'media/mira-control-lanes-poster.png',
-        description: 'A local Mira demo clip inside the Hudson frame. This is the current homepage proof: the landing can be a player for actual work, not just product copy.'
+        description: 'A local Mira demo clip inside the Hudson player surface. This is the current homepage proof: the landing can be a player for actual work, not just product copy.'
       },
       {
         id: 'mira-produced',
@@ -907,7 +910,7 @@
         badge: 'demo',
         title: 'A reference take you can inspect.',
         kind: 'Mira demo',
-        slot: 'review-source',
+        slot: 'preframe.player',
         source: 'Produced reference',
         status: 'reference take ready',
         src: 'media/mira-produced-reference.mp4',
@@ -920,7 +923,7 @@
         badge: 'demo',
         title: 'One take, then iterate.',
         kind: 'Render demo',
-        slot: 'render-queue',
+        slot: 'preframe.player',
         source: 'Mira intro first cut',
         status: 'first cut staged',
         src: 'media/mira-intro-first-cut.mp4',
@@ -933,7 +936,7 @@
         badge: 'effect',
         title: 'Effects need a stable subject.',
         kind: 'Effects bench',
-        slot: 'effects-bench',
+        slot: 'preframe.player',
         source: 'Hudson glass grade',
         status: 'effect pass ready',
         src: 'media/hudson-glass-graded.mp4',
@@ -946,7 +949,7 @@
         badge: 'effect',
         title: 'Treatment passes, side by side.',
         kind: 'Effects bench',
-        slot: 'effects-bench',
+        slot: 'preframe.player',
         source: 'Hudson glass FX',
         status: 'effect pass ready',
         src: 'media/hudson-glass-fx.mp4',
@@ -959,7 +962,7 @@
         badge: 'effect',
         title: 'A frame system becoming visible.',
         kind: 'Effects bench',
-        slot: 'effects-bench',
+        slot: 'preframe.player',
         source: 'Lattice grid born',
         status: 'effect pass ready',
         src: 'media/lattices-grid-born.mp4',

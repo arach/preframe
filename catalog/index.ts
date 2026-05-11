@@ -5,6 +5,7 @@ import { CatalogProvider } from './Provider';
 import { CatalogContent } from './slots/Content';
 import { CatalogLeftPanel } from './slots/LeftPanel';
 import { CatalogInspector } from './slots/Inspector';
+import { preframePlayerEmbedSurface } from './embeds/PlayerEmbed';
 import {
   useCatalogCommands,
   useCatalogStatus,
@@ -44,5 +45,9 @@ export const catalogApp: HudsonApp = {
     useNavCenter: useCatalogNavCenter,
     useNavActions: useCatalogNavActions,
     useLayoutMode: useCatalogLayoutMode,
+  },
+
+  exports: {
+    embeds: [preframePlayerEmbedSurface],
   },
 };
