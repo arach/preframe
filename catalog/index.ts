@@ -14,6 +14,7 @@ import {
   useCatalogNavActions,
   useCatalogLayoutMode,
 } from './hooks';
+import { preframePorts, usePreframePortOutput, usePreframePortInput } from './ports';
 
 export const catalogApp: HudsonApp = {
   id: 'preframe-catalog',
@@ -22,6 +23,8 @@ export const catalogApp: HudsonApp = {
   mode: 'panel',
 
   Provider: CatalogProvider,
+
+  ports: preframePorts,
 
   leftPanel: {
     title: 'Catalog',
@@ -45,6 +48,8 @@ export const catalogApp: HudsonApp = {
     useNavCenter: useCatalogNavCenter,
     useNavActions: useCatalogNavActions,
     useLayoutMode: useCatalogLayoutMode,
+    usePortOutput: usePreframePortOutput,
+    usePortInput: usePreframePortInput,
   },
 
   exports: {
