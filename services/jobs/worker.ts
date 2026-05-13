@@ -1673,6 +1673,14 @@ interface LogoJobInputs {
   prompt?: string;
   reviewNotes?: string;
   briefMarkdown?: string;
+  /** Structured visual effects — presets are v2; for now threaded into LLM prompt */
+  fx?: { presets?: string[]; prompt?: string };
+  /** Structured sound effects — presets are v2; for now threaded into LLM prompt */
+  sfx?: { presets?: string[]; prompt?: string; mute?: boolean };
+  /** Hudson Logo Designer context — supplementary, not consumed by worker directly */
+  renderBody?: string;
+  params?: Record<string, unknown>;
+  targetParams?: Record<string, unknown>;
 }
 
 async function readLogoSource(inputs: LogoJobInputs | null): Promise<{ svg?: string; prompt?: string; filename?: string }> {
@@ -1735,13 +1743,43 @@ async function runLogoBrief(ctx: {
   updateState('reading source', 10, `Logo brief for ${logoId}`);
   const source = await readLogoSource(inputs ?? { prompt: userPrompt });
 
+  // Build fx/sfx context sections for the LLM
+  const fxSection = inputs?.fx
+    ? '\n\n## Visual Effects\n' + [
+        inputs.fx.presets?.length ? `Presets: ${inputs.fx.presets.join(', ')}` : '',
+        inputs.fx.prompt ? `Notes: ${inputs.fx.prompt}` : '',
+      ].filter(Boolean).join('\n')
+    : '';
+  const sfxSection = inputs?.sfx
+    ? '\n\n## Sound Effects\n' + (inputs.sfx.mute
+        ? 'Silent render — no sound effects.'
+        : [
+            inputs.sfx.presets?.length ? `Presets: ${inputs.sfx.presets.join(', ')}` : '',
+            inputs.sfx.prompt ? `Notes: ${inputs.sfx.prompt}` : '',
+          ].filter(Boolean).join('\n') || '(user wants SFX but gave no specifics)')
+    : '';
+  const renderBodySection = inputs?.renderBody
+    ? '\n\n## Logo renderBody (JS source)\n```js\n' + inputs.renderBody.slice(0, 6_000) + '\n```'
+    : '';
+  const paramsSection = inputs?.params
+    ? '\n\n## Current params\n```json\n' + JSON.stringify(inputs.params, null, 2).slice(0, 3_000) + '\n```'
+    : '';
+  const targetParamsSection = inputs?.targetParams
+    ? '\n\n## Target params (morph destination)\n```json\n' + JSON.stringify(inputs.targetParams, null, 2).slice(0, 3_000) + '\n```'
+    : '';
+
   const userMessage = [
     '## User prompt',
     userPrompt || '(none — propose a sensible default)',
     '',
     source.svg ? '## Source SVG\n\n```svg\n' + source.svg.slice(0, 12_000) + '\n```' : '## Source\n\n(no SVG — animate from description)',
     reviewNotes ? '\n\n## Review notes from previous take\n' + reviewNotes : '',
-  ].join('\n');
+    renderBodySection,
+    paramsSection,
+    targetParamsSection,
+    fxSection,
+    sfxSection,
+  ].filter(Boolean).join('\n');
 
   const providerConfig = readProviderConfig();
   updateState('drafting brief', 40, `Calling ${providerConfig.name || providerConfig.model} for motion brief`);
@@ -1805,12 +1843,30 @@ async function runLogoRender(ctx: {
     } catch {}
   }
 
+  // Thread fx/sfx + Hudson context into render prompt
+  const fxSection = inputs?.fx
+    ? '\n\n## Visual Effects\n' + [
+        inputs.fx.presets?.length ? `Presets: ${inputs.fx.presets.join(', ')}` : '',
+        inputs.fx.prompt ? `Notes: ${inputs.fx.prompt}` : '',
+      ].filter(Boolean).join('\n')
+    : '';
+  const sfxSection = inputs?.sfx
+    ? '\n\n## Sound Effects\n' + (inputs.sfx.mute
+        ? 'Silent render — no sound effects.'
+        : [
+            inputs.sfx.presets?.length ? `Presets: ${inputs.sfx.presets.join(', ')}` : '',
+            inputs.sfx.prompt ? `Notes: ${inputs.sfx.prompt}` : '',
+          ].filter(Boolean).join('\n') || '(user wants SFX but gave no specifics)')
+    : '';
+
   const userMessage = [
     brief ? '## Motion brief\n' + brief : '## Motion brief\n(none provided — infer from prompt)',
     '',
     userPrompt ? '## User prompt\n' + userPrompt : '',
     '',
     source.svg ? '## Source SVG\n\n```svg\n' + source.svg.slice(0, 14_000) + '\n```' : '## Source\n\n(no SVG — compose from description)',
+    fxSection,
+    sfxSection,
   ].filter(Boolean).join('\n');
 
   const providerConfig = readProviderConfig();
