@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Check, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { apiClient } from '../lib/api-client';
 
 interface ProviderForm {
   format: 'anthropic' | 'openai';
@@ -37,7 +38,7 @@ export function SettingsView() {
   const [keyEdited, setKeyEdited] = useState(false);
 
   useEffect(() => {
-    fetch('/api/settings/provider')
+    apiClient.get('/api/settings/provider')
       .then(r => r.json())
       .then(data => {
         setForm({
@@ -76,7 +77,7 @@ export function SettingsView() {
       body.apiKey = form.apiKey;
     }
     try {
-      const res = await fetch('/api/settings/provider', {
+      const res = await apiClient.fetch('/api/settings/provider', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

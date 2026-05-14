@@ -19,6 +19,7 @@ import type {
 import { ReviewProvider } from './ReviewContext';
 import { FxProvider } from './FxContext';
 import { PlayerProvider } from './PlayerContext';
+import { apiClient } from './lib/api-client';
 
 // ---------------------------------------------------------------------------
 // Lightbox state — transient UI, not URL-backed
@@ -268,8 +269,8 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
   const refreshCatalog = useCallback(async () => {
     const cacheBust = Date.now();
     const [c, s] = await Promise.all([
-      fetch(`/catalog-data.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
-      fetch(`/curated-snippets.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+      apiClient.get(`/catalog-data.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+      apiClient.get(`/curated-snippets.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
     ]);
     if (c) setData(c);
     if (s) setSnippetsData(s);
@@ -435,8 +436,7 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     const videoUrl = video.videoUrl ?? (video.filename ? `/demos/${video.filename}` : null);
     if (!videoUrl) return;
     try {
-      await fetch(`/api/catalog/delete`, {
-        method: 'POST',
+      await apiClient.post(`/api/catalog/delete`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoUrl }),
       });
@@ -451,8 +451,7 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     // Optimistic: remove immediately
     setData(prev => prev ? { ...prev, audioAssets: (prev.audioAssets ?? []).filter(a => a.id !== id) } : prev);
     try {
-      await fetch('/api/music/delete', {
-        method: 'POST',
+      await apiClient.post('/api/music/delete', {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: asset.path }),
       });

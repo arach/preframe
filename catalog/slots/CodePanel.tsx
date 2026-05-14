@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import { ArrowLeft, Check, FileCode2, Save } from 'lucide-react';
 import { useCatalog } from '../Provider';
+import { apiClient } from '../lib/api-client';
 
 function langFromPath(path: string): string {
   if (path.endsWith('.tsx') || path.endsWith('.ts')) return 'typescript';
@@ -27,7 +28,7 @@ export function CodePanel() {
     if (!viewingFile) return;
     setLoading(true);
     setError(null);
-    fetch(`/api/source?path=${encodeURIComponent(viewingFile)}`)
+    apiClient.get(`/api/source?path=${encodeURIComponent(viewingFile)}`)
       .then(res => {
         if (!res.ok) throw new Error(`${res.status}`);
         return res.json();
@@ -47,7 +48,7 @@ export function CodePanel() {
     if (!viewingFile) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/source', {
+      const res = await apiClient.fetch('/api/source', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: viewingFile, content }),

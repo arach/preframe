@@ -5,6 +5,7 @@ import { ArrowLeft, Film, FolderOpen, Upload, Send, FileVideo, Music, X, Sparkle
 import type { IdeateResult } from '../../lib/inference';
 import { useCatalog } from '../Provider';
 import type { CompositionEngine } from '../../lib/types';
+import { apiClient } from '../lib/api-client';
 
 type CompositionMode = 'video' | 'video-music' | 'music';
 
@@ -31,7 +32,7 @@ async function ingestSource(source: QueuedSource): Promise<string> {
 
   const form = new FormData();
   form.append('file', source.file);
-  const res = await fetch('/api/catalog/ingest', { method: 'POST', body: form });
+  const res = await apiClient.post('/api/catalog/ingest', { body: form });
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || `Failed to ingest ${source.path}`);
@@ -133,8 +134,7 @@ export function NewComposition({ initialMode }: { initialMode?: CompositionMode 
     if (mode === 'music') {
       if (!musicPrompt.trim()) return;
       notifyMusicQueued();
-      fetch('/api/music/generate', {
-        method: 'POST',
+      apiClient.post('/api/music/generate', {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: musicPrompt.trim(),
@@ -164,8 +164,7 @@ export function NewComposition({ initialMode }: { initialMode?: CompositionMode 
       const clipPaths = await Promise.all(sources.map(ingestSource));
       const withMusic = mode === 'video-music';
 
-      const res = await fetch(`/api/compositions/${compositionId}/jobs`, {
-        method: 'POST',
+      const res = await apiClient.post(`/api/compositions/${compositionId}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'generate',
@@ -204,8 +203,7 @@ export function NewComposition({ initialMode }: { initialMode?: CompositionMode 
     setGeneratingLyrics(true);
     setError(null);
     try {
-      const res = await fetch('/api/music/lyrics', {
-        method: 'POST',
+      const res = await apiClient.post('/api/music/lyrics', {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: musicLyrics.trim() ? 'edit' : 'write_full_song',
@@ -233,8 +231,7 @@ export function NewComposition({ initialMode }: { initialMode?: CompositionMode 
     setIdeating(true);
     setError(null);
     try {
-      const res = await fetch('/api/inference', {
-        method: 'POST',
+      const res = await apiClient.post('/api/inference', {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ task: 'music-ideate', prompt: ideatePrompt.trim() }),
       });

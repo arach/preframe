@@ -2,6 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import type { AppPorts } from 'hudsonkit';
+import { apiClient } from './lib/api-client';
 
 // ---------------------------------------------------------------------------
 // Hudson Logo Animation Job — input payload from Logo Designer
@@ -62,7 +63,7 @@ async function pollJobUntilDone(
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
+      const res = await apiClient.get(`/api/jobs/${encodeURIComponent(jobId)}`);
       if (res.ok) {
         const job = await res.json() as {
           status: string;
@@ -142,8 +143,7 @@ export function usePreframePortInput() {
 
     try {
       // Stage 1: logo-brief
-      const briefRes = await fetch(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`, {
-        method: 'POST',
+      const briefRes = await apiClient.post(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'logo-brief', prompt: enrichedPrompt, inputs }),
       });
@@ -158,8 +158,7 @@ export function usePreframePortInput() {
       }
 
       // Stage 2: logo-render (brief is now on disk for the worker to read)
-      const renderRes = await fetch(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`, {
-        method: 'POST',
+      const renderRes = await apiClient.post(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind: 'logo-render', prompt: enrichedPrompt, inputs }),
       });

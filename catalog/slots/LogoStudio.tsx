@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Gem, Image as ImageIcon, Loader2, RefreshCw, RotateCcw, Send, Sparkles, Upload, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import type { LogoAsset } from '../../lib/types';
+import { apiClient } from '../lib/api-client';
 
 type SubmitMode = 'brief' | 'render';
 
@@ -145,7 +146,7 @@ function LogoDetail({ logo }: { logo: LogoAsset }) {
   useEffect(() => {
     if (!logo.briefPath) { setBrief(null); return; }
     let cancelled = false;
-    fetch(`${logo.briefPath}?t=${Date.now()}`).then(r => r.ok ? r.text() : null)
+    apiClient.fetch(`${logo.briefPath}?t=${Date.now()}`).then(r => r.ok ? r.text() : null)
       .then(t => { if (!cancelled) setBrief(t); }).catch(() => {});
     return () => { cancelled = true; };
   }, [logo.briefPath, logo.id]);
@@ -155,8 +156,7 @@ function LogoDetail({ logo }: { logo: LogoAsset }) {
     setError(null);
     try {
       const kind = mode === 'brief' ? 'logo-brief' : 'logo-render';
-      const res = await fetch(`/api/compositions/${encodeURIComponent(logo.id)}/jobs`, {
-        method: 'POST',
+      const res = await apiClient.post(`/api/compositions/${encodeURIComponent(logo.id)}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind,
@@ -313,10 +313,9 @@ function UploadModal({ onClose, onUploaded }: { onClose: () => void; onUploaded:
         form.append('file', file);
         if (prompt.trim()) form.append('prompt', prompt.trim());
         if (title.trim()) form.append('title', title.trim());
-        res = await fetch('/api/logos/upload', { method: 'POST', body: form });
+        res = await apiClient.post('/api/logos/upload', { body: form });
       } else if (prompt.trim()) {
-        res = await fetch('/api/logos/upload', {
-          method: 'POST',
+        res = await apiClient.post('/api/logos/upload', {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: prompt.trim(), title: title.trim() || undefined }),
         });
@@ -446,7 +445,7 @@ async function pollUntilDone(compositionId: string, kind: string): Promise<void>
   const start = Date.now();
   while (Date.now() - start < 90_000) {
     try {
-      const res = await fetch(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`);
+      const res = await apiClient.get(`/api/compositions/${encodeURIComponent(compositionId)}/jobs`);
       if (res.ok) {
         const jobs = await res.json() as Array<{ kind: string; status: string }>;
         // Most recent jobs first; find the first one matching this kind.

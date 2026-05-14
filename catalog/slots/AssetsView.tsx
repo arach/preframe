@@ -5,6 +5,7 @@ import { useCatalog } from '../Provider';
 import { formatDuration } from '../../lib/types';
 import type { Video } from '../../lib/types';
 import { Eye, FileVideo, Search } from 'lucide-react';
+import { apiClient } from '../lib/api-client';
 
 type AssetFilter = 'all' | 'analyzed' | 'needs-analysis';
 
@@ -231,15 +232,14 @@ function DropZone() {
         const filePath = (file as any).path as string | undefined;
         let res: Response;
         if (filePath) {
-          res = await fetch('/api/catalog/ingest', {
-            method: 'POST',
+          res = await apiClient.post('/api/catalog/ingest', {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ path: filePath }),
           });
         } else {
           const form = new FormData();
           form.append('file', file);
-          res = await fetch('/api/catalog/ingest', { method: 'POST', body: form });
+          res = await apiClient.post('/api/catalog/ingest', { body: form });
         }
         const data = await res.json();
         setUploads(prev =>
