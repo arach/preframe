@@ -2,8 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useCatalog } from '../Provider';
-import { formatDuration } from '@/lib/types';
-import type { Video } from '@/lib/types';
+import { formatDuration } from '../../lib/types';
+import type { Video } from '../../lib/types';
 import { Eye, FileVideo, Search } from 'lucide-react';
 
 type AssetFilter = 'all' | 'analyzed' | 'needs-analysis';

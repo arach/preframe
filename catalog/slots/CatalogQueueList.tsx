@@ -4,8 +4,8 @@ import { useEffect, useRef } from 'react';
 import { Film, Music2 } from 'lucide-react';
 import { usePlayer, type Media } from '../PlayerContext';
 import { useCatalog } from '../Provider';
-import { formatDuration } from '@/lib/types';
-import { resolveVideoSrc } from '@/lib/media';
+import { formatDuration } from '../../lib/types';
+import { resolveVideoSrc } from '../../lib/media';
 
 const ACCENT = 'var(--hud-accent)';
 

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronRight, Play, Pause, Square } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import type { CompositionFrame } from '@/lib/types';
+import type { CompositionFrame } from '../../lib/types';
 
 // ---------------------------------------------------------------------------
 // Spec shape matching composition-frame.html

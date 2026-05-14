@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Gem, Image as ImageIcon, Loader2, RefreshCw, RotateCcw, Send, Sparkles, Upload, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import type { LogoAsset } from '@/lib/types';
+import type { LogoAsset } from '../../lib/types';
 
 type SubmitMode = 'brief' | 'render';
 

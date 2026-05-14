@@ -17,8 +17,8 @@ import { useReviewContext } from '../ReviewContext';
 import { FxContext, type FxParamValues } from '../FxContext';
 import { FX_PARAMS, type ParamDef } from './FxParams';
 import { useContext } from 'react';
-import { formatDuration, formatTime } from '@/lib/types';
-import type { ReviewNote, ReviewNoteKind } from '@/lib/types';
+import { formatDuration, formatTime } from '../../lib/types';
+import type { ReviewNote, ReviewNoteKind } from '../../lib/types';
 import type { Composing } from '../hooks/useReview';
 
 export function CatalogInspector() {

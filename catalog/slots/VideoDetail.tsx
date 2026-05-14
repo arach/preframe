@@ -18,9 +18,9 @@ import { useCatalog } from '../Provider';
 import { useReviewContext } from '../ReviewContext';
 import { usePlayer } from '../PlayerContext';
 import { exportNotesAsPrompt } from '../reviewNotes';
-import { resolveVideoSrc } from '@/lib/media';
-import { formatDuration, formatTime } from '@/lib/types';
-import type { CompositionEngine, FrameOverlay, ReviewNoteKind, ReviewRect, Video, VisionTag } from '@/lib/types';
+import { resolveVideoSrc } from '../../lib/media';
+import { formatDuration, formatTime } from '../../lib/types';
+import type { CompositionEngine, FrameOverlay, ReviewNoteKind, ReviewRect, Video, VisionTag } from '../../lib/types';
 
 function aspectRatio(res?: string): string {
   if (!res) return '16 / 9';

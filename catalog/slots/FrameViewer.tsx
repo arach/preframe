@@ -10,8 +10,8 @@ import {
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Braces, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import { formatDuration, formatTime } from '@/lib/types';
-import type { FrameOverlay, VisionTag } from '@/lib/types';
+import { formatDuration, formatTime } from '../../lib/types';
+import type { FrameOverlay, VisionTag } from '../../lib/types';
 
 export function FrameViewer() {
   const { selectedVideo, frameIndex, openFrame, closeFrame } = useCatalog();

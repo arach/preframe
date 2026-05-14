@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Film, FolderOpen, Upload, Send, FileVideo, Music, X, Sparkles, Wand2 } from 'lucide-react';
-import type { IdeateResult } from '@/lib/inference';
+import type { IdeateResult } from '../../lib/inference';
 import { useCatalog } from '../Provider';
-import type { CompositionEngine } from '@/lib/types';
+import type { CompositionEngine } from '../../lib/types';
 
 type CompositionMode = 'video' | 'video-music' | 'music';
 

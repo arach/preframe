@@ -4,9 +4,9 @@ import { useState } from 'react';
 import { CornerDownRight, ListPlus } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { usePlayer } from '../PlayerContext';
-import { formatDuration } from '@/lib/types';
-import { resolveVideoSrc } from '@/lib/media';
-import type { CuratedSnippet, Video } from '@/lib/types';
+import { formatDuration } from '../../lib/types';
+import { resolveVideoSrc } from '../../lib/media';
+import type { CuratedSnippet, Video } from '../../lib/types';
 
 export function CatalogGrid() {
   const {

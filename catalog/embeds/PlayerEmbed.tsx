@@ -9,8 +9,8 @@ import type {
   SearchConfig,
   StatusColor,
 } from 'hudsonkit';
-import { resolveVideoSrc } from '@/lib/media';
-import type { Video } from '@/lib/types';
+import { resolveVideoSrc } from '../../lib/media';
+import type { Video } from '../../lib/types';
 import { CatalogProvider, useCatalog } from '../Provider';
 import { usePlayer } from '../PlayerContext';
 

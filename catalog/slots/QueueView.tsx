@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Clock, CheckCircle2, Loader2, FileVideo, MessageSquare, Zap, XCircle, RefreshCw, FolderOpen, ChevronRight, Play, FileCode, Braces, Database, Images, ExternalLink, RotateCcw, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import type { Video } from '@/lib/types';
+import type { Video } from '../../lib/types';
 
 interface ActivityEntry {
   stage: string;

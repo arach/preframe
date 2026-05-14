@@ -21,20 +21,20 @@ import {
 } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { usePlayer } from '../PlayerContext';
-import { formatTime } from '@/lib/types';
+import { formatTime } from '../../lib/types';
 import type {
   ReviewNote,
   ReviewNoteKind,
   ReviewRect,
   Video,
-} from '@/lib/types';
+} from '../../lib/types';
 import {
   createNoteId,
   exportNotesAsPrompt,
   loadNotes,
   saveNotes,
 } from '../reviewNotes';
-import { resolveVideoSrc } from '@/lib/media';
+import { resolveVideoSrc } from '../../lib/media';
 
 function aspectRatio(res?: string): string {
   if (!res) return '16 / 9';

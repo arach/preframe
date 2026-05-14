@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Braces, Clock, CornerDownRight, Disc3, FileAudio, ListPlus, Loader2, Music, Pause, Play, RefreshCw, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { usePlayer } from '../PlayerContext';
-import { formatDuration, type AudioAsset } from '@/lib/types';
+import { formatDuration, type AudioAsset } from '../../lib/types';
 
 interface JsonModalState {
   title: string;

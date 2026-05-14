@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReviewNote, ReviewNoteKind, ReviewRect, Video } from '@/lib/types';
+import type { ReviewNote, ReviewNoteKind, ReviewRect, Video } from '../../lib/types';
 import { createNoteId, exportNotesAsPrompt, loadNotes, saveNotes } from '../reviewNotes';
 import { usePlayer } from '../PlayerContext';
 
