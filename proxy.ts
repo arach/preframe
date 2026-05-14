@@ -34,5 +34,9 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: '/api/:path*',
+  matcher: [
+    '/api/:path*',
+    '/catalog-data.json',
+    '/curated-snippets.json',
+  ],
 };
