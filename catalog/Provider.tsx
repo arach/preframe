@@ -15,7 +15,7 @@ import type {
   CuratedSnippet,
   CuratedSnippetsData,
   Video,
-} from '@/lib/types';
+} from '../lib/types';
 import { ReviewProvider } from './ReviewContext';
 import { FxProvider } from './FxContext';
 import { PlayerProvider } from './PlayerContext';
@@ -121,10 +121,24 @@ export function useCatalog() {
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
-export function CatalogProvider({ children }: { children: ReactNode }) {
+const KNOWN_VIEWS = new Set([
+  'new', 'new-music', 'queue', 'assets', 'frames', 'fx', 'music', 'logos', 'prompts', 'settings',
+]);
+
+export interface CatalogProviderProps {
+  children: ReactNode;
+  /** Sync view state to URL pathname. Default: auto-detect (true if pathname matches a known view). */
+  standalone?: boolean;
+}
+
+export function CatalogProvider({ children, standalone }: CatalogProviderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  // Detect standalone: pathname is root or a known catalog view
+  const pathSegment = pathname === '/' ? null : pathname.replace(/^\//, '');
+  const isStandalone = standalone ?? (pathname === '/' || KNOWN_VIEWS.has(pathSegment ?? ''));
 
   // --- URL-backed state ---
   const filter = searchParams.get('filter') ?? 'all';
@@ -254,11 +268,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const refreshCatalog = useCallback(async () => {
     const cacheBust = Date.now();
     const [c, s] = await Promise.all([
-      fetch(`/catalog-data.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.json()),
-      fetch(`/curated-snippets.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.json()),
+      fetch(`/catalog-data.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
+      fetch(`/curated-snippets.json?t=${cacheBust}`, { cache: 'no-store' }).then(r => r.ok ? r.json() : null),
     ]);
-    setData(c);
-    setSnippetsData(s);
+    if (c) setData(c);
+    if (s) setSnippetsData(s);
     setLoading(false);
   }, []);
 
@@ -452,11 +466,14 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const notifyMusicQueued = useCallback(() => setPendingMusicCount(c => c + 1), []);
   const notifyMusicSettled = useCallback(() => setPendingMusicCount(c => Math.max(0, c - 1)), []);
 
-  // --- View state — driven by the URL path ---
-  const view = pathname === '/' ? null : pathname.replace(/^\//, '');
+  // --- View state — in-memory source of truth, optional URL sync in standalone ---
+  const [view, setViewState] = useState<string | null>(isStandalone ? pathSegment : null);
   const setView = useCallback((v: string | null) => {
-    router.push(v ? `/${v}` : '/');
-  }, [router]);
+    setViewState(v);
+    if (isStandalone) {
+      router.push(v ? `/${v}` : '/');
+    }
+  }, [isStandalone, router]);
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
 
   // --- Code viewer ---
