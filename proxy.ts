@@ -9,7 +9,7 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:3100',
 ]);
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const origin = req.headers.get('origin');
   const isAllowed = origin !== null && ALLOWED_ORIGINS.has(origin);
 
