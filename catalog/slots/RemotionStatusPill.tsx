@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { apiClient } from '../lib/api-client';
 
 type Status = 'idle' | 'online' | 'offline' | 'starting';
 
@@ -9,7 +10,7 @@ export function RemotionStatusPill() {
 
   const check = useCallback(async () => {
     try {
-      const res = await fetch('/api/remotion/status', { cache: 'no-store' });
+      const res = await apiClient.get('/api/remotion/status', { cache: 'no-store' });
       const data = await res.json();
       setStatus(data.running ? 'online' : 'offline');
     } catch {
@@ -24,7 +25,7 @@ export function RemotionStatusPill() {
   useEffect(() => {
     if (status !== 'starting') return;
     const id = setInterval(async () => {
-      const res = await fetch('/api/remotion/status', { cache: 'no-store' });
+      const res = await apiClient.get('/api/remotion/status', { cache: 'no-store' });
       const d = await res.json();
       if (d.running) setStatus('online');
     }, 1500);
@@ -34,7 +35,7 @@ export function RemotionStatusPill() {
 
   const handleStart = async () => {
     setStatus('starting');
-    await fetch('/api/remotion/start', { method: 'POST' });
+    await apiClient.post('/api/remotion/start');
   };
 
   if (status === 'idle') return null;

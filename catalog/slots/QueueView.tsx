@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Clock, CheckCircle2, Loader2, FileVideo, MessageSquare, Zap, XCircle, RefreshCw, FolderOpen, ChevronRight, Play, FileCode, Braces, Database, Images, ExternalLink, RotateCcw, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import type { Video } from '@/lib/types';
+import type { Video } from '../../lib/types';
+import { apiClient } from '../lib/api-client';
 
 interface ActivityEntry {
   stage: string;
@@ -123,7 +124,7 @@ function compactJson(data: unknown): string {
 }
 
 async function retryJobRequest(jobId: string): Promise<void> {
-  const res = await fetch(`/api/jobs/${jobId}/retry`, { method: 'POST' });
+  const res = await apiClient.post(`/api/jobs/${jobId}/retry`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Retry failed (${res.status})`);
@@ -143,7 +144,7 @@ export function QueueView() {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/jobs`);
+      const res = await apiClient.get(`/api/jobs`);
       if (!res.ok) { setLoading(false); return; }
       const data = (await res.json()) as CompositionJob[];
       const list = Array.isArray(data) ? data : [];
@@ -397,7 +398,7 @@ function JobDetail({
   const openJson = (title: string, data: unknown) => setJsonModal({ title, data });
   const openJsonFile = async (path: string, title: string) => {
     try {
-      const res = await fetch(`/api/source?path=${encodeURIComponent(path)}`);
+      const res = await apiClient.get(`/api/source?path=${encodeURIComponent(path)}`);
       if (!res.ok) throw new Error(`Could not read ${path}`);
       const body = await res.json();
       const content = body.content ?? '';
@@ -415,7 +416,7 @@ function JobDetail({
     if (!isBriefJob || job.status !== 'completed') return;
     let cancelled = false;
     setBriefLoading(true);
-    fetch(`/api/source?path=${encodeURIComponent(briefPath)}`)
+    apiClient.get(`/api/source?path=${encodeURIComponent(briefPath)}`)
       .then(res => res.ok ? res.json() : null)
       .then(body => {
         if (cancelled || !body?.content) return;
@@ -442,7 +443,7 @@ function JobDetail({
     setRegenError(null);
     try {
       const sourcePath = `.compositions/${sourceCompositionId}/Composition.tsx`;
-      const sourceRes = await fetch(`/api/source?path=${encodeURIComponent(sourcePath)}`);
+      const sourceRes = await apiClient.get(`/api/source?path=${encodeURIComponent(sourcePath)}`);
       if (!sourceRes.ok) throw new Error(`Could not read original TSX (${sourceRes.status})`);
       const { content: originalSource } = await sourceRes.json();
 
@@ -450,7 +451,7 @@ function JobDetail({
       let audio: string[] = [];
       let aspectRatio: string | undefined;
       try {
-        const planRes = await fetch(`/api/source?path=${encodeURIComponent(`.compositions/${sourceCompositionId}/composition.json`)}`);
+        const planRes = await apiClient.get(`/api/source?path=${encodeURIComponent(`.compositions/${sourceCompositionId}/composition.json`)}`);
         if (planRes.ok) {
           const { content: planJson } = await planRes.json();
           const plan = JSON.parse(planJson);
@@ -467,8 +468,7 @@ function JobDetail({
       }
 
       const renderId = `${sourceCompositionId}-rev-${Date.now().toString(36)}`;
-      const res = await fetch(`/api/compositions/${encodeURIComponent(renderId)}/jobs`, {
-        method: 'POST',
+      const res = await apiClient.post(`/api/compositions/${encodeURIComponent(renderId)}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'revise-render',

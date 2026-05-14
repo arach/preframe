@@ -1,5 +1,5 @@
-import type { ReviewNote, Video } from "@/lib/types";
-import { formatTime } from "@/lib/types";
+import type { ReviewNote, Video } from "../lib/types";
+import { formatTime } from "../lib/types";
 
 const key = (videoId: string) => `preframe:review-notes:${videoId}`;
 

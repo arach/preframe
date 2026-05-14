@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ExternalLink, Layers } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { FramePreview } from './FramePreview';
-import type { CompositionFrame } from '@/lib/types';
+import type { CompositionFrame } from '../../lib/types';
 
 export function FramesView() {
   const { data } = useCatalog();

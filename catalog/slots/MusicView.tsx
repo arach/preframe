@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Braces, Clock, CornerDownRight, Disc3, FileAudio, ListPlus, Loader2, Music, Pause, Play, RefreshCw, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { usePlayer } from '../PlayerContext';
-import { formatDuration, type AudioAsset } from '@/lib/types';
+import { formatDuration, type AudioAsset } from '../../lib/types';
+import { apiClient } from '../lib/api-client';
 
 interface JsonModalState {
   title: string;
@@ -85,8 +86,7 @@ export function MusicView() {
     const note = feedback[asset.id]?.trim();
     if (!note) return;
     notifyMusicQueued();
-    fetch('/api/music/generate', {
-      method: 'POST',
+    apiClient.post('/api/music/generate', {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sourceAsset: asset,

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronRight, Play, Pause, Square } from 'lucide-react';
 import { useCatalog } from '../Provider';
-import type { CompositionFrame } from '@/lib/types';
+import type { CompositionFrame } from '../../lib/types';
+import { apiClient } from '../lib/api-client';
 
 // ---------------------------------------------------------------------------
 // Spec shape matching composition-frame.html
@@ -55,7 +56,7 @@ export function FramePreview({ frame, onBack }: FramePreviewProps) {
   // One-time Remotion server check
   useEffect(() => {
     if (frame.engine !== 'remotion' && frame.engine !== 'both') return;
-    fetch('/api/remotion/status', { cache: 'no-store' })
+    apiClient.get('/api/remotion/status', { cache: 'no-store' })
       .then(r => r.json())
       .then(d => setRemotionUp(d.running))
       .catch(() => setRemotionUp(false));
@@ -63,10 +64,10 @@ export function FramePreview({ frame, onBack }: FramePreviewProps) {
 
   const startRemotion = async () => {
     setRemotionUp(null); // "starting" state
-    await fetch('/api/remotion/start', { method: 'POST' });
+    await apiClient.post('/api/remotion/start');
     // Poll until up
     const poll = setInterval(async () => {
-      const r = await fetch('/api/remotion/status', { cache: 'no-store' });
+      const r = await apiClient.get('/api/remotion/status', { cache: 'no-store' });
       const d = await r.json();
       if (d.running) { setRemotionUp(true); clearInterval(poll); }
     }, 1500);

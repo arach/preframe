@@ -8,8 +8,8 @@ import {
   type MediaItem,
   type PlayMediaOpts as HudsonPlayMediaOpts,
 } from 'hudsonkit/player';
-import type { AudioAsset, Video } from '@/lib/types';
-import { resolveVideoSrc } from '@/lib/media';
+import type { AudioAsset, Video } from '../lib/types';
+import { resolveVideoSrc } from '../lib/media';
 import { useCatalog } from './Provider';
 import { CatalogQueueList } from './slots/CatalogQueueList';
 

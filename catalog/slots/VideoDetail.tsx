@@ -16,11 +16,12 @@ import {
 } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { useReviewContext } from '../ReviewContext';
+import { apiClient } from '../lib/api-client';
 import { usePlayer } from '../PlayerContext';
 import { exportNotesAsPrompt } from '../reviewNotes';
-import { resolveVideoSrc } from '@/lib/media';
-import { formatDuration, formatTime } from '@/lib/types';
-import type { CompositionEngine, FrameOverlay, ReviewNoteKind, ReviewRect, Video, VisionTag } from '@/lib/types';
+import { resolveVideoSrc } from '../../lib/media';
+import { formatDuration, formatTime } from '../../lib/types';
+import type { CompositionEngine, FrameOverlay, ReviewNoteKind, ReviewRect, Video, VisionTag } from '../../lib/types';
 
 function aspectRatio(res?: string): string {
   if (!res) return '16 / 9';
@@ -82,7 +83,7 @@ export function VideoDetail({ video }: { video: Video }) {
       let originalSource = '';
       const sourcePath = `.compositions/${compositionId}/Composition.tsx`;
       try {
-        const res = await fetch(`/api/source?path=${encodeURIComponent(sourcePath)}`);
+        const res = await apiClient.get(`/api/source?path=${encodeURIComponent(sourcePath)}`);
         if (res.ok) {
           const data = await res.json();
           originalSource = data.content ?? '';
@@ -92,8 +93,7 @@ export function VideoDetail({ video }: { video: Video }) {
       const reviewText = exportNotesAsPrompt(video, review.notes);
       const revisionId = `${compositionId}-rev-${Date.now().toString(36)}`;
 
-      const res = await fetch(`/api/compositions/${encodeURIComponent(revisionId)}/jobs`, {
-        method: 'POST',
+      const res = await apiClient.post(`/api/compositions/${encodeURIComponent(revisionId)}/jobs`, {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind: 'revise-brief',

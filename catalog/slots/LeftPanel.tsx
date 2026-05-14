@@ -4,8 +4,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { ArrowLeft, BookOpen, ChevronRight, Code2, FileCode2, FileVideo, Film, FolderOpen, Gem, Inbox, LayoutTemplate, Music, Layers, Plus, Settings, Wand2 } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import { RemotionStatusPill } from './RemotionStatusPill';
-import { formatDuration } from '@/lib/types';
-import type { Video } from '@/lib/types';
+import { formatDuration } from '../../lib/types';
+import type { Video } from '../../lib/types';
 
 export function CatalogLeftPanel() {
   const { projectVideo, projectId, videoId, data, openProjectInput, closeProjectInput, setView, view, setPendingFiles } = useCatalog();
