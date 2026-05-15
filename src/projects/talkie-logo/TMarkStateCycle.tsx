@@ -38,8 +38,9 @@ function stateColor(state: State): string {
   }
 }
 
-function glyphColor(state: State): string {
-  return state === 'idle' ? COLORS.tapeTan : COLORS.studioCream;
+function glyphColor(_state: State): string {
+  // All states use studioCream — the glyph is the constant, the dot is the state
+  return COLORS.studioCream;
 }
 
 export const TMarkStateCycle: React.FC = () => {

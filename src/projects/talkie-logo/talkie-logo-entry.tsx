@@ -3,8 +3,8 @@ import { TMarkStateCycle, T_MARK_CYCLE_FRAMES } from './TMarkStateCycle';
 import { WordmarkEntrance, WORDMARK_ENTRANCE_FRAMES } from './WordmarkEntrance';
 
 // State candidates
-import { IdleBreath, IDLE_BREATH_FRAMES } from './states/IdleBreath';
-import { IdleGlow, IDLE_GLOW_FRAMES } from './states/IdleGlow';
+import { IdleBreath, IdleBreathNoDot, IdleBreathWhiteDot, IDLE_BREATH_FRAMES } from './states/IdleBreath';
+import { IdleGlow, IdleGlowNoDot, IdleGlowWhiteDot, IDLE_GLOW_FRAMES } from './states/IdleGlow';
 import { ProcessingPulsePair, PROCESSING_PULSE_PAIR_FRAMES } from './states/ProcessingPulsePair';
 import { ProcessingTapeFlow, PROCESSING_TAPE_FLOW_FRAMES } from './states/ProcessingTapeFlow';
 import { ProcessingReelsRotated, PROCESSING_REELS_ROTATED_FRAMES } from './states/ProcessingReelsRotated';
@@ -17,6 +17,12 @@ import {
   IdleToRecordingFlicker,
   IdleToRecordingPreroll,
   IdleToRecordingFlood,
+  IdleToRecordingFlickerNoDot,
+  IdleToRecordingFlickerWhiteDot,
+  IdleToRecordingPrerollNoDot,
+  IdleToRecordingPrerollWhiteDot,
+  IdleToRecordingFloodNoDot,
+  IdleToRecordingFloodWhiteDot,
   IDLE_TO_RECORDING_FRAMES,
 } from './IdleToRecording';
 
@@ -29,6 +35,10 @@ import { WordmarkNeonGlow } from './wordmark-variants/NeonGlow';
 import { WordmarkGlitch } from './wordmark-variants/Glitch';
 import { WordmarkInkBloom } from './wordmark-variants/InkBloom';
 import { VARIANT_FRAMES } from './wordmark-variants/shared';
+import {
+  WordmarkCrtScanBezel, WordmarkMovieIntroBezel, WordmarkFilmGrainBezel,
+  WordmarkNeonGlowBezel, WordmarkGlitchBezel, WordmarkInkBloomBezel,
+} from './wordmark-variants/BezelWrapped';
 
 const FPS = 60;
 const SIZE = 2160;
@@ -54,23 +64,11 @@ const Root: React.FC = () => (
       />
     </Folder>
     <Folder name="Talkie-Logo-States">
-      {/* IDLE candidates */}
-      <Composition
-        id="IdleBreath"
-        component={IdleBreath}
-        durationInFrames={IDLE_BREATH_FRAMES}
-        fps={FPS}
-        width={SIZE}
-        height={SIZE}
-      />
-      <Composition
-        id="IdleGlow"
-        component={IdleGlow}
-        durationInFrames={IDLE_GLOW_FRAMES}
-        fps={FPS}
-        width={SIZE}
-        height={SIZE}
-      />
+      {/* IDLE candidates — sub-variants */}
+      <Composition id="IdleBreathNoDot" component={IdleBreathNoDot} durationInFrames={IDLE_BREATH_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="IdleBreathWhiteDot" component={IdleBreathWhiteDot} durationInFrames={IDLE_BREATH_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="IdleGlowNoDot" component={IdleGlowNoDot} durationInFrames={IDLE_GLOW_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="IdleGlowWhiteDot" component={IdleGlowWhiteDot} durationInFrames={IDLE_GLOW_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       {/* PROCESSING candidates */}
       <Composition
         id="ProcessingPulsePair"
@@ -123,30 +121,12 @@ const Root: React.FC = () => (
       />
     </Folder>
     <Folder name="Talkie-Idle-To-Recording">
-      <Composition
-        id="IdleToRecordingFlicker"
-        component={IdleToRecordingFlicker}
-        durationInFrames={IDLE_TO_RECORDING_FRAMES}
-        fps={FPS}
-        width={SIZE}
-        height={SIZE}
-      />
-      <Composition
-        id="IdleToRecordingPreroll"
-        component={IdleToRecordingPreroll}
-        durationInFrames={IDLE_TO_RECORDING_FRAMES}
-        fps={FPS}
-        width={SIZE}
-        height={SIZE}
-      />
-      <Composition
-        id="IdleToRecordingFlood"
-        component={IdleToRecordingFlood}
-        durationInFrames={IDLE_TO_RECORDING_FRAMES}
-        fps={FPS}
-        width={SIZE}
-        height={SIZE}
-      />
+      <Composition id="FlickerNoDot" component={IdleToRecordingFlickerNoDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="FlickerWhiteDot" component={IdleToRecordingFlickerWhiteDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="PrerollNoDot" component={IdleToRecordingPrerollNoDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="PrerollWhiteDot" component={IdleToRecordingPrerollWhiteDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="FloodNoDot" component={IdleToRecordingFloodNoDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="FloodWhiteDot" component={IdleToRecordingFloodWhiteDot} durationInFrames={IDLE_TO_RECORDING_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     </Folder>
     <Folder name="Talkie-Wordmark-Variants">
       <Composition id="WordmarkCrtScan" component={WordmarkCrtScan} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
@@ -156,6 +136,14 @@ const Root: React.FC = () => (
       <Composition id="WordmarkNeonGlow" component={WordmarkNeonGlow} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="WordmarkGlitch" component={WordmarkGlitch} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="WordmarkInkBloom" component={WordmarkInkBloom} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+    </Folder>
+    <Folder name="Talkie-Wordmark-Bezel">
+      <Composition id="CrtScanBezel" component={WordmarkCrtScanBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="MovieIntroBezel" component={WordmarkMovieIntroBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="FilmGrainBezel" component={WordmarkFilmGrainBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="NeonGlowBezel" component={WordmarkNeonGlowBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="GlitchBezel" component={WordmarkGlitchBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="InkBloomBezel" component={WordmarkInkBloomBezel} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     </Folder>
   </>
 );

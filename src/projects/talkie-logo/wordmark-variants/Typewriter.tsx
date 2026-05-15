@@ -49,11 +49,16 @@ export const WordmarkTypewriter: React.FC = () => {
             const revealProgress = interpolate(frame, [letterStart, letterStart + STRIKE_DURATION], [0, 1], {
               extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
             });
-            const clipX = s.letterPositions[i];
-            const clipW = (i < 5 ? s.letterPositions[i + 1] - clipX : s.wordmarkSize * 0.6) * revealProgress;
+            // Use generous cell width + overshoot padding so glyph strokes
+            // (K diagonals, E horizontals) are never clipped
+            const cellWidths = [600, 600, 600, 600, 340, 600];
+            const cellW = cellWidths[i] * s.u;
+            const overshoot = s.wordmarkSize * 0.15; // extra padding for glyph overshoot
+            const clipX = s.letterPositions[i] - overshoot * 0.3;
+            const clipW = (cellW + overshoot) * revealProgress;
             return (
               <clipPath key={`clip-${i}`} id={`strike-${i}`}>
-                <rect x={clipX} y={0} width={clipW} height={s.totalH} />
+                <rect x={clipX} y={0} width={revealProgress >= 1 ? cellW + overshoot : clipW} height={s.totalH} />
               </clipPath>
             );
           })}

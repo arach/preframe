@@ -2,9 +2,9 @@
  * TalkieIdleToRecording — the headline brand moment.
  *
  * Beat structure (~4s = 240 frames @ 60fps):
- * 1. Idle establish (0–1.5s / 0–90f): tapeTan dot with breath envelope, t in tapeTan
- * 2. Trigger moment (1.5–1.7s / 90–102f): the activation (3 variants)
- * 3. Hot Mic activated (1.7–4.0s / 102–240f): canonical 1.0Hz pulse, full studioCream t
+ * 1. Idle establish (0–1.5s / 0–90f): studioCream glyph, dot per dotMode
+ * 2. Trigger moment (1.5–1.7s / 90–102f): the activation (3 variants × 2 dotModes)
+ * 3. Hot Mic activated (1.7–4.0s / 102–240f): canonical 1.0Hz pulse
  */
 import { AbsoluteFill, interpolate, useCurrentFrame, Easing } from 'remotion';
 import { COLORS, MONO, T_GEOMETRY, PULSE } from './tokens';
@@ -14,13 +14,13 @@ const SIZE = 600;
 export const IDLE_TO_RECORDING_FRAMES = 240; // 4s
 
 type TriggerVariant = 'flicker' | 'preroll' | 'flood';
+type DotMode = 'no-dot' | 'white-dot';
 
-// Timing boundaries (in frames)
-const IDLE_END = 90;        // 1.5s
-const TRIGGER_END = 102;    // 1.7s
-const TRIGGER_DURATION = TRIGGER_END - IDLE_END; // 12 frames = 200ms
+const IDLE_END = 90;
+const TRIGGER_END = 102;
+const TRIGGER_DURATION = TRIGGER_END - IDLE_END;
 
-function makeIdleToRecording(variant: TriggerVariant): React.FC {
+function makeIdleToRecording(variant: TriggerVariant, dotMode: DotMode): React.FC {
   return () => {
     const frame = useCurrentFrame();
     const anchorX = SIZE * T_GEOMETRY.cellCenter;
@@ -30,11 +30,10 @@ function makeIdleToRecording(variant: TriggerVariant): React.FC {
     const dotCy = SIZE * 0.21;
     const viewW = SIZE * 0.62;
 
-    // Phase: idle (0), trigger (1), activated (2)
     const phase = frame < IDLE_END ? 0 : frame < TRIGGER_END ? 1 : 2;
     const triggerProgress = phase === 1 ? (frame - IDLE_END) / TRIGGER_DURATION : phase === 2 ? 1 : 0;
 
-    // --- Idle breath envelope (mm-a-breath at 5.5s cycle, 3% amplitude) ---
+    // Idle breath envelope
     const breathCycleFrames = 5.5 * FPS;
     const breathPhase = (frame % breathCycleFrames) / breathCycleFrames;
     const breathStops = [
@@ -53,85 +52,96 @@ function makeIdleToRecording(variant: TriggerVariant): React.FC {
     const breathNorm = (rawBreath - 0.92) / (1.06 - 0.92);
     const idleDotScale = 1 + (breathNorm - 0.5) * 0.03 * 2;
 
-    // --- Hot Mic 1.0Hz pulse ---
+    // Hot Mic 1.0Hz pulse
     const pulsePeriodFrames = (PULSE.periodMs / 1000) * FPS;
     const pulsePhase = ((frame - TRIGGER_END) % pulsePeriodFrames) / pulsePeriodFrames;
     const hotMicOpacity = interpolate(
-      Math.sin(pulsePhase * Math.PI * 2),
-      [-1, 1],
+      Math.sin(pulsePhase * Math.PI * 2), [-1, 1],
       [PULSE.opacityRange[0], PULSE.opacityRange[1]],
     );
 
-    // --- Compute dot + glyph per variant ---
+    // Idle start colors based on dotMode
+    const hasIdleDot = dotMode === 'white-dot';
+    const idleDotColor = COLORS.studioCream;
+    const idleDotOpacity = 0.75;
+
     let dotColor: string;
     let dotOpacity: number;
     let dotScale: number;
-    let glyphFill: string;
+    let showDot: boolean;
 
     if (phase === 0) {
-      // Idle state
-      dotColor = COLORS.tapeTan;
-      dotOpacity = 0.65;
+      // Idle
+      dotColor = idleDotColor;
+      dotOpacity = hasIdleDot ? idleDotOpacity : 0;
       dotScale = idleDotScale;
-      glyphFill = COLORS.tapeTan;
+      showDot = hasIdleDot;
     } else if (phase === 2) {
       // Activated
       dotColor = COLORS.hotMic;
       dotOpacity = hotMicOpacity;
       dotScale = 1;
-      glyphFill = COLORS.studioCream;
+      showDot = true;
     } else {
-      // Trigger — variant-specific
+      // Trigger
       const t = Easing.inOut(Easing.ease)(triggerProgress);
+      showDot = true;
 
       switch (variant) {
         case 'flicker': {
-          // Wake-up flicker: t snaps tapeTan→studioCream over 80ms
-          // with 1-frame brightness overshoot at midpoint
-          const flickerMid = 0.4; // midpoint of 200ms
+          const flickerMid = 0.4;
           const isOvershoot = triggerProgress > flickerMid - 0.08 && triggerProgress < flickerMid + 0.08;
-          glyphFill = isOvershoot ? '#FFFFFF' : lerpColor(COLORS.tapeTan, COLORS.studioCream, t);
-          // Dot transitions color
-          dotColor = lerpColor(COLORS.tapeTan, COLORS.hotMic, t);
-          dotOpacity = interpolate(t, [0, 1], [0.65, 1]);
+          void isOvershoot;
+          if (hasIdleDot) {
+            // white-dot → hotMic: color transform
+            dotColor = lerpColor(COLORS.studioCream, COLORS.hotMic, t);
+            dotOpacity = interpolate(t, [0, 1], [idleDotOpacity, 1]);
+          } else {
+            // no-dot → hotMic: dot emerges
+            dotColor = COLORS.hotMic;
+            dotOpacity = interpolate(t, [0, 1], [0, 1]);
+          }
           dotScale = 1;
           break;
         }
         case 'preroll': {
-          // Pre-roll breath: dot takes deep anticipation inhale (scale 1.35 over 200ms)
-          // then collapses inward and becomes Hot Mic
-          const inhalePhase = Math.min(t / 0.6, 1); // first 60% is inhale
-          const collapsePhase = t > 0.6 ? (t - 0.6) / 0.4 : 0; // last 40% is collapse+color
+          const inhalePhase = Math.min(t / 0.6, 1);
+          const collapsePhase = t > 0.6 ? (t - 0.6) / 0.4 : 0;
           if (t <= 0.6) {
-            // Inhale with overshoot
             const overshoot = Easing.bezier(0.2, 1.3, 0.4, 1)(inhalePhase);
             dotScale = 1 + overshoot * 0.35;
-            dotColor = COLORS.tapeTan;
-            dotOpacity = interpolate(inhalePhase, [0, 1], [0.65, 0.9]);
+            if (hasIdleDot) {
+              dotColor = COLORS.studioCream;
+              dotOpacity = interpolate(inhalePhase, [0, 1], [idleDotOpacity, 0.9]);
+            } else {
+              dotColor = COLORS.hotMic;
+              dotOpacity = interpolate(inhalePhase, [0, 1], [0, 0.9]);
+            }
           } else {
-            // Collapse: scale snaps back to 1, color floods to hotMic
             const collapseEased = Easing.out(Easing.ease)(collapsePhase);
             dotScale = interpolate(collapseEased, [0, 1], [1.35, 1]);
-            dotColor = lerpColor(COLORS.tapeTan, COLORS.hotMic, collapseEased);
+            if (hasIdleDot) {
+              dotColor = lerpColor(COLORS.studioCream, COLORS.hotMic, collapseEased);
+            } else {
+              dotColor = COLORS.hotMic;
+            }
             dotOpacity = interpolate(collapseEased, [0, 1], [0.9, 1]);
           }
-          glyphFill = lerpColor(COLORS.tapeTan, COLORS.studioCream, Easing.out(Easing.ease)(t));
           break;
         }
         case 'flood': {
-          // Color flood: red wash sweeps left→right across dot via clip-path
-          // Glyph stays dim during sweep, brightens at end
           dotColor = COLORS.hotMic;
           dotOpacity = 1;
           dotScale = 1;
-          // We'll render two overlapping dots with a clip boundary
-          glyphFill = lerpColor(COLORS.tapeTan, COLORS.studioCream, Easing.out(Easing.cubic)(t));
           break;
         }
       }
     }
 
-    // Flood variant needs special SVG for the sweep
+    // Glyph is always studioCream now
+    const glyphFill = COLORS.studioCream;
+
+    // Flood variant special SVG
     const isFloodTrigger = variant === 'flood' && phase === 1;
     const floodT = phase === 1 ? Easing.inOut(Easing.ease)(triggerProgress) : 0;
 
@@ -153,19 +163,21 @@ function makeIdleToRecording(variant: TriggerVariant): React.FC {
 
           {isFloodTrigger ? (
             <>
-              {/* Base: tapeTan dot */}
-              <circle cx={stemCx} cy={dotCy} r={dotR * 0.78} fill={COLORS.tapeTan} opacity={0.65} />
-              {/* Flood overlay: hotMic sweeping in */}
+              {hasIdleDot && (
+                <circle cx={stemCx} cy={dotCy} r={dotR} fill={COLORS.studioCream} opacity={idleDotOpacity * (1 - floodT)} />
+              )}
               <circle cx={stemCx} cy={dotCy} r={dotR} fill={COLORS.hotMic} clipPath="url(#flood-clip)" />
             </>
           ) : (
-            <circle
-              cx={stemCx}
-              cy={dotCy}
-              r={dotR * (phase === 0 ? 0.78 : 1) * dotScale}
-              fill={dotColor!}
-              opacity={dotOpacity!}
-            />
+            showDot && (
+              <circle
+                cx={stemCx}
+                cy={dotCy}
+                r={dotR * dotScale}
+                fill={dotColor!}
+                opacity={dotOpacity!}
+              />
+            )
           )}
 
           <text
@@ -175,7 +187,7 @@ function makeIdleToRecording(variant: TriggerVariant): React.FC {
             fontFamily={MONO}
             fontWeight={400}
             fontSize={SIZE * 0.78}
-            fill={glyphFill!}
+            fill={glyphFill}
           >
             t
           </text>
@@ -185,7 +197,6 @@ function makeIdleToRecording(variant: TriggerVariant): React.FC {
   };
 }
 
-// --- Color interpolation ---
 function lerpColor(a: string, b: string, t: number): string {
   const pa = parseHex(a);
   const pb = parseHex(b);
@@ -196,7 +207,15 @@ function parseHex(hex: string): [number, number, number] {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
-// Export all three trigger variants
-export const IdleToRecordingFlicker = makeIdleToRecording('flicker');
-export const IdleToRecordingPreroll = makeIdleToRecording('preroll');
-export const IdleToRecordingFlood = makeIdleToRecording('flood');
+// 3 triggers × 2 dot modes = 6 exports
+export const IdleToRecordingFlickerNoDot = makeIdleToRecording('flicker', 'no-dot');
+export const IdleToRecordingFlickerWhiteDot = makeIdleToRecording('flicker', 'white-dot');
+export const IdleToRecordingPrerollNoDot = makeIdleToRecording('preroll', 'no-dot');
+export const IdleToRecordingPrerollWhiteDot = makeIdleToRecording('preroll', 'white-dot');
+export const IdleToRecordingFloodNoDot = makeIdleToRecording('flood', 'no-dot');
+export const IdleToRecordingFloodWhiteDot = makeIdleToRecording('flood', 'white-dot');
+
+// Legacy exports (white-dot default)
+export const IdleToRecordingFlicker = IdleToRecordingFlickerWhiteDot;
+export const IdleToRecordingPreroll = IdleToRecordingPrerollWhiteDot;
+export const IdleToRecordingFlood = IdleToRecordingFloodWhiteDot;
