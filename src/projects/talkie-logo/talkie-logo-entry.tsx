@@ -20,6 +20,16 @@ import {
   IDLE_TO_RECORDING_FRAMES,
 } from './IdleToRecording';
 
+// §2 — wordmark filter variants
+import { WordmarkCrtScan } from './wordmark-variants/CrtScan';
+import { WordmarkMovieIntro } from './wordmark-variants/MovieIntro';
+import { WordmarkTypewriter } from './wordmark-variants/Typewriter';
+import { WordmarkFilmGrain } from './wordmark-variants/FilmGrain';
+import { WordmarkNeonGlow } from './wordmark-variants/NeonGlow';
+import { WordmarkGlitch } from './wordmark-variants/Glitch';
+import { WordmarkInkBloom } from './wordmark-variants/InkBloom';
+import { VARIANT_FRAMES } from './wordmark-variants/shared';
+
 const FPS = 60;
 const SIZE = 2160;
 
@@ -137,6 +147,15 @@ const Root: React.FC = () => (
         width={SIZE}
         height={SIZE}
       />
+    </Folder>
+    <Folder name="Talkie-Wordmark-Variants">
+      <Composition id="WordmarkCrtScan" component={WordmarkCrtScan} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkMovieIntro" component={WordmarkMovieIntro} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkTypewriter" component={WordmarkTypewriter} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkFilmGrain" component={WordmarkFilmGrain} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkNeonGlow" component={WordmarkNeonGlow} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkGlitch" component={WordmarkGlitch} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="WordmarkInkBloom" component={WordmarkInkBloom} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     </Folder>
   </>
 );
