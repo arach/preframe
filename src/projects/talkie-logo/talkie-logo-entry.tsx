@@ -55,6 +55,9 @@ import { WordmarkTrailerSnap } from './wordmark-variants/CinematicTrailerSnap';
 // Showcase reel
 import { TalkieIntroShowcase, SHOWCASE_FRAMES } from './TalkieIntroShowcase';
 
+// Knockout mark
+import { TalkieKnockoutStatic, TalkieKnockoutBlink, KNOCKOUT_BLINK_FRAMES } from './TalkieKnockout';
+
 // Static brand marks
 import { TMarkIdle, TMarkListening } from './statics/TMarkStatic';
 import { WordmarkStatic } from './statics/WordmarkStatic';
@@ -132,6 +135,8 @@ const Root: React.FC = () => (
     {/* Showcase reel — the review surface */}
     <Composition id="TalkieIntroShowcase" component={TalkieIntroShowcase} durationInFrames={SHOWCASE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     {/* Static brand marks */}
+    <Still id="TalkieKnockoutStatic" component={TalkieKnockoutStatic} width={1024} height={1024} />
+    <Composition id="TalkieKnockoutBlink" component={TalkieKnockoutBlink} durationInFrames={KNOCKOUT_BLINK_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     <Still id="TMarkIdle" component={TMarkIdle} width={1024} height={1024} />
     <Still id="TMarkListening" component={TMarkListening} width={1024} height={1024} />
     <Still id="WordmarkStatic" component={WordmarkStatic} width={1024} height={1024} />
