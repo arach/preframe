@@ -22,7 +22,7 @@ export function tGeom(size = 600): TMarkGeometry {
   const stemCx = anchorX + size * T_GEOMETRY.stemOffsetFromAnchor;
   const baseline = size * 0.86;
   const dotR = (size * T_GEOMETRY.stemWidth) / 2;
-  const dotCy = size * 0.12;
+  const dotCy = size * 0.21;
   return { size, viewW, anchorX, stemCx, baseline, dotR, dotCy };
 }
 

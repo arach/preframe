@@ -53,7 +53,7 @@ export const TMarkStateCycle: React.FC = () => {
   const stemCx = anchorX + size * T_GEOMETRY.stemOffsetFromAnchor;
   const baseline = size * 0.86;
   const dotR = (size * T_GEOMETRY.stemWidth) / 2;
-  const dotCy = size * 0.12;
+  const dotCy = size * 0.21;
 
   // Interpolate glyph color during transition
   const currentGlyphColor = transition > 0
@@ -88,7 +88,7 @@ export const TMarkStateCycle: React.FC = () => {
           y={baseline}
           textAnchor="middle"
           fontFamily={MONO}
-          fontWeight={500}
+          fontWeight={400}
           fontSize={size * 0.78}
           fill={currentGlyphColor}
         >

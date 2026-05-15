@@ -12,6 +12,14 @@ import { ErrorJitter, ERROR_JITTER_FRAMES } from './states/ErrorJitter';
 import { ErrorWink, ERROR_WINK_FRAMES } from './states/ErrorWink';
 import { ErrorOutlinePulse, ERROR_OUTLINE_PULSE_FRAMES } from './states/ErrorOutlinePulse';
 
+// §3 — idle→recording showpiece
+import {
+  IdleToRecordingFlicker,
+  IdleToRecordingPreroll,
+  IdleToRecordingFlood,
+  IDLE_TO_RECORDING_FRAMES,
+} from './IdleToRecording';
+
 const FPS = 60;
 const SIZE = 2160;
 
@@ -99,6 +107,32 @@ const Root: React.FC = () => (
         id="ErrorOutlinePulse"
         component={ErrorOutlinePulse}
         durationInFrames={ERROR_OUTLINE_PULSE_FRAMES}
+        fps={FPS}
+        width={SIZE}
+        height={SIZE}
+      />
+    </Folder>
+    <Folder name="Talkie-Idle-To-Recording">
+      <Composition
+        id="IdleToRecordingFlicker"
+        component={IdleToRecordingFlicker}
+        durationInFrames={IDLE_TO_RECORDING_FRAMES}
+        fps={FPS}
+        width={SIZE}
+        height={SIZE}
+      />
+      <Composition
+        id="IdleToRecordingPreroll"
+        component={IdleToRecordingPreroll}
+        durationInFrames={IDLE_TO_RECORDING_FRAMES}
+        fps={FPS}
+        width={SIZE}
+        height={SIZE}
+      />
+      <Composition
+        id="IdleToRecordingFlood"
+        component={IdleToRecordingFlood}
+        durationInFrames={IDLE_TO_RECORDING_FRAMES}
         fps={FPS}
         width={SIZE}
         height={SIZE}

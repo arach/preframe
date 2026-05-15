@@ -46,7 +46,7 @@ export const ProcessingPulsePair: React.FC = () => {
           y={g.baseline}
           textAnchor="middle"
           fontFamily={MONO}
-          fontWeight={500}
+          fontWeight={400}
           fontSize={g.size * 0.78}
           fill={COLORS.studioCream}
         >
