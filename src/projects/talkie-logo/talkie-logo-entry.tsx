@@ -1,4 +1,4 @@
-import { Composition, Folder, registerRoot } from 'remotion';
+import { Composition, Still, Folder, registerRoot } from 'remotion';
 import { TMarkStateCycle, T_MARK_CYCLE_FRAMES } from './TMarkStateCycle';
 import { WordmarkEntrance, WORDMARK_ENTRANCE_FRAMES } from './WordmarkEntrance';
 
@@ -54,6 +54,20 @@ import { WordmarkTrailerSnap } from './wordmark-variants/CinematicTrailerSnap';
 
 // Showcase reel
 import { TalkieIntroShowcase, SHOWCASE_FRAMES } from './TalkieIntroShowcase';
+
+// Static brand marks
+import { TMarkIdle, TMarkListening } from './statics/TMarkStatic';
+import { WordmarkStatic } from './statics/WordmarkStatic';
+
+// Dot library
+import {
+  DotBlink, DOT_BLINK_FRAMES, DotAppear, DOT_APPEAR_FRAMES,
+  DotDisappear, DOT_DISAPPEAR_FRAMES, DotColorCreamToRed, DOT_COLOR_CREAM_TO_RED_FRAMES,
+  DotColorRedToCream, DOT_COLOR_RED_TO_CREAM_FRAMES, DotIdleWander, DOT_IDLE_WANDER_FRAMES,
+  DotPulseHotMic, DOT_PULSE_HOT_MIC_FRAMES, DotPulseSlow, DOT_PULSE_SLOW_FRAMES,
+  DotSplitToTwinReels, DOT_SPLIT_FRAMES, DotMergeFromTwinReels, DOT_MERGE_FRAMES,
+} from './dot-library/primitives';
+import { DotShowcase, DOT_SHOWCASE_FRAMES } from './dot-library/DotShowcase';
 
 const FPS = 60;
 const SIZE = 2160;
@@ -117,6 +131,24 @@ const Root: React.FC = () => (
     </Folder>
     {/* Showcase reel — the review surface */}
     <Composition id="TalkieIntroShowcase" component={TalkieIntroShowcase} durationInFrames={SHOWCASE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+    {/* Static brand marks */}
+    <Still id="TMarkIdle" component={TMarkIdle} width={1024} height={1024} />
+    <Still id="TMarkListening" component={TMarkListening} width={1024} height={1024} />
+    <Still id="WordmarkStatic" component={WordmarkStatic} width={1024} height={1024} />
+    {/* Dot library */}
+    <Folder name="Talkie-Dot-Library">
+      <Composition id="DotBlink" component={DotBlink} durationInFrames={DOT_BLINK_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotAppear" component={DotAppear} durationInFrames={DOT_APPEAR_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotDisappear" component={DotDisappear} durationInFrames={DOT_DISAPPEAR_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotColorCreamToRed" component={DotColorCreamToRed} durationInFrames={DOT_COLOR_CREAM_TO_RED_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotColorRedToCream" component={DotColorRedToCream} durationInFrames={DOT_COLOR_RED_TO_CREAM_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotIdleWander" component={DotIdleWander} durationInFrames={DOT_IDLE_WANDER_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotPulseHotMic" component={DotPulseHotMic} durationInFrames={DOT_PULSE_HOT_MIC_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotPulseSlow" component={DotPulseSlow} durationInFrames={DOT_PULSE_SLOW_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotSplitToTwinReels" component={DotSplitToTwinReels} durationInFrames={DOT_SPLIT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotMergeFromTwinReels" component={DotMergeFromTwinReels} durationInFrames={DOT_MERGE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="DotShowcase" component={DotShowcase} durationInFrames={DOT_SHOWCASE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+    </Folder>
   </>
 );
 
