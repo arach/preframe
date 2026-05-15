@@ -34,14 +34,26 @@ import {
   WordmarkNeonGlowBezel, WordmarkGlitchBezel, WordmarkInkBloomBezel,
 } from './wordmark-variants/BezelWrapped';
 
-// Letter-based wordmark animations (§B batch 4)
+// Letter-based wordmark animations
 import { WordmarkRollout } from './wordmark-variants/LettersRollout';
 import { WordmarkStamp } from './wordmark-variants/LettersStamp';
 import { WordmarkSlideLeft } from './wordmark-variants/LettersSlideLeft';
 import { WordmarkSlideUp } from './wordmark-variants/LettersSlideUp';
+import { WordmarkWipeVertical } from './wordmark-variants/LettersWipeVertical';
+import { WordmarkFlip3d } from './wordmark-variants/LettersFlip3d';
 import { WordmarkCascadeFall } from './wordmark-variants/LettersCascadeFall';
 import { WordmarkDecode } from './wordmark-variants/LettersDecode';
 import { WordmarkZoomIn } from './wordmark-variants/LettersZoomIn';
+
+// Cinematic filter variants
+import { WordmarkAnamorphicFlare } from './wordmark-variants/CinematicAnamorphicFlare';
+import { WordmarkTealOrange } from './wordmark-variants/CinematicTealOrange';
+import { WordmarkSlowZoom } from './wordmark-variants/CinematicSlowZoom';
+import { WordmarkTitleCard } from './wordmark-variants/CinematicTitleCard';
+import { WordmarkTrailerSnap } from './wordmark-variants/CinematicTrailerSnap';
+
+// Showcase reel
+import { TalkieIntroShowcase, SHOWCASE_FRAMES } from './TalkieIntroShowcase';
 
 const FPS = 60;
 const SIZE = 2160;
@@ -90,10 +102,21 @@ const Root: React.FC = () => (
       <Composition id="LettersStamp" component={WordmarkStamp} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="LettersSlideLeft" component={WordmarkSlideLeft} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="LettersSlideUp" component={WordmarkSlideUp} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="LettersWipeVertical" component={WordmarkWipeVertical} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="LettersFlip3d" component={WordmarkFlip3d} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="LettersCascadeFall" component={WordmarkCascadeFall} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="LettersDecode" component={WordmarkDecode} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
       <Composition id="LettersZoomIn" component={WordmarkZoomIn} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
     </Folder>
+    <Folder name="Talkie-Wordmark-Cinematic">
+      <Composition id="AnamorphicFlare" component={WordmarkAnamorphicFlare} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="TealOrange" component={WordmarkTealOrange} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="SlowZoom" component={WordmarkSlowZoom} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="TitleCard" component={WordmarkTitleCard} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Composition id="TrailerSnap" component={WordmarkTrailerSnap} durationInFrames={VARIANT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+    </Folder>
+    {/* Showcase reel — the review surface */}
+    <Composition id="TalkieIntroShowcase" component={TalkieIntroShowcase} durationInFrames={SHOWCASE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
   </>
 );
 

@@ -28,7 +28,7 @@ export const WordmarkEntrance: React.FC = () => {
   // Dot positioning (above dotless i stem)
   const dotCx = WORDMARK.iStemCenterUPM * u;
   const dotR = wordmarkSize * 0.075;
-  const dotCy = baseline - WORDMARK.iStemTopUPM * u - dotR * 1.4;
+  const dotCy = baseline - WORDMARK.iStemTopUPM * u - dotR * 2.5;
 
   // Individual letter opacities
   // We use per-character <text> elements for sequential fade-in

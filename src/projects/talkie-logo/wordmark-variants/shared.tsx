@@ -42,7 +42,7 @@ export function useWordmarkState(): WordmarkState {
   const baseline = wordmarkSize * 0.82;
   const dotCx = WORDMARK.iStemCenterUPM * u;
   const dotR = wordmarkSize * 0.075;
-  const dotCy = baseline - WORDMARK.iStemTopUPM * u - dotR * 1.4;
+  const dotCy = baseline - WORDMARK.iStemTopUPM * u - dotR * 2.5;
 
   const cellWidths = [600, 600, 600, 600, 340, 600];
   let cumX = 0;
