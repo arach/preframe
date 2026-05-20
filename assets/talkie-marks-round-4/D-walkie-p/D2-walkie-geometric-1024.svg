@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- D2 walkie geometric: even more reduced. Body is a vertical capsule.
+       Antenna is a straight diagonal mark. Dot is the brand. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Capsule body — fully rounded, solid -->
+  <rect x="368" y="320" width="224" height="512" rx="112" ry="112" fill="#F4EFE6"/>
+  <!-- Antenna line — projecting up-right from top of capsule -->
+  <line x1="592" y1="352" x2="752" y2="192" stroke="#F4EFE6" stroke-width="40" stroke-linecap="round"/>
+  <!-- Hot Mic dot — antenna terminus -->
+  <circle cx="752" cy="192" r="44" fill="#FF5346"/>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- A4 closed-loop oscillator: trace forms a sealed shape (Lissajous-ish),
+       not a horizontal line. Dot rides the loop. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <path
+    d="M 512 256
+       C 720 256, 832 384, 768 512
+       C 704 640, 512 768, 320 640
+       C 192 552, 240 360, 416 304
+       C 480 280, 512 256, 512 256 Z"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="768" cy="448" r="44" fill="#FF5346"/>
+</svg>
