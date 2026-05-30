@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- B1 symmetric reel pair, ribbon below, Hot Mic dot replacing one reel center -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Left reel: outline + cream center -->
+  <circle cx="328" cy="448" r="176" fill="none" stroke="#F4EFE6" stroke-width="40"/>
+  <circle cx="328" cy="448" r="48" fill="#F4EFE6"/>
+  <!-- Right reel: outline + Hot Mic center -->
+  <circle cx="696" cy="448" r="176" fill="none" stroke="#F4EFE6" stroke-width="40"/>
+  <circle cx="696" cy="448" r="48" fill="#FF5346"/>
+  <!-- Ribbon below — slight curve to suggest tension -->
+  <path
+    d="M 296 696 Q 512 776, 728 696"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="32"
+    stroke-linecap="round"
+  />
+</svg>

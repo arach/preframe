@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- B4 reel cross-section: edge-on view. Two narrow ellipses stacked,
+       suggests depth — a reel rotated to show its face from the side. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Top reel — ellipse with hub -->
+  <ellipse cx="512" cy="328" rx="248" ry="64" fill="none" stroke="#F4EFE6" stroke-width="32"/>
+  <ellipse cx="512" cy="328" rx="48" ry="20" fill="#F4EFE6"/>
+  <!-- Bottom reel -->
+  <ellipse cx="512" cy="696" rx="248" ry="64" fill="none" stroke="#F4EFE6" stroke-width="32"/>
+  <ellipse cx="512" cy="696" rx="48" ry="20" fill="#FF5346"/>
+  <!-- Vertical "tape" body connecting them -->
+  <line x1="280" y1="328" x2="280" y2="696" stroke="#F4EFE6" stroke-width="32" stroke-linecap="round"/>
+  <line x1="744" y1="328" x2="744" y2="696" stroke="#F4EFE6" stroke-width="32" stroke-linecap="round"/>
+</svg>

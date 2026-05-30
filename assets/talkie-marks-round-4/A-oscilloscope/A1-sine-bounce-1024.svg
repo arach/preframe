@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- A1 sine-bounce: single rise+fall, calm, Hot Mic dot at peak.
+       The trace IS the mark. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <path
+    d="M 192 512 Q 384 512, 432 384 T 592 384 Q 640 384, 832 512"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="40"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="512" cy="368" r="48" fill="#FF5346"/>
+</svg>

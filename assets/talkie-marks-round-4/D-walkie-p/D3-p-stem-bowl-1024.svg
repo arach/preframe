@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- D3 lowercase p — stem + bowl. The "p" of press-to-talk.
+       Reads as a shape-on-stand. Hot Mic dot in the bowl's center
+       to anchor the recording semantics. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Vertical stem -->
+  <rect x="320" y="320" width="80" height="560" fill="#F4EFE6"/>
+  <!-- Bowl: closed counter on the right of the stem -->
+  <circle cx="560" cy="464" r="184" fill="none" stroke="#F4EFE6" stroke-width="80"/>
+  <!-- Hot Mic dot in the bowl's center — "press here to record" -->
+  <circle cx="560" cy="464" r="48" fill="#FF5346"/>
+</svg>

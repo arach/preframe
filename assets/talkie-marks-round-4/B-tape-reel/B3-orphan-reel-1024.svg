@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- B3 orphan-reel: single circle with a trailing ribbon.
+       More abstract — the reel as gesture, not as device. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- The reel — large, centered -->
+  <circle cx="480" cy="464" r="240" fill="none" stroke="#F4EFE6" stroke-width="48"/>
+  <circle cx="480" cy="464" r="64" fill="#FF5346"/>
+  <!-- Trailing ribbon — drops down and away, suggests tape pulling out -->
+  <path
+    d="M 656 568 Q 768 696, 768 856"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="36"
+    stroke-linecap="round"
+  />
+</svg>

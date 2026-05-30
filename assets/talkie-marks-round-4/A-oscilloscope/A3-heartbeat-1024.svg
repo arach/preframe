@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- A3 heartbeat: flat plateaus, one sharp spike with a downbeat overshoot.
+       Medical/instrumental register. Hot Mic dot at the spike apex. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <path
+    d="M 128 512
+       L 384 512
+       L 432 432
+       L 480 200
+       L 528 752
+       L 576 512
+       L 896 512"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="36"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="480" cy="200" r="44" fill="#FF5346"/>
+</svg>

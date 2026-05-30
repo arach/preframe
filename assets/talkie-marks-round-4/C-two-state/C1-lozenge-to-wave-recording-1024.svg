@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- C1 recording: lozenge opened on the right edge, waveform escapes
+       outward. Same primitive, transformed. Hot Mic dot at the wave's tip. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- The opened lozenge — left side remains, right side becomes wave -->
+  <path
+    d="M 640 384
+       L 384 384
+       Q 256 384, 256 512
+       Q 256 640, 384 640
+       L 640 640"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="44"
+    stroke-linejoin="round"
+    stroke-linecap="round"
+  />
+  <!-- Waveform escaping from the opening -->
+  <path
+    d="M 640 384 Q 712 432, 760 384 T 880 432
+       M 640 640 Q 712 592, 760 640 T 880 592"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="32"
+    stroke-linecap="round"
+  />
+  <circle cx="880" cy="512" r="44" fill="#FF5346"/>
+</svg>

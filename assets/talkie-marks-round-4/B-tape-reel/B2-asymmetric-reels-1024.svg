@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- B2 asymmetric reels: one full (recording source), one half-spooled.
+       Evokes recording in progress. Ribbon thickens toward the full reel. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Left reel: smaller, half-spooled (donut shape with thicker rim) -->
+  <circle cx="288" cy="464" r="128" fill="none" stroke="#F4EFE6" stroke-width="32"/>
+  <circle cx="288" cy="464" r="32" fill="#F4EFE6"/>
+  <!-- Right reel: larger, full (filled body) — the "destination" -->
+  <circle cx="704" cy="464" r="192" fill="#F4EFE6"/>
+  <circle cx="704" cy="464" r="56" fill="#FF5346"/>
+  <!-- Ribbon transferring from left to right, drawn as connecting tangent -->
+  <path
+    d="M 360 552 C 480 680, 560 680, 624 624"
+    fill="none"
+    stroke="#F4EFE6"
+    stroke-width="28"
+    stroke-linecap="round"
+  />
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- D1 walkie minimal: antenna + rounded body. Reduced to skeleton.
+       No buttons, no grille, no callouts. -->
+  <rect width="1024" height="1024" fill="#0E0D0A"/>
+  <!-- Body: rounded rectangle, vertical -->
+  <rect x="320" y="304" width="320" height="488" rx="64" ry="64"
+    fill="none" stroke="#F4EFE6" stroke-width="44"/>
+  <!-- Antenna: angled stem extending up-right from the body's top -->
+  <line x1="560" y1="320" x2="704" y2="160" stroke="#F4EFE6" stroke-width="36" stroke-linecap="round"/>
+  <!-- Antenna tip / signal cue: Hot Mic dot -->
+  <circle cx="704" cy="160" r="36" fill="#FF5346"/>
+  <!-- One faint indicator inside the body — the speaker/grille is replaced by a single dot -->
+  <circle cx="480" cy="464" r="24" fill="#F4EFE6"/>
+</svg>
