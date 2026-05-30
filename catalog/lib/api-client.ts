@@ -4,15 +4,18 @@
  * Resolves base URL once:
  * - Standalone (:3100): relative fetch (empty base)
  * - Embedded in Hudson (:3500): absolute fetch to preframe's origin
+ *
+ * All requests are network-safe — if the Preframe service is unreachable,
+ * `request()` returns a synthetic `Response { status: 0 }` instead of throwing.
+ * Use `checkHealth()` to probe service availability before driving UI state.
  */
 
 const PREFRAME_ORIGIN = 'http://localhost:3100';
+const HEALTH_PATH = '/api/health';
 
 function getBase(): string {
   if (typeof window === 'undefined') return '';
-  // If we're running on preframe's own port, use relative paths
   if (window.location.origin === PREFRAME_ORIGIN) return '';
-  // Otherwise we're embedded — target preframe's API server
   return PREFRAME_ORIGIN;
 }
 
@@ -22,8 +25,33 @@ function base(): string {
   return _base;
 }
 
+function offlineResponse(): Response {
+  return new Response(null, { status: 0, statusText: 'Network unavailable' });
+}
+
 async function request(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`${base()}${path}`, init);
+  try {
+    return await fetch(`${base()}${path}`, init);
+  } catch {
+    return offlineResponse();
+  }
+}
+
+/** Probe the Preframe service. Resolves true iff /api/health returns ok within timeoutMs. */
+export async function checkHealth(timeoutMs = 2000): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(`${base()}${HEALTH_PATH}`, {
+      signal: controller.signal,
+      cache: 'no-store',
+    });
+    return r.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export const apiClient = {

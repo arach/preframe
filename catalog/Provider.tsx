@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -19,7 +20,11 @@ import type {
 import { ReviewProvider } from './ReviewContext';
 import { FxProvider } from './FxContext';
 import { PlayerProvider } from './PlayerContext';
-import { apiClient } from './lib/api-client';
+import { apiClient, checkHealth } from './lib/api-client';
+
+export type ServiceStatus = 'unknown' | 'checking' | 'online' | 'offline';
+
+const OFFLINE_BACKOFF_MS = [5_000, 10_000, 20_000, 30_000] as const;
 
 // ---------------------------------------------------------------------------
 // Lightbox state — transient UI, not URL-backed
@@ -39,6 +44,10 @@ export interface CatalogContextValue {
   data: CatalogData | null;
   snippets: CuratedSnippet[];
   loading: boolean;
+
+  // Service availability
+  serviceStatus: ServiceStatus;
+  retry: () => void;
 
   // URL-backed state
   filter: string;
@@ -265,6 +274,10 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [serviceStatus, setServiceStatus] = useState<ServiceStatus>('unknown');
+  const retryAttemptRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const probeTokenRef = useRef(0);
 
   const refreshCatalog = useCallback(async () => {
     const cacheBust = Date.now();
@@ -277,18 +290,54 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    refreshCatalog().catch(err => {
-      if (cancelled) return;
-      console.error('Failed to load catalog', err);
+  const probe = useCallback(async () => {
+    const token = ++probeTokenRef.current;
+    setServiceStatus(prev => (prev === 'online' ? prev : 'checking'));
+    const ok = await checkHealth();
+    if (token !== probeTokenRef.current) return; // stale probe
+    if (ok) {
+      retryAttemptRef.current = 0;
+      setServiceStatus('online');
+      setLoading(true);
+      try {
+        await refreshCatalog();
+      } catch (err) {
+        console.error('Failed to load catalog', err);
+        setLoading(false);
+      }
+    } else {
+      setServiceStatus('offline');
       setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
+      const attempt = retryAttemptRef.current;
+      const delay = OFFLINE_BACKOFF_MS[Math.min(attempt, OFFLINE_BACKOFF_MS.length - 1)];
+      retryAttemptRef.current = attempt + 1;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        void probe();
+      }, delay);
+    }
   }, [refreshCatalog]);
+
+  const retry = useCallback(() => {
+    retryAttemptRef.current = 0;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    void probe();
+  }, [probe]);
+
+  useEffect(() => {
+    void probe();
+    return () => {
+      probeTokenRef.current++; // invalidate in-flight probes
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [probe]);
 
   // --- Derived ---
   const snippets = snippetsData?.snippets ?? [];
@@ -490,6 +539,8 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
       data,
       snippets,
       loading,
+      serviceStatus,
+      retry,
       filter,
       setFilter,
       search,
@@ -538,6 +589,8 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
       data,
       snippets,
       loading,
+      serviceStatus,
+      retry,
       filter,
       setFilter,
       search,

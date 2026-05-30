@@ -30,7 +30,9 @@ export function useCatalogCommands(): CommandOption[] {
 // useStatus — total count + state color
 // ---------------------------------------------------------------------------
 export function useCatalogStatus(): { label: string; color: StatusColor } {
-  const { loading, filteredVideos, data, filter, filteredSnippets, view } = useCatalog();
+  const { loading, filteredVideos, data, filter, filteredSnippets, view, serviceStatus } = useCatalog();
+  if (serviceStatus === 'offline') return { label: 'offline', color: 'red' };
+  if (serviceStatus === 'checking' || serviceStatus === 'unknown') return { label: 'connecting…', color: 'amber' };
   if (loading) return { label: 'loading…', color: 'amber' };
   if (filter === 'curated') {
     return { label: `${filteredSnippets.length} snippets`, color: 'emerald' };
