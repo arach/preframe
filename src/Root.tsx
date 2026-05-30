@@ -40,6 +40,7 @@ import { DeviceFrame } from "./components/DeviceFrame";
 import { SocialReel } from "./components/SocialReel";
 import { ChapterSlate } from "./intros/ChapterSlate";
 import { KineticTitle } from "./intros/KineticTitle";
+import { MemoReel, memoReelDefaultProps, memoReelTotalFrames, type MemoReelProps } from "./projects/memo-reel/MemoReel";
 
 // Video settings
 const FPS = 30;
@@ -98,6 +99,25 @@ function introCompositions(baseId: string, component: React.FC, duration: number
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      {/* MemoReel — agentic routine treatment, fully driven by input props */}
+      <Composition<any, MemoReelProps>
+        id="MemoReel"
+        component={MemoReel}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={memoReelDefaultProps}
+        durationInFrames={memoReelTotalFrames(memoReelDefaultProps) || 900}
+        calculateMetadata={async ({ defaultProps, props }) => {
+          const merged: MemoReelProps = { ...defaultProps, ...props };
+          const total = memoReelTotalFrames(merged);
+          return {
+            durationInFrames: total > 0 ? total : 900,
+            props: merged,
+          };
+        }}
+      />
+
       {/* Talkie Coming Soon - standalone scene */}
       <Composition
         id="TalkieComingSoon"

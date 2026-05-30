@@ -6,7 +6,8 @@ export type JobKind =
   | 'prepare'
   | 'render'
   | 'logo-brief'
-  | 'logo-render';
+  | 'logo-render'
+  | 'memo-reel';
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled';
 
 export interface CreateJobRequest {

@@ -20,6 +20,7 @@ import { useContext } from 'react';
 import { formatDuration, formatTime } from '../../lib/types';
 import type { ReviewNote, ReviewNoteKind } from '../../lib/types';
 import type { Composing } from '../hooks/useReview';
+import { MemoReelInspector, isMemoReel } from './MemoReelInspector';
 
 export function CatalogInspector() {
   const { selectedVideo, filter, counts, filteredVideos, view } = useCatalog();
@@ -50,9 +51,13 @@ export function CatalogInspector() {
 
   const v = selectedVideo;
   const hasNotes = review.notes.length > 0 || review.composing;
+  const memoReel = isMemoReel(v);
 
   return (
     <div className="flex flex-col h-full overflow-y-auto frame-scrollbar">
+      {/* MemoReel-specific detail block (segments, judge, timeline, brief) */}
+      {memoReel && <MemoReelInspector video={v} />}
+
       {/* Details — collapsible */}
       <div className="border-b border-white/[0.04]">
         <button
