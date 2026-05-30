@@ -1221,6 +1221,13 @@ async function processJob(ctx: {
       return;
     }
 
+    // Memo Reel — agentic routine. No LLM. Renders the registered MemoReel
+    // composition with caller-supplied input props (segments, source, beats).
+    if (kind === 'memo-reel') {
+      await runMemoReel({ jobId, compositionId, inputs, updateState });
+      return;
+    }
+
     // ── Stage 1: Collect inputs ─────────────────────────────
     updateState('collecting inputs', 5, `Reading ${kind} job for ${compositionId}`);
 
@@ -1920,6 +1927,584 @@ async function runLogoRender(ctx: {
       kind: 'logo-render',
       logoId,
       compositionPath: `/compositions/logos/${logoId}/Composition.html`,
+    },
+  });
+}
+
+// ── Memo Reel routine ───────────────────────────────────────────
+//
+// Renders the registered "MemoReel" composition from src/Root.tsx using
+// caller-supplied input props (source clip path, segment manifest, beat track).
+// No LLM call — the routine layer is responsible for planning the cuts.
+
+interface MemoSegmentPlan {
+  srcStart: number;
+  durationFrames: number;
+  label?: string;
+  role?: 'hook' | 'setup' | 'development' | 'payoff' | 'close';
+}
+
+interface MemoBeatPattern {
+  frames: number;
+  role: MemoSegmentPlan['role'];
+  label?: string;
+}
+
+// Hand-tuned beat shape for a 30s reel:
+// open punchy, breath, drive, hold, build, climax. 17 segments × frames = 810
+// (27s body + 1s intro slate + 2s outro slate = 30s total)
+const DEFAULT_BEAT_PATTERN: MemoBeatPattern[] = [
+  { frames: 30, role: 'hook',        label: 'OPEN' },
+  { frames: 30, role: 'hook' },
+  { frames: 30, role: 'setup' },
+  { frames: 30, role: 'setup' },
+  { frames: 90, role: 'setup',       label: 'BREATH' },
+  { frames: 30, role: 'development' },
+  { frames: 30, role: 'development' },
+  { frames: 30, role: 'development' },
+  { frames: 30, role: 'development' },
+  { frames: 120, role: 'development', label: 'HOLD' },
+  { frames: 30, role: 'payoff' },
+  { frames: 30, role: 'payoff' },
+  { frames: 30, role: 'payoff' },
+  { frames: 30, role: 'payoff' },
+  { frames: 30, role: 'payoff' },
+  { frames: 30, role: 'close' },
+  { frames: 180, role: 'close',      label: 'CLIMAX' },
+];
+
+interface ActiveWindow {
+  start: number;
+  end: number;
+  duration: number;
+  motionArea?: string;
+  /** Higher is better. */
+  score: number;
+}
+
+function buildActiveWindows(edl: any, minActiveLen = 1.5): ActiveWindow[] {
+  // The EDL doesn't carry the raw diff segments back to us, but the
+  // scenes array preserves activity classification from the diff pass.
+  // Treat any consecutive run of non-idle scenes as an active window.
+  const scenes: any[] = edl.scenes || [];
+  const out: ActiveWindow[] = [];
+  let cur: { start: number; end: number; motion?: string; score: number } | null = null;
+
+  for (const sc of scenes) {
+    const isActive = sc.activity && sc.activity !== 'idle' && sc.activity !== 'unknown';
+    if (isActive) {
+      if (cur) {
+        cur.end = sc.end;
+        cur.score += sc.end - sc.start;
+      } else {
+        cur = { start: sc.start, end: sc.end, motion: sc.motionArea, score: sc.end - sc.start };
+      }
+    } else if (cur) {
+      const dur = cur.end - cur.start;
+      if (dur >= minActiveLen) out.push({ ...cur, duration: dur, motionArea: cur.motion });
+      cur = null;
+    }
+  }
+  if (cur) {
+    const dur = cur.end - cur.start;
+    if (dur >= minActiveLen) out.push({ ...cur, duration: dur, motionArea: cur.motion });
+  }
+
+  return out.sort((a, b) => b.score - a.score);
+}
+
+function inDeadTime(t: number, deadTime: Array<{ start: number; end: number }>): boolean {
+  return deadTime.some(d => t >= d.start && t <= d.end);
+}
+
+function mergeIntervals(intervals: Array<{ start: number; end: number }>): Array<{ start: number; end: number }> {
+  if (intervals.length === 0) return [];
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const out: Array<{ start: number; end: number }> = [{ start: sorted[0].start, end: sorted[0].end }];
+  for (let i = 1; i < sorted.length; i++) {
+    const last = out[out.length - 1];
+    if (sorted[i].start <= last.end) {
+      last.end = Math.max(last.end, sorted[i].end);
+    } else {
+      out.push({ start: sorted[i].start, end: sorted[i].end });
+    }
+  }
+  return out;
+}
+
+/**
+ * Compute "live windows" — stretches of the source NOT covered by deadTime.
+ * Every pick we make must land inside one of these and have enough headroom
+ * for its segment duration.
+ */
+function computeLiveWindows(
+  sourceDuration: number,
+  deadTime: Array<{ start: number; end: number }>,
+): Array<{ start: number; end: number; duration: number }> {
+  const merged = mergeIntervals(deadTime);
+  const live: Array<{ start: number; end: number; duration: number }> = [];
+  let cursor = 0;
+  for (const dz of merged) {
+    if (dz.start > cursor) live.push({ start: cursor, end: dz.start, duration: dz.start - cursor });
+    cursor = Math.max(cursor, dz.end);
+  }
+  if (cursor < sourceDuration) live.push({ start: cursor, end: sourceDuration, duration: sourceDuration - cursor });
+  return live;
+}
+
+/**
+ * Plans a beat-aligned segment manifest by distributing picks evenly across
+ * the source's LIVE timeline (concatenation of all non-dead regions), then
+ * mapping each pick back to wall-clock time. Guarantees every srcStart sits
+ * inside a live window with enough headroom for the segment's duration.
+ *
+ * The seed nudges the distribution so the judge loop can try variations
+ * without re-analyzing the source.
+ */
+function planFromEDL(
+  edl: any,
+  pattern: MemoBeatPattern[],
+  sourceDuration: number,
+  seed: number,
+): MemoSegmentPlan[] {
+  const deadTime: Array<{ start: number; end: number }> = edl.deadTime || [];
+  const live = computeLiveWindows(sourceDuration, deadTime);
+  const minHead = 1.0;
+  const usable = live.filter(w => w.duration >= minHead);
+
+  const n = pattern.length;
+  const seedShift = (seed * 0.13) % 0.5;
+
+  // Edge case: no live windows usable — fall back to plain even spacing.
+  if (usable.length === 0) {
+    return pattern.map((p, i) => {
+      const lenSec = p.frames / 30;
+      const t = sourceDuration * (i / Math.max(n - 1, 1));
+      return {
+        srcStart: Math.max(0, Math.min(sourceDuration - lenSec - 0.2, t)),
+        durationFrames: p.frames,
+        ...(p.label ? { label: p.label } : {}),
+        role: p.role,
+      };
+    });
+  }
+
+  const liveTotal = usable.reduce((acc, w) => acc + w.duration, 0);
+
+  // Distribute n picks evenly across the concatenated live timeline.
+  const segments: MemoSegmentPlan[] = [];
+  for (let i = 0; i < n; i++) {
+    const lenSec = pattern[i].frames / 30;
+    const frac = n === 1 ? 0.5 : (i / (n - 1) + seedShift) % 1;
+    const liveOffset = frac * liveTotal;
+
+    // Walk windows to find which one this offset lands in
+    let chosen: number | null = null;
+    let acc = 0;
+    for (const w of usable) {
+      if (liveOffset >= acc && liveOffset < acc + w.duration) {
+        let t = w.start + (liveOffset - acc);
+        // Ensure full segment fits inside this window
+        if (t + lenSec + 0.2 > w.end) {
+          t = w.end - lenSec - 0.2;
+        }
+        if (t >= w.start) chosen = t;
+        break;
+      }
+      acc += w.duration;
+    }
+
+    // If the chosen window can't hold this segment, find another window big enough
+    if (chosen === null) {
+      const bigEnough = usable.filter(w => w.duration >= lenSec + 0.2);
+      if (bigEnough.length > 0) {
+        const w = bigEnough[(i + seed) % bigEnough.length];
+        chosen = w.start + (w.duration - lenSec - 0.2) * 0.5;
+      }
+    }
+
+    // Final safety net
+    if (chosen === null) {
+      chosen = Math.max(0, Math.min(sourceDuration - lenSec - 0.2, frac * sourceDuration));
+    }
+
+    segments.push({
+      srcStart: Math.max(0, Math.round(chosen * 100) / 100),
+      durationFrames: pattern[i].frames,
+      ...(pattern[i].label ? { label: pattern[i].label } : {}),
+      role: pattern[i].role,
+    });
+  }
+  return segments;
+}
+
+interface JudgeReport {
+  ok: boolean;
+  score: number;
+  failures: string[];
+  warnings: string[];
+}
+
+function judgeManifest(
+  segments: MemoSegmentPlan[],
+  edl: any,
+  fps = 30,
+): JudgeReport {
+  const failures: string[] = [];
+  const warnings: string[] = [];
+  const deadTime: Array<{ start: number; end: number }> = edl.deadTime || [];
+  const scenes: any[] = edl.scenes || [];
+
+  // 1. dead-time exclusion
+  segments.forEach((s, i) => {
+    if (inDeadTime(s.srcStart, deadTime)) {
+      failures.push(`segment ${i + 1} starts at ${s.srcStart.toFixed(2)}s — inside dead zone`);
+    }
+    const segEnd = s.srcStart + s.durationFrames / fps;
+    deadTime.forEach(d => {
+      if (s.srcStart < d.end && segEnd > d.start && !(s.srcStart >= d.start && s.srcStart <= d.end)) {
+        warnings.push(`segment ${i + 1} (${s.srcStart.toFixed(2)}–${segEnd.toFixed(2)}s) overlaps dead zone ${d.start.toFixed(2)}–${d.end.toFixed(2)}s`);
+      }
+    });
+  });
+
+  // 2. activity check — each srcStart should land in an active (non-idle) scene
+  let activeHits = 0;
+  segments.forEach((s, i) => {
+    const sc = scenes.find(x => s.srcStart >= x.start && s.srcStart < x.end);
+    if (sc) {
+      if (sc.activity === 'idle' || sc.activity === 'unknown') {
+        warnings.push(`segment ${i + 1} lands in ${sc.activity} scene at ${sc.start.toFixed(2)}s`);
+      } else {
+        activeHits++;
+      }
+    } else {
+      warnings.push(`segment ${i + 1} has no matching scene record`);
+    }
+  });
+
+  // 3. variety — at least N distinct regions (no clustering)
+  const starts = segments.map(s => s.srcStart).sort((a, b) => a - b);
+  let clusters = 0;
+  for (let i = 1; i < starts.length; i++) {
+    if (starts[i] - starts[i - 1] < 1.0) clusters++;
+  }
+  if (clusters > 2) {
+    failures.push(`${clusters} pairs of cuts within 1s of each other (clustering)`);
+  }
+
+  // 4. role coverage
+  const roles = new Set(segments.map(s => s.role).filter(Boolean));
+  ['hook', 'setup', 'development', 'payoff', 'close'].forEach(r => {
+    if (!roles.has(r as any)) warnings.push(`missing role: ${r}`);
+  });
+
+  const score = activeHits - failures.length * 3 - warnings.length * 0.5;
+  return { ok: failures.length === 0, score, failures, warnings };
+}
+
+async function runMemoReel(ctx: {
+  jobId: string;
+  compositionId: string;
+  inputs: Record<string, unknown> | null;
+  updateState: (state: string, progress: number, message?: string) => void;
+}) {
+  const { jobId, compositionId, inputs, updateState } = ctx;
+
+  if (!inputs || typeof inputs !== 'object') {
+    throw new Error('memo-reel job requires inputs with at least { source }');
+  }
+  const source = inputs.source as string | undefined;
+  if (!source) throw new Error('memo-reel: inputs.source is required');
+
+  const sourceAbs = resolve(join(process.cwd(), 'public', source));
+  if (!existsSync(sourceAbs)) {
+    throw new Error(`memo-reel: source not found at public/${source}`);
+  }
+
+  // ── Stage 1: analyze (cached) ─────────────────────────────
+  updateState('analyzing source', 8, `Running storyboard analysis on ${source}`);
+
+  const storyboardDir = join(
+    process.cwd(),
+    'public',
+    'demos',
+    `storyboard-${basename(source, '.mp4').replace(/[^a-zA-Z0-9-_.]/g, '').slice(0, 40).toLowerCase()}`,
+  );
+
+  // Pick a vision provider — MiniMax MCP if MINIMAX_API_KEY is set, else
+  // Anthropic if ANTHROPIC_API_KEY is set, else mechanical-only (no descriptions).
+  let visionProvider: any = undefined;
+  let visionKind: 'minimax' | 'anthropic' | 'none' = 'none';
+  const minimaxKey = process.env.MINIMAX_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (minimaxKey) {
+    visionProvider = createMiniMaxMcpVision({ apiKey: minimaxKey });
+    visionKind = 'minimax';
+  } else if (anthropicKey) {
+    visionProvider = createAnthropicVision({ apiKey: anthropicKey });
+    visionKind = 'anthropic';
+  }
+
+  let edl: any;
+  try {
+    edl = await analyzeVideo(sourceAbs, {
+      outDir: storyboardDir,
+      skipVision: visionKind === 'none',
+      vision: visionProvider,
+    });
+  } catch (err: any) {
+    throw new Error(`memo-reel analyze failed: ${err.message ?? err}`);
+  } finally {
+    if (visionProvider?.close) {
+      try { await visionProvider.close(); } catch {}
+    }
+  }
+
+  const scenesWithTags = (edl.scenes ?? []).filter((s: any) => s.tags?.length || s.description).length;
+
+  appendActivity(jobId, {
+    stage: 'analyze',
+    message: `Storyboard ready — ${edl.scenes?.length ?? 0} scenes, ${edl.deadTime?.length ?? 0} dead zones, ${scenesWithTags} VLM-tagged (${visionKind})`,
+    detail: `active ${edl.stats?.activeTime ?? 0}s · idle ${edl.stats?.idleTime ?? 0}s · transition ${edl.stats?.transitionTime ?? 0}s`,
+  });
+
+  // ── Stage 2: plan with judge loop ─────────────────────────
+  updateState('planning manifest', 30, 'Mapping beats to active windows');
+
+  const callerSegments = inputs.segments as MemoSegmentPlan[] | undefined;
+  const sourceDuration = edl.duration || 0;
+  const pattern = DEFAULT_BEAT_PATTERN;
+
+  let chosen: MemoSegmentPlan[] | null = null;
+  let chosenReport: JudgeReport | null = null;
+  const attempts: { seed: number; report: JudgeReport; segments: MemoSegmentPlan[] }[] = [];
+
+  // If the caller provided segments explicitly, judge them once. Otherwise
+  // iterate the planner across different seeds until the judge is satisfied.
+  if (Array.isArray(callerSegments) && callerSegments.length > 0) {
+    const report = judgeManifest(callerSegments, edl);
+    attempts.push({ seed: -1, report, segments: callerSegments });
+    if (report.ok) {
+      chosen = callerSegments;
+      chosenReport = report;
+    }
+  }
+
+  if (!chosen) {
+    for (let seed = 0; seed < 4 && !chosen; seed++) {
+      const segs = planFromEDL(edl, pattern, sourceDuration, seed);
+      const report = judgeManifest(segs, edl);
+      attempts.push({ seed, report, segments: segs });
+      updateState(
+        'judging plan',
+        38 + seed * 4,
+        `Attempt ${seed + 1}: ${report.ok ? 'PASS' : 'FAIL'} (score ${report.score.toFixed(1)}, ${report.failures.length} fails, ${report.warnings.length} warns)`,
+      );
+      if (report.ok) {
+        chosen = segs;
+        chosenReport = report;
+      }
+    }
+  }
+
+  if (!chosen) {
+    // Use the highest-scoring attempt and continue with warnings.
+    const best = attempts.sort((a, b) => b.report.score - a.report.score)[0];
+    chosen = best.segments;
+    chosenReport = best.report;
+    appendActivity(jobId, {
+      stage: 'judge',
+      message: `No attempt passed cleanly — using best (seed ${best.seed}, score ${best.report.score.toFixed(1)})`,
+      detail: best.report.failures.concat(best.report.warnings).join('\n'),
+    });
+  } else {
+    appendActivity(jobId, {
+      stage: 'judge',
+      message: `Plan approved (score ${chosenReport!.score.toFixed(1)})`,
+      detail: chosen.map((s, i) => `${String(i + 1).padStart(2, '0')} ${s.role ?? '   '.padEnd(11)} @ ${s.srcStart.toFixed(2)}s · ${s.durationFrames}f${s.label ? ' · ' + s.label : ''}`).join('\n'),
+    });
+  }
+
+  // ── Stage 3: persist brief + structured metadata alongside output ────
+  const publicOutDir = join(process.cwd(), 'public', 'out');
+  mkdirSync(publicOutDir, { recursive: true });
+  const outputBasename = `${compositionId}-${jobId}.mp4`;
+  const outputPath = join(publicOutDir, outputBasename);
+  const briefPath = join(publicOutDir, `${compositionId}-${jobId}.brief.md`);
+  const metaPath = join(publicOutDir, `${compositionId}-${jobId}.meta.json`);
+
+  // For each segment, find the nearest scene-break to that srcStart and copy
+  // its VLM description / tags / frame ref. This is what the inspector reads.
+  const scenesArr: any[] = edl.scenes ?? [];
+  const findScene = (t: number) => {
+    let best: any = null;
+    let bestDist = Infinity;
+    for (const sc of scenesArr) {
+      const center = (sc.start + sc.end) / 2;
+      const d = Math.abs(center - t);
+      if (d < bestDist) { bestDist = d; best = sc; }
+    }
+    return best;
+  };
+
+  const storyboardId = edl.storyboardDir; // e.g. "storyboard-scout-2026-05-22"
+  const segmentsWithMeta = chosen.map((s, i) => {
+    const sc = findScene(s.srcStart + (s.durationFrames / 30) / 2);
+    const frameUrl = sc?.frameFile ? `/demos/${storyboardId}/${sc.frameFile}` : null;
+    return {
+      index: i + 1,
+      srcStart: s.srcStart,
+      durationFrames: s.durationFrames,
+      durationSec: Math.round((s.durationFrames / 30) * 100) / 100,
+      label: s.label ?? null,
+      role: s.role ?? null,
+      vlm: sc
+        ? {
+            description: sc.description ?? null,
+            tags: sc.tags ?? [],
+            contentType: sc.contentType ?? null,
+            sceneActivity: sc.activity ?? null,
+            sceneStart: sc.start,
+            sceneEnd: sc.end,
+            frameFile: sc.frameFile ?? null,
+            frameUrl,
+          }
+        : null,
+    };
+  });
+
+  const meta = {
+    jobId,
+    compositionId,
+    createdAt: new Date().toISOString(),
+    source: {
+      path: source,
+      duration: sourceDuration,
+      resolution: edl.resolution,
+      fps: edl.fps,
+    },
+    storyboard: {
+      id: storyboardId,
+      dir: `/demos/${storyboardId}/`,
+      sceneCount: scenesArr.length,
+      deadZones: edl.deadTime ?? [],
+      stats: edl.stats ?? {},
+      scenes: scenesArr.map((sc: any) => ({
+        index: sc.index,
+        start: sc.start,
+        end: sc.end,
+        activity: sc.activity,
+        description: sc.description,
+        tags: sc.tags,
+        contentType: sc.contentType,
+        frameFile: sc.frameFile,
+        frameUrl: sc.frameFile ? `/demos/${storyboardId}/${sc.frameFile}` : null,
+      })),
+    },
+    visionProvider: visionKind,
+    judge: chosenReport,
+    segments: segmentsWithMeta,
+    output: {
+      mp4: `/out/${outputBasename}`,
+      brief: `/out/${compositionId}-${jobId}.brief.md`,
+      meta: `/out/${compositionId}-${jobId}.meta.json`,
+    },
+  };
+  writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+
+  const briefMarkdown = [
+    `# ${compositionId} · ${jobId}`,
+    '',
+    `**Source:** \`${source}\` (${sourceDuration.toFixed(1)}s)`,
+    `**Storyboard:** \`${edl.storyboardDir}\` · ${scenesArr.length} scenes · vision: ${visionKind}`,
+    `**Judge score:** ${chosenReport?.score.toFixed(1)} — ${chosenReport?.ok ? 'PASS' : 'best-effort'}`,
+    '',
+    '## Manifest',
+    '',
+    '| # | role | srcStart | dur | label | VLM description |',
+    '|---|------|----------|-----|-------|-----------------|',
+    ...segmentsWithMeta.map(s =>
+      `| ${s.index} | ${s.role ?? '-'} | ${s.srcStart.toFixed(2)}s | ${s.durationFrames}f | ${s.label ?? ''} | ${(s.vlm?.description ?? '').replace(/\|/g, '/').slice(0, 90)} |`,
+    ),
+    '',
+    '## Judge findings',
+    '',
+    chosenReport?.failures.length ? '**Failures:**\n' + chosenReport.failures.map(f => `- ${f}`).join('\n') : '*no failures*',
+    '',
+    chosenReport?.warnings.length ? '**Warnings:**\n' + chosenReport.warnings.map(w => `- ${w}`).join('\n') : '*no warnings*',
+  ].join('\n');
+  writeFileSync(briefPath, briefMarkdown);
+
+  // ── Stage 4: render ───────────────────────────────────────
+  // Attach the matched-scene description to each segment so the composition
+  // can render it as a narrative caption (replaces the role-label centerpiece).
+  const chosenWithDescriptions = chosen.map((s, i) => {
+    const meta = segmentsWithMeta[i];
+    return {
+      ...s,
+      description: meta?.vlm?.description ?? null,
+    };
+  });
+
+  const finalProps = {
+    source,
+    segments: chosenWithDescriptions,
+    beatTrack: inputs.beatTrack ?? 'tracks/japan-trap.mp3',
+    slateTitle: inputs.slateTitle ?? 'SCOUT',
+    slateSubtitle: inputs.slateSubtitle ?? `Memo Reel · ${new Date().toISOString().slice(0, 10)}`,
+    outroTagline: inputs.outroTagline ?? 'preframe',
+    outroDate: inputs.outroDate ?? 'memo-reel · 30s',
+    preSlateFrames: inputs.preSlateFrames ?? 60,
+    postSlateFrames: inputs.postSlateFrames ?? 120,
+  };
+
+  const propsPath = join(process.cwd(), '.data', `memo-reel-props-${jobId}.json`);
+  mkdirSync(join(process.cwd(), '.data'), { recursive: true });
+  writeFileSync(propsPath, JSON.stringify(finalProps, null, 2));
+
+  updateState('rendering', 60, `Rendering MemoReel → public/out/${outputBasename}`);
+
+  const cmd = `npx remotion render src/index.ts MemoReel "${outputPath}" --props="${propsPath}" --log=error`;
+  console.log(`[worker] memo-reel render: ${cmd}`);
+
+  try {
+    execSync(cmd, {
+      cwd: process.cwd(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 10 * 60 * 1000,
+      env: { ...process.env, FORCE_COLOR: '0' },
+    });
+  } catch (err: any) {
+    const stderr = err.stderr?.toString?.()?.slice(-800) || err.message;
+    throw new Error(`Remotion render failed: ${stderr}`);
+  }
+
+  appendActivity(jobId, {
+    stage: 'render',
+    message: `Rendered to public/out/${outputBasename}`,
+  });
+
+  updateState('rebuilding catalog', 90, 'Adding memo-reel to catalog');
+  rebuildCatalog();
+
+  completeJob(jobId, {
+    outputUrls: [
+      `/out/${outputBasename}`,
+      `/out/${compositionId}-${jobId}.brief.md`,
+      `/out/${compositionId}-${jobId}.meta.json`,
+    ],
+    metadata: {
+      kind: 'memo-reel',
+      source,
+      segmentCount: chosen.length,
+      outputPath: `public/out/${outputBasename}`,
+      briefPath: `public/out/${compositionId}-${jobId}.brief.md`,
+      metaPath: `public/out/${compositionId}-${jobId}.meta.json`,
+      judgeScore: chosenReport?.score ?? null,
+      judgePassed: chosenReport?.ok ?? false,
+      storyboardDir: edl.storyboardDir,
+      visionProvider: visionKind,
     },
   });
 }

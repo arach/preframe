@@ -17,7 +17,7 @@ function generateJobId(): string {
 }
 
 function isValidCompositionId(compositionId: string): boolean {
-  return /^[A-Za-z0-9\-\u4E00-\u9FFF]+$/u.test(compositionId);
+  return /^[A-Za-z0-9_\-\u4E00-\u9FFF]+$/u.test(compositionId);
 }
 
 export function jobToCreateResponse(job: JobRecord): CreateJobResponse {
@@ -36,7 +36,7 @@ export async function createJob(compositionId: string, body: CreateJobRequest) {
 
   if (!isValidCompositionId(compositionId)) {
     return {
-      error: 'compositionId can only contain letters, numbers, CJK characters, and hyphens',
+      error: 'compositionId can only contain letters, numbers, underscores, hyphens, and CJK characters',
       status: 400,
     };
   }
@@ -45,7 +45,7 @@ export async function createJob(compositionId: string, body: CreateJobRequest) {
     return { error: 'prompt is required', status: 400 };
   }
 
-  const validKinds = ['generate', 'revise', 'revise-brief', 'revise-render', 'prepare', 'render'];
+  const validKinds = ['generate', 'revise', 'revise-brief', 'revise-render', 'prepare', 'render', 'logo-brief', 'logo-render', 'memo-reel'];
   if (!validKinds.includes(kind)) {
     return { error: `kind must be one of: ${validKinds.join(', ')}`, status: 400 };
   }

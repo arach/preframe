@@ -19,7 +19,7 @@ function generateJobId(): string {
 }
 
 function isValidCompositionId(compositionId: string): boolean {
-  return /^[A-Za-z0-9\-\u4E00-\u9FFF]+$/u.test(compositionId);
+  return /^[A-Za-z0-9_\-\u4E00-\u9FFF]+$/u.test(compositionId);
 }
 
 function jobToResponse(job: JobRecord) {
