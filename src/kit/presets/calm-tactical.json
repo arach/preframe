@@ -1,0 +1,67 @@
+{
+  "name": "calm-tactical",
+  "title": "Calm Tactical",
+  "description": "Tactical chrome + monitor bezel + role caption — the MemoReel baseline.",
+  "canvas": { "width": 1920, "height": 1080 },
+  "layers": [
+    {
+      "id": "l_monitor",
+      "type": "MonitorFrame",
+      "visible": true,
+      "props": {
+        "bezelColor": "#1d1d23",
+        "bezelWidth": 12,
+        "bezelRadius": 14,
+        "showStand": false,
+        "showScreenGlow": true,
+        "glowColor": "rgba(140, 175, 200, 0.10)",
+        "wordmark": "PREFRAME",
+        "wordmarkColor": "rgba(255, 255, 255, 0.32)",
+        "monitorWidthPct": 92,
+        "monitorHeightPct": 78,
+        "monitorTopPct": 8,
+        "chinHeight": 28
+      }
+    },
+    {
+      "id": "l_tactical",
+      "type": "TacticalFrame",
+      "visible": true,
+      "props": {
+        "totalFrames": 120,
+        "title": "PREFRAME",
+        "subtitle": "Calm Tactical",
+        "stats": ["1920×1080", "30fps", "preview"],
+        "versionTag": "calm-tactical · v1",
+        "recLabel": "REC",
+        "recColor": "#7c9eb2",
+        "guideMargin": 24
+      }
+    },
+    {
+      "id": "l_caption",
+      "type": "CaptionCard",
+      "visible": true,
+      "props": {
+        "role": "development",
+        "label": "DEVELOPMENT",
+        "text": "Calm chrome over the video — bezel + tactical rails + role caption.",
+        "maxWidth": 820
+      }
+    },
+    {
+      "id": "l_scene",
+      "type": "SceneLabel",
+      "visible": true,
+      "props": {
+        "label": "DEVELOPMENT",
+        "sublabel": "act 3 / 5",
+        "progress": 0.55,
+        "placement": "left",
+        "bottom": 56,
+        "left": 56,
+        "barWidth": 120
+      }
+    }
+  ]
+}
