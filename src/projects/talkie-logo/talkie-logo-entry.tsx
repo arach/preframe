@@ -1,6 +1,7 @@
 import { Composition, Still, Folder, registerRoot } from 'remotion';
 import { TMarkStateCycle, T_MARK_CYCLE_FRAMES } from './TMarkStateCycle';
 import { WordmarkEntrance, WORDMARK_ENTRANCE_FRAMES } from './WordmarkEntrance';
+import { WordmarkEntranceLight, WordmarkStaticLight, WORDMARK_LIGHT_FRAMES } from './WordmarkEntranceLight';
 
 // Idle — one calm static state
 import { IdleNoDot, IdleWithDot, IDLE_FRAMES } from './states/Idle';
@@ -80,6 +81,8 @@ const Root: React.FC = () => (
     <Folder name="Talkie-Logo">
       <Composition id="TMarkStateCycle" component={TMarkStateCycle} durationInFrames={T_MARK_CYCLE_FRAMES} fps={FPS} width={1080} height={1080} />
       <Composition id="WordmarkEntrance" component={WordmarkEntrance} durationInFrames={WORDMARK_ENTRANCE_FRAMES} fps={FPS} width={1080} height={1080} />
+      <Composition id="WordmarkEntranceLight" component={WordmarkEntranceLight} durationInFrames={WORDMARK_LIGHT_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
+      <Still id="WordmarkStaticLight" component={WordmarkStaticLight} width={1024} height={1024} />
     </Folder>
     <Folder name="Talkie-Logo-States">
       <Composition id="IdleNoDot" component={IdleNoDot} durationInFrames={IDLE_FRAMES} fps={FPS} width={SIZE} height={SIZE} />
