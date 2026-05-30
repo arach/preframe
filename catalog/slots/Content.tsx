@@ -3,6 +3,7 @@
 import { useCatalog } from '../Provider';
 import { AssetsView } from './AssetsView';
 import { CatalogGrid } from './CatalogGrid';
+import { CatalogOffline } from './CatalogOffline';
 import { CodePanel } from './CodePanel';
 import { FrameViewer } from './FrameViewer';
 import { FramesView } from './FramesView';
@@ -16,7 +17,11 @@ import { SettingsView } from './SettingsView';
 import { VideoDetail } from './VideoDetail';
 
 export function CatalogContent() {
-  const { loading, selectedVideo, frameIndex, viewingFile, view } = useCatalog();
+  const { loading, selectedVideo, frameIndex, viewingFile, view, serviceStatus } = useCatalog();
+
+  if (serviceStatus === 'offline') {
+    return <CatalogOffline />;
+  }
 
   if (loading) {
     return (

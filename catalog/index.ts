@@ -14,6 +14,7 @@ import {
   useCatalogNavActions,
   useCatalogLayoutMode,
 } from './hooks';
+import { useCatalogStatusRight } from './PlayerContext';
 import { preframePorts, usePreframePortOutput, usePreframePortInput } from './ports';
 
 export const catalogApp: HudsonApp = {
@@ -44,13 +45,14 @@ export const catalogApp: HudsonApp = {
   hooks: {
     useCommands: useCatalogCommands,
     useStatus: useCatalogStatus,
+    useStatusRight: useCatalogStatusRight,
     useSearch: useCatalogSearch,
     useNavCenter: useCatalogNavCenter,
     useNavActions: useCatalogNavActions,
     useLayoutMode: useCatalogLayoutMode,
     usePortOutput: usePreframePortOutput,
     usePortInput: usePreframePortInput,
-  },
+  } as HudsonApp['hooks'] & { useStatusRight: typeof useCatalogStatusRight },
 
   exports: {
     embeds: [preframePlayerEmbedSurface],

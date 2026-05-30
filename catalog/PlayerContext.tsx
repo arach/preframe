@@ -2,12 +2,13 @@
 
 import { useCallback, useMemo, type ReactNode } from 'react';
 import {
+  PlayerPanel as HudsonPlayerPanel,
   PlayerProvider as HudsonPlayerProvider,
-  PlayerWidget as HudsonPlayerWidget,
   usePlayer as useHudsonPlayer,
   type MediaItem,
   type PlayMediaOpts as HudsonPlayMediaOpts,
 } from 'hudsonkit/player';
+import { Music2, Pause, Play } from 'lucide-react';
 import type { AudioAsset, Video } from '../lib/types';
 import { resolveVideoSrc } from '../lib/media';
 import { useCatalog } from './Provider';
@@ -115,15 +116,54 @@ function PlayerProviderInner({ children }: { children: ReactNode }) {
       shouldCaptureKeys={shouldCaptureKeys}
     >
       {children}
-      <HudsonPlayerWidget heightKey="preframe.playerH">
-        <CatalogQueueList />
-      </HudsonPlayerWidget>
     </HudsonPlayerProvider>
   );
 }
 
 export function PlayerProvider({ children }: { children: ReactNode }) {
   return <PlayerProviderInner>{children}</PlayerProviderInner>;
+}
+
+export function CatalogPlayerStatus() {
+  const { media, playing, isPlayerOpen, togglePlay, togglePlayer } = useHudsonPlayer();
+  const hasMedia = media != null;
+
+  if (!hasMedia && !isPlayerOpen) return null;
+
+  return (
+    <>
+      <div className="flex min-w-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em]">
+        <button
+          type="button"
+          onClick={hasMedia ? togglePlay : togglePlayer}
+          className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          title={hasMedia ? (playing ? 'Pause' : 'Play') : 'Open player'}
+          aria-label={hasMedia ? (playing ? 'Pause' : 'Play') : 'Open player'}
+        >
+          {hasMedia ? (
+            playing ? <Pause size={10} fill="currentColor" /> : <Play size={10} fill="currentColor" />
+          ) : (
+            <Music2 size={10} />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={togglePlayer}
+          className="max-w-[180px] truncate text-muted-foreground transition-colors hover:text-foreground"
+          title={isPlayerOpen ? 'Hide player' : 'Show player'}
+        >
+          {media?.title ?? 'Player'}
+        </button>
+      </div>
+      <HudsonPlayerPanel heightKey="preframe.playerH">
+        <CatalogQueueList />
+      </HudsonPlayerPanel>
+    </>
+  );
+}
+
+export function useCatalogStatusRight(): ReactNode | null {
+  return <CatalogPlayerStatus />;
 }
 
 // ---------------------------------------------------------------------------
