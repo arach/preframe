@@ -1,6 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
 import { readProviderConfig } from './provider';
+import { callLlm, isLlmConfigured } from './llm';
 
 // ---------------------------------------------------------------------------
 // Shared types
@@ -76,7 +75,7 @@ export async function callInference(
   context?: string,
 ): Promise<unknown> {
   const config = readProviderConfig();
-  if (!config.apiKey || !config.model) {
+  if (!isLlmConfigured(config)) {
     throw new Error('LLM provider not configured. Set it up in Settings.');
   }
 
@@ -84,44 +83,25 @@ export async function callInference(
     ? `${task.system}\n\nAdditional context:\n${context}`
     : task.system;
 
-  // 'auto' or anything unrecognized falls through to the configured format
   const format =
     providerHint === 'anthropic' ? 'anthropic'
     : providerHint === 'openai' ? 'openai'
+    : providerHint === 'codex' ? 'codex'
     : config.format;
 
-  if (format === 'anthropic') {
-    const client = new Anthropic({
-      apiKey: config.apiKey,
-      ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    });
-    const msg = await client.messages.create({
-      model: config.model,
-      max_tokens: task.maxTokens ?? 1024,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }],
-    });
-    const text = msg.content[0].type === 'text' ? msg.content[0].text : '';
-    if (task.jsonOutput) {
-      const match = text.match(/[\[{][\s\S]*[\]}]/);
-      return JSON.parse(match ? match[0] : text);
-    }
-    return { text };
-  } else {
-    const client = new OpenAI({
-      apiKey: config.apiKey,
-      ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    });
-    const completion = await client.chat.completions.create({
-      model: config.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      ...(task.jsonOutput ? { response_format: { type: 'json_object' as const } } : {}),
-    });
-    const content = completion.choices[0].message.content ?? '{}';
-    if (task.jsonOutput) return JSON.parse(content);
-    return { text: content };
+  const effectiveConfig = format === config.format ? config : { ...config, format };
+
+  const result = await callLlm({
+    system: systemPrompt,
+    userMessage: userPrompt,
+    maxTokens: task.maxTokens ?? 1024,
+    config: effectiveConfig,
+  });
+
+  const text = result.text || '';
+  if (task.jsonOutput) {
+    const match = text.match(/[\[{][\s\S]*[\]}]/);
+    return JSON.parse(match ? match[0] : text);
   }
+  return { text };
 }

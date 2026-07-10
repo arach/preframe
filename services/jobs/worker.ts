@@ -1,9 +1,15 @@
 import { getDb, updateJobStatus, updateJobAgent, completeJob, failJob, appendActivity } from './db';
 import type { JobKind } from './types';
-import { readProviderConfig, type ProviderConfig } from '@/lib/provider';
-import { analyzeVideo, createAnthropicVision, createMiniMaxMcpVision } from '../../scripts/lib/index';
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
+import { readProviderConfig, readMusicModelConfig, getMiniMaxApiKey, type ProviderConfig } from '@/lib/provider';
+import { callLlm } from '@/lib/llm';
+import { getCodexRunner } from '@/lib/codex-runner';
+import { createConfiguredVisionProvider } from '@/lib/vision-provider';
+import {
+  analyzeVideo,
+  createAnthropicVision,
+  createMiniMaxMcpVision,
+} from '../../scripts/lib/index';
+
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
 import { execSync } from 'node:child_process';
@@ -58,6 +64,7 @@ interface AudioTrackPlan {
 
 interface SoundtrackRequest {
   enabled?: boolean;
+  title?: string;
   prompt?: string;
   lyrics?: string;
   lyricsResult?: Record<string, any>;
@@ -117,6 +124,7 @@ interface GeneratedSoundtrack {
   lyrics: string;
   model: string;
   volume: number;
+  generatedAt: string;
 }
 
 interface InputAnalysisSummary {
@@ -143,73 +151,6 @@ interface InputAnalysisSummary {
   }>;
 }
 
-// ── LLM client ──────────────────────────────────────────────────
-
-async function callLLM(opts: {
-  system: string;
-  userMessage: string;
-  maxTokens: number;
-}): Promise<{ text: string; inputTokens: number; outputTokens: number; model: string }> {
-  const config = readProviderConfig();
-  if (!config.apiKey) throw new Error('No API key configured — go to Settings to add a provider');
-  if (!config.model) throw new Error('No model configured — go to Settings to choose a model');
-
-  if (config.format === 'openai') {
-    return callOpenAI(config, opts);
-  }
-  return callAnthropic(config, opts);
-}
-
-async function callAnthropic(
-  config: ProviderConfig,
-  opts: { system: string; userMessage: string; maxTokens: number },
-) {
-  const client = new Anthropic({
-    apiKey: config.apiKey,
-    ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-  });
-  const response = await client.messages.create({
-    model: config.model,
-    max_tokens: opts.maxTokens,
-    system: opts.system,
-    messages: [{ role: 'user', content: opts.userMessage }],
-  });
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map(b => b.text)
-    .join('');
-  return {
-    text,
-    inputTokens: response.usage?.input_tokens ?? 0,
-    outputTokens: response.usage?.output_tokens ?? 0,
-    model: config.model,
-  };
-}
-
-async function callOpenAI(
-  config: ProviderConfig,
-  opts: { system: string; userMessage: string; maxTokens: number },
-) {
-  const client = new OpenAI({
-    apiKey: config.apiKey,
-    baseURL: config.baseUrl || undefined,
-  });
-  const response = await client.chat.completions.create({
-    model: config.model,
-    max_tokens: opts.maxTokens,
-    messages: [
-      { role: 'system', content: opts.system },
-      { role: 'user', content: opts.userMessage },
-    ],
-  });
-  return {
-    text: response.choices[0]?.message?.content ?? '',
-    inputTokens: response.usage?.prompt_tokens ?? 0,
-    outputTokens: response.usage?.completion_tokens ?? 0,
-    model: config.model,
-  };
-}
-
 // ── Optional MiniMax Music soundtrack ───────────────────────────
 
 const DEFAULT_SOUNDTRACK_PROMPT =
@@ -223,16 +164,6 @@ Te no naka de flow, click kara go
 Kotoba ga hashiru, screen ni glow
 Review, confirm, then enter the zone
 Mouse dake de send, Lattices control`;
-
-function getMiniMaxApiKey(config: ProviderConfig): string {
-  const looksLikeMiniMax =
-    config.name.toLowerCase().includes('minimax') ||
-    config.baseUrl.toLowerCase().includes('minimax') ||
-    config.model.toLowerCase().includes('minimax');
-
-  if (looksLikeMiniMax && config.apiKey) return config.apiKey;
-  return process.env.MINIMAX_API_KEY ?? '';
-}
 
 function normalizeSoundtrackRequest(params: Record<string, unknown> | null): SoundtrackRequest {
   const raw = params?.soundtrack;
@@ -256,14 +187,17 @@ function sanitizeMiniMaxResponse(data: any): Record<string, unknown> {
 async function generateMiniMaxSoundtrack(
   compositionId: string,
   request: SoundtrackRequest,
-  providerConfig: ProviderConfig,
 ): Promise<GeneratedSoundtrack> {
-  const apiKey = getMiniMaxApiKey(providerConfig);
+  const musicConfig = readMusicModelConfig();
+  if (!musicConfig) {
+    throw new Error('Soundtrack requested, but no music model is configured in Settings');
+  }
+  const apiKey = getMiniMaxApiKey(musicConfig);
   if (!apiKey) {
-    throw new Error('MiniMax music requested, but no MiniMax API key is configured');
+    throw new Error('Soundtrack requested, but the music model API key is missing');
   }
 
-  const model = request.model || 'music-2.6';
+  const model = request.model || musicConfig.model || 'music-2.6';
   const instrumental = request.instrumental ?? false;
   const prompt = (request.prompt || DEFAULT_SOUNDTRACK_PROMPT).slice(0, 2000);
   const lyrics = instrumental ? '' : (request.lyrics || DEFAULT_SOUNDTRACK_LYRICS).slice(0, 3500);
@@ -310,6 +244,7 @@ async function generateMiniMaxSoundtrack(
   mkdirSync(outputDir, { recursive: true });
   const filename = `${compositionId}-${Date.now().toString(36)}.mp3`;
   const outputPath = join(outputDir, filename);
+  const generatedAt = new Date().toISOString();
   writeFileSync(outputPath, Buffer.from(audioHex, 'hex'));
   writeFileSync(
     outputPath.replace(/\.[^.]+$/, '.json'),
@@ -325,7 +260,7 @@ async function generateMiniMaxSoundtrack(
       songTitle: request.lyricsResult?.song_title,
       styleTags: request.lyricsResult?.style_tags,
       lyricsGeneration: request.lyricsResult,
-      createdAt: new Date().toISOString(),
+      createdAt: generatedAt,
       request: {
         ...body,
         authorization: 'Bearer [redacted]',
@@ -340,7 +275,55 @@ async function generateMiniMaxSoundtrack(
     lyrics,
     model,
     volume: request.volume ?? 0.22,
+    generatedAt,
   };
+}
+
+async function runMusicGenerationJob(ctx: {
+  jobId: string;
+  compositionId: string;
+  prompt: string;
+  params: Record<string, unknown> | null;
+  updateState: (agentState: string, progress: number, lastMessage?: string) => void;
+}) {
+  const { jobId, compositionId, prompt, params, updateState } = ctx;
+  const request = normalizeSoundtrackRequest(params);
+  const musicRequest: SoundtrackRequest = {
+    ...request,
+    enabled: true,
+    prompt,
+    lyrics: request.instrumental ? undefined : request.lyrics,
+    lyricsResult: request.instrumental ? undefined : request.lyricsResult,
+  };
+  const instrumental = musicRequest.instrumental ?? false;
+
+  updateState('generating music', 15, `Generating ${instrumental ? 'instrumental' : 'vocal'} track with MiniMax`);
+  appendActivity(jobId, {
+    stage: 'music',
+    message: `Generating ${instrumental ? 'instrumental' : 'vocal'} track with ${musicRequest.model || 'music-2.6'}`,
+    detail: prompt,
+  });
+
+  const generated = await generateMiniMaxSoundtrack(compositionId, musicRequest);
+  updateState('updating catalog', 90, 'Music generated; updating the library');
+  rebuildCatalog();
+
+  appendActivity(jobId, {
+    stage: 'done',
+    message: `Music ready — ${generated.path}`,
+  });
+  completeJob(jobId, {
+    outputUrls: [generated.path],
+    metadata: {
+      kind: 'music-generate',
+      title: musicRequest.title || compositionId,
+      audioPath: generated.path,
+      instrumental,
+      model: generated.model,
+      prompt: generated.prompt,
+      generatedAt: generated.generatedAt,
+    },
+  });
 }
 
 function lyricCaptionOverlays(lyrics: string, durationSec: number): TextOverlayPlan[] {
@@ -378,12 +361,37 @@ function sanitizeAnalysisId(inputPath: string): string {
 function resolvePublicClip(src: string): string | null {
   const publicDir = resolve(process.cwd(), 'public');
   const normalized = src.replace(/^\/+/, '');
+  // Absolute paths under public/ are accepted (agent/worker convenience).
+  if (src.startsWith('/')) {
+    const abs = resolve(src);
+    if (abs.startsWith(`${publicDir}${sep}`) && existsSync(abs)) return abs;
+  }
   const absPath = resolve(publicDir, normalized);
   if (absPath !== publicDir && !absPath.startsWith(`${publicDir}${sep}`)) return null;
-  return absPath;
+  return existsSync(absPath) ? absPath : null;
 }
 
-async function analyzeInputClip(src: string): Promise<InputAnalysisSummary> {
+function storyboardDirForClip(src: string): string {
+  const abs = resolvePublicClip(src) || src;
+  return `storyboard-${sanitizeAnalysisId(abs)}`;
+}
+
+function hasExistingEdl(src: string): boolean {
+  const dir = storyboardDirForClip(src);
+  return existsSync(join(process.cwd(), 'public', 'demos', dir, 'edl.json'));
+}
+
+function relativePublicClip(src: string): string {
+  const abs = resolvePublicClip(src);
+  if (!abs) return src.replace(/^\/+/, '');
+  const publicDir = resolve(process.cwd(), 'public');
+  return abs.slice(publicDir.length + 1).replace(/\\/g, '/');
+}
+
+async function analyzeInputClip(
+  src: string,
+  opts: { force?: boolean; refreshVision?: boolean } = {},
+): Promise<InputAnalysisSummary> {
   const inputPath = resolvePublicClip(src);
   if (!inputPath || !existsSync(inputPath)) {
     return { src, status: 'missing', error: 'Source clip is not present under public/' };
@@ -391,25 +399,7 @@ async function analyzeInputClip(src: string): Promise<InputAnalysisSummary> {
 
   const id = sanitizeAnalysisId(inputPath);
   const outDir = join(process.cwd(), 'public', 'demos', `storyboard-${id}`);
-  const providerConfig = readProviderConfig();
-  const canUseAnthropicVision =
-    providerConfig.format === 'anthropic' &&
-    !!providerConfig.apiKey &&
-    !!providerConfig.model;
-  const looksLikeMiniMax =
-    providerConfig.name.toLowerCase().includes('minimax') ||
-    providerConfig.baseUrl.toLowerCase().includes('minimax') ||
-    providerConfig.model.toLowerCase().includes('minimax');
-  const vision = canUseAnthropicVision
-    ? looksLikeMiniMax
-      ? createMiniMaxMcpVision({ apiKey: getMiniMaxApiKey(providerConfig) || providerConfig.apiKey })
-      : createAnthropicVision({
-      apiKey: providerConfig.apiKey,
-      baseURL: providerConfig.baseUrl,
-      model: providerConfig.model,
-      provider: providerConfig.name || 'Vision',
-    })
-    : undefined;
+  const vision = createConfiguredVisionProvider();
   let edl;
   try {
     edl = await analyzeVideo(inputPath, {
@@ -417,6 +407,9 @@ async function analyzeInputClip(src: string): Promise<InputAnalysisSummary> {
       skipVision: !vision,
       vision,
       analyzeAllFrames: !!vision,
+      // force=true must re-run VLM, not just skip the EDL short-circuit above.
+      force: opts.force,
+      refreshVision: opts.refreshVision ?? opts.force,
     });
   } finally {
     await (vision as any)?.close?.();
@@ -446,12 +439,16 @@ async function analyzeInputClip(src: string): Promise<InputAnalysisSummary> {
   };
 }
 
-async function analyzeInputClips(clips: string[], jobId: string): Promise<InputAnalysisSummary[]> {
+async function analyzeInputClips(
+  clips: string[],
+  jobId: string,
+  opts: { force?: boolean; refreshVision?: boolean } = {},
+): Promise<InputAnalysisSummary[]> {
   const analyses: InputAnalysisSummary[] = [];
 
   for (const src of clips) {
     try {
-      const result = await analyzeInputClip(src);
+      const result = await analyzeInputClip(src, opts);
       analyses.push(result);
 
       if (result.status === 'complete') {
@@ -601,6 +598,17 @@ function buildUserMessage(ctx: {
 
   parts.push(`## Creative Brief\n${ctx.prompt}`);
   parts.push(`\n## Job Kind: ${ctx.kind}`);
+
+  const engine = typeof ctx.params?.engine === 'string' ? ctx.params.engine : undefined;
+  const preferredEffects = Array.isArray(ctx.params?.preferredEffects)
+    ? ctx.params.preferredEffects.filter((effect): effect is string => typeof effect === 'string')
+    : [];
+  if (engine) {
+    parts.push(`\n## Preferred Build Tool\n${engine}`);
+  }
+  if (preferredEffects.length > 0) {
+    parts.push(`\n## Effect Preferences\n${preferredEffects.map(effect => `- ${effect}`).join('\n')}\nThese are preferences, not a hard allow-list. Use another available effect when it fits the creative brief better.`);
+  }
 
   if (ctx.inputs) {
     const clips = (ctx.inputs.clips as string[] | undefined) ?? [];
@@ -809,7 +817,7 @@ import {
   AbsoluteFill,
   Sequence,
   Audio,
-  OffthreadVideo,
+  Video,
   staticFile,
   interpolate,
   useVideoConfig,
@@ -892,7 +900,7 @@ const ClipSegment: React.FC<{
 
   return (
     <AbsoluteFill style={{ opacity }}>
-      <OffthreadVideo
+      <Video
         src={staticFile(clip.src)}
         startFrom={Math.round(clip.startFrom * fps)}
         style={{
@@ -1099,7 +1107,10 @@ function renderComposition(compositionId: string, outDir: string): string {
 
   mkdirSync(publicOutDir, { recursive: true });
 
-  const cmd = `npx remotion render "${entryPoint}" "${compositionId}" "${outputPath}" --log=error`;
+  // Talkie captures are high-resolution variable-frame-rate videos. Keep one
+  // browser renderer active at a time to avoid compositor crashes on modest
+  // local machines.
+  const cmd = `npx remotion render "${entryPoint}" "${compositionId}" "${outputPath}" --log=error --concurrency=1`;
   console.log(`[worker] Rendering: ${cmd}`);
 
   execSync(cmd, {
@@ -1110,6 +1121,16 @@ function renderComposition(compositionId: string, outDir: string): string {
   });
 
   return outputPath;
+}
+
+function renderFailureDetails(error: any): string {
+  const output = [error?.stdout, error?.stderr]
+    .map(value => value?.toString?.().trim())
+    .filter(Boolean)
+    .join('\n');
+  const detail = output || error?.message || 'Unknown Remotion render error';
+  if (detail.length <= 4000) return detail;
+  return `${detail.slice(0, 2500)}\n… output truncated …\n${detail.slice(-1500)}`;
 }
 
 function rebuildCatalog(): void {
@@ -1134,6 +1155,15 @@ export function startWorker() {
   if (polling) return;
   polling = true;
   console.log('[worker] Composition jobs worker started (poll-based)');
+
+  const llm = readProviderConfig();
+  if (llm.format === 'codex') {
+    void getCodexRunner({ model: llm.model })
+      .warmup()
+      .then(() => console.log('[worker] Codex app-server ready'))
+      .catch(err => console.warn('[worker] Codex warmup failed:', err instanceof Error ? err.message : err));
+  }
+
   poll();
 }
 
@@ -1179,6 +1209,167 @@ function schedulePoll(ms: number) {
   timer = setTimeout(poll, ms);
 }
 
+// ── Analyze job (first-class asset analysis) ────────────────────
+
+async function runAnalyzeJob(ctx: {
+  jobId: string;
+  compositionId: string;
+  inputs: Record<string, unknown> | null;
+  params: Record<string, unknown> | null;
+  updateState: (agentState: string, progress: number, lastMessage?: string) => void;
+}) {
+  const { jobId, compositionId, inputs, params, updateState } = ctx;
+  const clips = (inputs?.clips as string[] | undefined) ?? [];
+  const force = params?.force === true;
+  const transcribe = params?.transcribe === true;
+
+  if (clips.length === 0) {
+    throw new Error('analyze job requires inputs.clips with at least one public path');
+  }
+
+  updateState('analyzing', 10, `Analyzing ${clips.length} clip${clips.length !== 1 ? 's' : ''} for ${compositionId}`);
+  appendActivity(jobId, {
+    stage: 'analyze',
+    message: `Starting analysis (${force ? 'force' : 'skip existing EDLs'}${transcribe ? ', +transcript' : ''})`,
+    detail: clips.join(', '),
+  });
+
+  const pending: string[] = [];
+  const reused: InputAnalysisSummary[] = [];
+  for (const src of clips) {
+    if (!force && hasExistingEdl(src)) {
+      const dir = storyboardDirForClip(src);
+      reused.push({
+        src,
+        status: 'complete',
+        storyboardDir: dir,
+        edlPath: `public/demos/${dir}/edl.json`,
+        error: 'reused existing storyboard EDL',
+      });
+      appendActivity(jobId, {
+        stage: 'analysis',
+        message: `Reused EDL for ${basename(src)}`,
+        detail: `public/demos/${dir}/edl.json`,
+      });
+    } else {
+      pending.push(src);
+    }
+  }
+
+  let analyses: InputAnalysisSummary[] = [...reused];
+  if (pending.length > 0) {
+    updateState('analyzing', 30, `Running VLM storyboard for ${pending.length} clip${pending.length !== 1 ? 's' : ''}`);
+    analyses = [
+      ...reused,
+      ...(await analyzeInputClips(pending, jobId, {
+        force,
+        // Analyze jobs always re-tag frames (stale M2.7 caches must not stick).
+        // Non-force jobs that already have EDL short-circuit above via `reused`.
+        refreshVision: true,
+      })),
+    ];
+  }
+
+  const transcripts: Array<{ src: string; ok: boolean; detail: string }> = [];
+  if (transcribe) {
+    updateState('transcribing', 70, 'Running Whisper transcription');
+    for (const src of clips) {
+      const abs = resolvePublicClip(src);
+      if (!abs) {
+        transcripts.push({ src, ok: false, detail: 'missing under public/' });
+        continue;
+      }
+      const result = runWhisperTranscript(abs);
+      transcripts.push({ src, ...result });
+      appendActivity(jobId, {
+        stage: 'transcript',
+        message: result.ok
+          ? `Transcript for ${basename(src)}`
+          : `Transcript failed for ${basename(src)}`,
+        detail: result.detail,
+      });
+    }
+  }
+
+  const complete = analyses.filter(a => a.status === 'complete').length;
+  const failed = analyses.filter(a => a.status === 'failed' || a.status === 'missing').length;
+
+  if (complete === 0) {
+    const detail = analyses
+      .map(a => `${basename(a.src)}: ${a.error || a.status}`)
+      .join('; ');
+    appendActivity(jobId, {
+      stage: 'error',
+      message: 'Analyze job produced no completed EDLs',
+      detail,
+    });
+    throw new Error(`Analyze failed for all input clips${detail ? ` — ${detail}` : ''}`);
+  }
+
+  updateState('rebuilding catalog', 90, 'Updating catalog-data.json');
+  if (analyses.some(a => a.status === 'complete') || transcripts.some(t => t.ok)) {
+    rebuildCatalog();
+  }
+
+  completeJob(jobId, {
+    outputUrls: analyses
+      .map(a => a.edlPath)
+      .filter((p): p is string => Boolean(p)),
+    metadata: {
+      compositionId,
+      kind: 'analyze',
+      complete,
+      failed,
+      reused: reused.length,
+      analyses,
+      transcripts: transcripts.length ? transcripts : undefined,
+    },
+  });
+
+  appendActivity(jobId, {
+    stage: 'done',
+    message: `Analyze complete — ${complete} ok, ${failed} failed, ${reused.length} reused`,
+  });
+  updateState('done', 100, `Analyzed ${complete}/${analyses.length}`);
+}
+
+function runWhisperTranscript(videoPath: string): { ok: boolean; detail: string } {
+  const outDir = join(process.cwd(), 'public', 'transcripts');
+  mkdirSync(outDir, { recursive: true });
+  const diarize = join(process.cwd(), 'scripts', 'diarize.py');
+  if (!existsSync(diarize)) {
+    return { ok: false, detail: 'scripts/diarize.py missing' };
+  }
+  try {
+    execSync(
+      `python3 "${diarize}" "${videoPath}" --output "${outDir}" --model base --skip-diarization`,
+      {
+        cwd: process.cwd(),
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 15 * 60 * 1000,
+      },
+    );
+    const stem = basename(videoPath).replace(/\.[^.]+$/, '');
+    const jsonPath = join(outDir, `${stem}.json`);
+    if (existsSync(jsonPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(jsonPath, 'utf8'));
+        if (Array.isArray(raw)) {
+          const segments = raw;
+          const text = segments.map((s: { text?: string }) => s.text ?? '').join(' ').trim();
+          writeFileSync(jsonPath, JSON.stringify({ text, segments }, null, 2));
+        }
+      } catch {
+        /* leave raw */
+      }
+    }
+    return { ok: true, detail: `public/transcripts/${stem}.json` };
+  } catch (err: any) {
+    const msg = err.stderr?.toString?.()?.slice(-300) || err.message || String(err);
+    return { ok: false, detail: msg };
+  }
+}
+
 // ── Main job processor ──────────────────────────────────────────
 
 async function processJob(ctx: {
@@ -1203,6 +1394,18 @@ async function processJob(ctx: {
   };
 
   try {
+    // First-class asset analysis: storyboard + VLM (+ optional transcript).
+    // No LLM composition planning — returns before generate path.
+    if (kind === 'analyze') {
+      await runAnalyzeJob({ jobId, compositionId, inputs, params, updateState });
+      return;
+    }
+
+    if (kind === 'music-generate') {
+      await runMusicGenerationJob({ jobId, compositionId, prompt, params, updateState });
+      return;
+    }
+
     // Stage 1 of the two-stage revise flow: synthesize a human-readable
     // brief and stop before rendering, so the reviewer can confirm intent.
     if (kind === 'revise-brief') {
@@ -1237,6 +1440,10 @@ async function processJob(ctx: {
     const durationSec = (params?.durationSec as number | undefined);
     const soundtrack = normalizeSoundtrackRequest(params);
     const shouldAnalyzeInputs = params?.analyzeInputs !== false;
+    const preferredEffects = Array.isArray(params?.preferredEffects)
+      ? params.preferredEffects.filter((effect): effect is string => typeof effect === 'string')
+      : [];
+    const engine = typeof params?.engine === 'string' ? params.engine : 'remotion';
 
     appendActivity(jobId, {
       stage: 'inputs',
@@ -1244,20 +1451,56 @@ async function processJob(ctx: {
       detail: clips.join(', '),
     });
 
+    if (preferredEffects.length > 0) {
+      appendActivity(jobId, {
+        stage: 'effects',
+        message: `${preferredEffects.length} preferred effect${preferredEffects.length !== 1 ? 's' : ''}`,
+        detail: preferredEffects.join(', '),
+      });
+    }
+
     console.log(`[worker] Job ${jobId}: ${clips.length} clips, ${audio.length} audio, aspect=${aspectRatio}`);
 
     let inputAnalyses: InputAnalysisSummary[] = [];
     if (clips.length > 0 && shouldAnalyzeInputs) {
-      updateState('analyzing inputs', 10, `Extracting storyboard frames from ${clips.length} clip${clips.length !== 1 ? 's' : ''}`);
-      appendActivity(jobId, {
-        stage: 'analysis',
-        message: `Running FFmpeg storyboard analysis for ${clips.length} input clip${clips.length !== 1 ? 's' : ''}`,
-      });
+      // Skip clips that already have an EDL unless forceAnalyzeInputs.
+      const forceAnalyze = params?.forceAnalyzeInputs === true;
+      const pending: string[] = [];
+      const cached: InputAnalysisSummary[] = [];
+      for (const src of clips) {
+        if (!forceAnalyze && hasExistingEdl(src)) {
+          const id = sanitizeAnalysisId(resolvePublicClip(src) || src);
+          cached.push({
+            src,
+            status: 'complete',
+            storyboardDir: `storyboard-${id}`,
+            edlPath: `public/demos/storyboard-${id}/edl.json`,
+            error: 'reused existing storyboard EDL',
+          });
+        } else {
+          pending.push(src);
+        }
+      }
 
-      inputAnalyses = await analyzeInputClips(clips, jobId);
+      if (cached.length > 0) {
+        appendActivity(jobId, {
+          stage: 'analysis',
+          message: `Reusing existing EDL for ${cached.length} clip${cached.length !== 1 ? 's' : ''}`,
+        });
+      }
 
-      if (inputAnalyses.some(a => a.status === 'complete')) {
-        rebuildCatalog();
+      if (pending.length > 0) {
+        updateState('analyzing inputs', 10, `Extracting storyboard frames from ${pending.length} clip${pending.length !== 1 ? 's' : ''}`);
+        appendActivity(jobId, {
+          stage: 'analysis',
+          message: `Running FFmpeg storyboard analysis for ${pending.length} input clip${pending.length !== 1 ? 's' : ''}`,
+        });
+        inputAnalyses = [...cached, ...(await analyzeInputClips(pending, jobId))];
+        if (inputAnalyses.some(a => a.status === 'complete' && !a.error?.includes('reused'))) {
+          rebuildCatalog();
+        }
+      } else {
+        inputAnalyses = cached;
       }
     } else if (clips.length > 0) {
       inputAnalyses = clips.map(src => ({ src, status: 'skipped' as const, error: 'Input analysis disabled for this job' }));
@@ -1280,7 +1523,7 @@ async function processJob(ctx: {
 
     console.log(`[worker] Job ${jobId}: calling ${providerConfig.model} via ${providerConfig.format} format`);
 
-    const llmResult = await callLLM({
+    const llmResult = await callLlm({
       system: SYSTEM_PROMPT,
       userMessage,
       maxTokens: 4096,
@@ -1337,7 +1580,7 @@ async function processJob(ctx: {
         detail: soundtrack.prompt || DEFAULT_SOUNDTRACK_PROMPT,
       });
 
-      const generated = await generateMiniMaxSoundtrack(compositionId, soundtrack, providerConfig);
+      const generated = await generateMiniMaxSoundtrack(compositionId, soundtrack);
       plan.audioTracks.push({
         src: generated.path,
         volume: generated.volume,
@@ -1417,9 +1660,9 @@ async function processJob(ctx: {
     try {
       outputPath = renderComposition(compositionId, outDir);
     } catch (renderErr: any) {
-      const stderr = renderErr.stderr?.toString?.()?.slice(-500) || renderErr.message;
-      appendActivity(jobId, { stage: 'error', message: `Render failed: ${stderr}` });
-      throw new Error(`Remotion render failed: ${stderr}`);
+      const detail = renderFailureDetails(renderErr);
+      appendActivity(jobId, { stage: 'error', message: `Render failed: ${detail}` });
+      throw new Error(`Remotion render failed: ${detail}`);
     }
 
     const outputExists = existsSync(outputPath);
@@ -1460,6 +1703,8 @@ async function processJob(ctx: {
         clipCount: plan.clips.length,
         audioTrackCount: plan.audioTracks.length,
         introStyle: plan.introStyle,
+        engine,
+        preferredEffects,
         compositionDir: `.compositions/${compositionId}`,
         videoPath: `out/${compositionId}.mp4`,
         inputAnalyses,
@@ -1542,7 +1787,7 @@ async function runBrief(ctx: {
     reviewNotes,
   ].join('\n');
 
-  const llmResult = await callLLM({
+  const llmResult = await callLlm({
     system: BRIEF_SYSTEM_PROMPT,
     userMessage,
     maxTokens: 2048,
@@ -1795,7 +2040,7 @@ async function runLogoBrief(ctx: {
     message: `Calling ${providerConfig.name || providerConfig.model} (${providerConfig.format}) for motion brief`,
   });
 
-  const llmResult = await callLLM({
+  const llmResult = await callLlm({
     system: LOGO_BRIEF_SYSTEM_PROMPT,
     userMessage,
     maxTokens: 1024,
@@ -1883,7 +2128,7 @@ async function runLogoRender(ctx: {
     message: `Calling ${providerConfig.name || providerConfig.model} (${providerConfig.format}) for Hyperframe HTML`,
   });
 
-  const llmResult = await callLLM({
+  const llmResult = await callLlm({
     system: LOGO_RENDER_SYSTEM_PROMPT,
     userMessage,
     maxTokens: 8192,

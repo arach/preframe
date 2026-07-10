@@ -42,7 +42,7 @@ export function CatalogLeftPanel() {
     );
   }
 
-  const isVideos = !view;
+  const isTreatments = !view;
 
   return (
     <div className="flex flex-col h-full py-3">
@@ -68,7 +68,7 @@ export function CatalogLeftPanel() {
 
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5 px-1">
-        <NavItem icon={<Film size={14} />} label="Videos" active={isVideos} onClick={() => setView(null)} />
+        <NavItem icon={<Film size={14} />} label="Treatments" active={isTreatments} onClick={() => setView(null)} />
         <NavItem icon={<Inbox size={14} />} label="Queue" active={view === 'queue'} onClick={() => setView('queue')} />
         <NavItem icon={<FolderOpen size={14} />} label="Assets" active={view === 'assets'} onClick={() => setView('assets')} />
         <NavItem icon={<Music size={14} />} label="Music" active={view === 'music'} onClick={() => setView('music')} />

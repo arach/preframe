@@ -12,7 +12,7 @@ export function useCatalogCommands(): CommandOption[] {
 
   return useMemo<CommandOption[]>(
     () => [
-      { id: 'filter:all', label: 'Show All Videos', action: () => setFilter('all') },
+      { id: 'filter:all', label: 'Show All Treatments', action: () => setFilter('all') },
       { id: 'filter:curated', label: 'Show Curated Snippets', action: () => setFilter('curated') },
       { id: 'filter:analyzed', label: 'Filter: Analyzed', action: () => setFilter('analyzed') },
       { id: 'filter:needs-work', label: 'Filter: Needs Work', action: () => setFilter('needs-work') },
@@ -45,7 +45,7 @@ export function useCatalogStatus(): { label: string; color: StatusColor } {
     return { label: 'queue', color: 'emerald' };
   }
   const finals = filteredVideos.filter(v => v.stage === 'final');
-  return { label: `${finals.length} videos`, color: 'emerald' };
+  return { label: `${finals.length} treatments`, color: 'emerald' };
 }
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ export function useCatalogSearch(): SearchConfig {
   return {
     value: search,
     onChange: setSearch,
-    placeholder: 'Search videos, tags, transcripts…',
+    placeholder: 'Search treatments, assets, tags…',
   };
 }
 

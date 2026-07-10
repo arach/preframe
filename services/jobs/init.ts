@@ -1,6 +1,7 @@
 import { getDb, insertJob, findActiveJob, findByIdempotencyKey, getJob } from './db';
 import { startWorker } from './worker';
 import type { CreateJobRequest, JobRecord, CreateJobResponse } from './types';
+import { VALID_KINDS } from './types';
 
 let workerStarted = false;
 
@@ -45,9 +46,8 @@ export async function createJob(compositionId: string, body: CreateJobRequest) {
     return { error: 'prompt is required', status: 400 };
   }
 
-  const validKinds = ['generate', 'revise', 'revise-brief', 'revise-render', 'prepare', 'render', 'logo-brief', 'logo-render', 'memo-reel'];
-  if (!validKinds.includes(kind)) {
-    return { error: `kind must be one of: ${validKinds.join(', ')}`, status: 400 };
+  if (!VALID_KINDS.includes(kind as (typeof VALID_KINDS)[number])) {
+    return { error: `kind must be one of: ${VALID_KINDS.join(', ')}`, status: 400 };
   }
 
   if (idempotencyKey) {

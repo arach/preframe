@@ -150,6 +150,15 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
   const pathSegment = pathname === '/' ? null : pathname.replace(/^\//, '');
   const isStandalone = standalone ?? (pathname === '/' || KNOWN_VIEWS.has(pathSegment ?? ''));
 
+  // --- View state — in-memory source of truth, optional URL sync in standalone ---
+  const [view, setViewState] = useState<string | null>(isStandalone ? pathSegment : null);
+  const setView = useCallback((v: string | null) => {
+    setViewState(v);
+    if (isStandalone) {
+      router.push(v ? `/${v}` : '/');
+    }
+  }, [isStandalone, router]);
+
   // --- URL-backed state ---
   const filter = searchParams.get('filter') ?? 'all';
   const search = searchParams.get('q') ?? '';
@@ -196,12 +205,20 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
 
   const openVideo = useCallback(
     (id: string) => {
+      setViewState(null);
+      if (isStandalone) {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('video', id);
+        params.set('project', id);
+        router.replace(`/?${params.toString()}`, { scroll: false });
+        return;
+      }
       writeParams(p => {
         p.set('video', id);
         p.set('project', id);
       });
     },
-    [writeParams],
+    [isStandalone, router, searchParams, writeParams],
   );
 
   const closeVideo = useCallback(() => {
@@ -514,14 +531,6 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
   const notifyMusicQueued = useCallback(() => setPendingMusicCount(c => c + 1), []);
   const notifyMusicSettled = useCallback(() => setPendingMusicCount(c => Math.max(0, c - 1)), []);
 
-  // --- View state — in-memory source of truth, optional URL sync in standalone ---
-  const [view, setViewState] = useState<string | null>(isStandalone ? pathSegment : null);
-  const setView = useCallback((v: string | null) => {
-    setViewState(v);
-    if (isStandalone) {
-      router.push(v ? `/${v}` : '/');
-    }
-  }, [isStandalone, router]);
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
 
   // --- Code viewer ---

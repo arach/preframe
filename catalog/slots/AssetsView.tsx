@@ -2,9 +2,15 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useCatalog } from '../Provider';
-import { formatDuration } from '../../lib/types';
+import {
+  formatAbsoluteDate,
+  formatDuration,
+  formatRecency,
+  recencyBucket,
+  RECENCY_BUCKET_LABELS,
+} from '../../lib/types';
 import type { Video } from '../../lib/types';
-import { Eye, FileVideo, Search } from 'lucide-react';
+import { Eye, FileVideo, Loader2, Search } from 'lucide-react';
 import { apiClient } from '../lib/api-client';
 
 type AssetFilter = 'all' | 'analyzed' | 'needs-analysis';
@@ -12,8 +18,10 @@ type AssetFilter = 'all' | 'analyzed' | 'needs-analysis';
 const VIDEO_EXTS = ['.mp4', '.mov', '.webm', '.mkv'];
 
 export function AssetsView() {
-  const { data, openVideo, deleteVideo, sort, setSort, search, setSearch } = useCatalog();
+  const { data, openVideo, deleteVideo, sort, setSort, search, setSearch, setView, refreshCatalog } = useCatalog();
   const [assetFilter, setAssetFilter] = useState<AssetFilter>('all');
+  const [analyzeBusy, setAnalyzeBusy] = useState(false);
+  const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
 
   const sourceVideos = useMemo(() => {
     const vids = (data?.videos ?? []).filter(v => v.stage === 'source' || !v.stage);
@@ -56,6 +64,56 @@ export function AssetsView() {
   const analyzed = sourceVideos.filter(v => v.analysisStatus === 'complete' || v.analysisStatus === 'analyzed');
   const unanalyzed = sourceVideos.filter(v => !v.analysisStatus || v.analysisStatus === 'none' || v.analysisStatus === 'frames-only');
 
+  /** When sorting by newest (default), group cards by recency so "new vs old" is obvious. */
+  const groupByRecency = sort === 'newest' || sort === 'oldest' || !sort;
+  const recencyGroups = useMemo(() => {
+    if (!groupByRecency) return null;
+    const order = ['today', 'yesterday', 'this-week', 'earlier', 'unknown'] as const;
+    const map = new Map<string, Video[]>();
+    for (const key of order) map.set(key, []);
+    for (const v of sourceVideos) {
+      const b = recencyBucket(v.capturedAt);
+      map.get(b)!.push(v);
+    }
+    // oldest sort: reverse bucket order and reverse within buckets
+    const keys = sort === 'oldest' ? [...order].reverse() : [...order];
+    return keys
+      .map(key => ({
+        key,
+        label: RECENCY_BUCKET_LABELS[key],
+        videos: sort === 'oldest' ? [...(map.get(key) ?? [])].reverse() : (map.get(key) ?? []),
+      }))
+      .filter(g => g.videos.length > 0);
+  }, [sourceVideos, groupByRecency, sort]);
+
+  const enqueueAnalyze = useCallback(async () => {
+    if (needsCount === 0 || analyzeBusy) return;
+    setAnalyzeBusy(true);
+    setAnalyzeMsg(null);
+    try {
+      const res = await apiClient.post('/api/assets/analyze', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filter: 'needs-analysis' }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok && !body.enqueued) {
+        setAnalyzeMsg(body.error || `Analyze request failed (${res.status})`);
+        return;
+      }
+      const n = typeof body.enqueued === 'number' ? body.enqueued : 0;
+      setAnalyzeMsg(
+        n > 0
+          ? `Enqueued ${n} analyze job${n === 1 ? '' : 's'} — open Queue for progress`
+          : body.message || 'No jobs enqueued',
+      );
+      void refreshCatalog?.();
+    } catch (err: any) {
+      setAnalyzeMsg(err?.message || 'Analyze request failed');
+    } finally {
+      setAnalyzeBusy(false);
+    }
+  }, [needsCount, analyzeBusy, refreshCatalog]);
+
   return (
     <div className="px-6 py-5">
       {/* Stats */}
@@ -65,13 +123,39 @@ export function AssetsView() {
         <Stat label="Needs Analysis" value={needsCount} />
       </div>
 
-      {/* Filters + Sort */}
-      <div className="flex items-center gap-4 mb-4">
+      {/* Filters + Sort + actions */}
+      <div className="flex items-center gap-4 mb-4 flex-wrap">
         <div className="flex items-center gap-1 bg-white/[0.02] border border-white/[0.06] rounded-sm p-0.5">
           <FilterPill label="All" count={allSource.length} active={assetFilter === 'all'} onClick={() => setAssetFilter('all')} />
           <FilterPill label="Analyzed" count={analyzedCount} active={assetFilter === 'analyzed'} onClick={() => setAssetFilter('analyzed')} />
           <FilterPill label="Needs Analysis" count={needsCount} active={assetFilter === 'needs-analysis'} onClick={() => setAssetFilter('needs-analysis')} />
         </div>
+
+        <button
+          type="button"
+          disabled={needsCount === 0 || analyzeBusy}
+          onClick={() => void enqueueAnalyze()}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border border-white/[0.1] text-white/70 hover:text-white/90 hover:border-white/[0.18] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Enqueue first-class analyze jobs (storyboard + MiniMax VLM)"
+        >
+          {analyzeBusy ? <Loader2 size={12} className="animate-spin" /> : null}
+          Analyze needs-analysis ({needsCount})
+        </button>
+
+        {analyzeMsg && (
+          <div className="flex items-center gap-2 text-[10px] font-mono text-white/45">
+            <span>{analyzeMsg}</span>
+            {analyzeMsg.includes('Queue') && (
+              <button
+                type="button"
+                onClick={() => setView('queue')}
+                className="text-cyan-400/70 hover:text-cyan-300/90 underline-offset-2 hover:underline"
+              >
+                Open Queue
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="flex-1" />
 
@@ -101,6 +185,16 @@ export function AssetsView() {
         <div className="py-16 text-center text-white/20 text-[12px] font-mono tracking-wider uppercase">
           No assets match the current filter
         </div>
+      ) : groupByRecency && recencyGroups ? (
+        <>
+          {recencyGroups.map(g => (
+            <Bucket key={g.key} label={`${g.label} · ${g.videos.length}`} dim={g.key === 'earlier' || g.key === 'unknown'}>
+              {g.videos.map(v => (
+                <AssetCard key={v.id} video={v} onOpen={openVideo} onDelete={deleteVideo} dim={!isVideoAnalyzed(v) && assetFilter === 'all'} />
+              ))}
+            </Bucket>
+          ))}
+        </>
       ) : assetFilter === 'all' ? (
         <>
           {analyzed.length > 0 && (
@@ -121,6 +215,10 @@ export function AssetsView() {
       )}
     </div>
   );
+}
+
+function isVideoAnalyzed(v: Video): boolean {
+  return v.analysisStatus === 'complete' || v.analysisStatus === 'analyzed';
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
@@ -161,9 +259,13 @@ function Bucket({ label, children, dim }: { label: string; children: React.React
 }
 
 function AssetCard({ video, onOpen, onDelete, dim }: { video: Video; onOpen: (id: string) => void; onDelete: (id: string) => Promise<void>; dim?: boolean }) {
-  const isAnalyzed = video.analysisStatus === 'complete' || video.analysisStatus === 'analyzed';
+  const isAnalyzed = isVideoAnalyzed(video);
   const statusColor = isAnalyzed ? 'bg-emerald-400/60' : video.analysisStatus === 'frames-only' ? 'bg-amber-400/50' : 'bg-white/10';
   const statusLabel = isAnalyzed ? 'Analyzed' : video.analysisStatus === 'frames-only' ? 'Partial' : 'Unanalyzed';
+  const recency = formatRecency(video.capturedAt);
+  const absolute = formatAbsoluteDate(video.capturedAt);
+  const bucket = recencyBucket(video.capturedAt);
+  const isFresh = bucket === 'today' || bucket === 'yesterday';
 
   return (
     <div
@@ -178,13 +280,21 @@ function AssetCard({ video, onOpen, onDelete, dim }: { video: Video; onOpen: (id
         x
       </button>
 
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2 gap-2 pr-5">
+        <div className="flex items-center gap-2 min-w-0">
           {video.app && (
-            <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60">{video.app}</span>
+            <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400/60 shrink-0">{video.app}</span>
           )}
+          <span
+            className={`text-[10px] font-mono tabular-nums truncate ${
+              isFresh ? 'text-white/70' : 'text-white/35'
+            }`}
+            title={absolute}
+          >
+            {recency}
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <span className={`text-[9px] font-mono uppercase tracking-wider ${isAnalyzed ? 'text-emerald-400/60' : 'text-white/25'}`}>
             {statusLabel}
           </span>
@@ -195,7 +305,7 @@ function AssetCard({ video, onOpen, onDelete, dim }: { video: Video; onOpen: (id
       <div className="text-[12px] text-white/80 group-hover:text-white transition-colors truncate">{video.id}</div>
       {video.description && <div className="text-[11px] text-white/40 mt-1 line-clamp-2">{video.description}</div>}
 
-      <div className="flex items-center gap-3 mt-3 text-[10px] font-mono text-white/30">
+      <div className="flex items-center gap-3 mt-3 text-[10px] font-mono text-white/30 flex-wrap">
         <span>{formatDuration(video.duration)}</span>
         <span>{video.resolution}</span>
         <span>{video.sizeMB.toFixed(1)} MB</span>

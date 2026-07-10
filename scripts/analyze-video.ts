@@ -4,11 +4,10 @@ import { basename, join, resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import {
 	analyzeVideo,
-	createAnthropicVision,
-	createMiniMaxMcpVision,
 	log,
 	formatTime,
 } from "./lib/index.ts";
+import { describeConfiguredVisionProvider, createConfiguredVisionProvider } from "../lib/vision-provider.ts";
 
 try {
 	const envContent = readFileSync(resolve(import.meta.dirname || ".", "../.env.local"), "utf-8");
@@ -56,18 +55,6 @@ const id = basename(resolved, ".mp4")
 	.substring(0, 40);
 const outDir = join(PUBLIC_DIR, `storyboard-${id}`);
 
-function loadProviderConfig() {
-	const configPath = resolve(import.meta.dirname || ".", "../.data/provider.json");
-	if (!existsSync(configPath)) return null;
-	try {
-		const config = JSON.parse(readFileSync(configPath, "utf-8"));
-		if (!config.apiKey || !config.model || config.format !== "anthropic") return null;
-		return config as { apiKey: string; baseUrl?: string; model: string; name?: string };
-	} catch {
-		return null;
-	}
-}
-
 log(`\n╔══════════════════════════════════════════╗`);
 log(`║  PREFRAME — Video Analyzer              ║`);
 log(`╚══════════════════════════════════════════╝`);
@@ -77,25 +64,10 @@ if (force && existsSync(outDir)) {
 	rmSync(outDir, { recursive: true, force: true });
 }
 
-const providerConfig = loadProviderConfig();
-const isMiniMax = providerConfig
-	? (providerConfig.name || "").toLowerCase().includes("minimax") ||
-		(providerConfig.baseUrl || "").toLowerCase().includes("minimax") ||
-		providerConfig.model.toLowerCase().includes("minimax")
-	: false;
-const vision = providerConfig
-	? isMiniMax
-		? createMiniMaxMcpVision({ apiKey: providerConfig.apiKey })
-		: createAnthropicVision({
-			apiKey: providerConfig.apiKey,
-			baseURL: providerConfig.baseUrl,
-			model: providerConfig.model,
-			provider: providerConfig.name || "Custom",
-		})
-	: undefined;
-
-if (providerConfig) {
-	log(`\nUsing vision provider: ${isMiniMax ? "MiniMax MCP understand_image" : providerConfig.name || "Custom"} (${providerConfig.model})`);
+const vision = createConfiguredVisionProvider();
+const visionLabel = describeConfiguredVisionProvider();
+if (visionLabel) {
+	log(`\nUsing vision provider: ${visionLabel}`);
 }
 
 let edl;
@@ -103,7 +75,7 @@ try {
 	edl = await analyzeVideo(resolved, {
 		outDir,
 		vision,
-		analyzeAllFrames: analyzeAllFrames || !!providerConfig,
+		analyzeAllFrames: analyzeAllFrames || !!vision,
 	});
 } finally {
 	await (vision as any)?.close?.();
