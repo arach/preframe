@@ -41,6 +41,20 @@ function slotFromApi(slotId: ModelSlotId, data: SettingsPayload): SlotFormState 
   };
 }
 
+type IngestForm = {
+  kind: 'talkie' | 'folder';
+  since: string;
+  folder: string;
+  analyze: boolean;
+};
+
+const DEFAULT_INGEST_FORM: IngestForm = {
+  kind: 'talkie',
+  since: '1d',
+  folder: '~/Downloads',
+  analyze: true,
+};
+
 export function SettingsView() {
   const [slots, setSlots] = useState<Record<ModelSlotId, SlotFormState>>(() =>
     Object.fromEntries(
@@ -56,14 +70,27 @@ export function SettingsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [ingest, setIngest] = useState<IngestForm>(DEFAULT_INGEST_FORM);
+  const [ingestSaving, setIngestSaving] = useState(false);
+  const [ingestSaved, setIngestSaved] = useState(false);
 
   useEffect(() => {
-    apiClient.get('/api/settings/provider')
-      .then(r => r.json())
-      .then((data: SettingsPayload) => {
+    Promise.all([
+      apiClient.get('/api/settings/provider').then(r => r.json()),
+      apiClient.get('/api/settings/ingest').then(r => (r.ok ? r.json() : null)).catch(() => null),
+    ])
+      .then(([data, ingestData]: [SettingsPayload, IngestForm | null]) => {
         setSlots(Object.fromEntries(
           MODEL_SLOTS.map(slot => [slot.id, slotFromApi(slot.id, data)]),
         ) as Record<ModelSlotId, SlotFormState>);
+        if (ingestData) {
+          setIngest({
+            kind: ingestData.kind === 'folder' ? 'folder' : 'talkie',
+            since: ingestData.since || '1d',
+            folder: ingestData.folder || '~/Downloads',
+            analyze: ingestData.analyze !== false,
+          });
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -323,8 +350,124 @@ export function SettingsView() {
         className="flex items-center gap-2 px-4 py-2 rounded-sm text-[11px] font-mono uppercase tracking-wider bg-cyan-400/[0.08] border border-cyan-400/20 text-cyan-300/90 hover:bg-cyan-400/[0.12] hover:text-cyan-200 transition-all disabled:opacity-50"
       >
         {saving ? <Loader2 size={12} className="animate-spin" /> : saved ? <Check size={12} /> : null}
-        {saved ? 'Saved' : 'Save'}
+        {saved ? 'Saved' : 'Save models'}
       </button>
+
+      {/* Capture source — drives Assets "Import latest" + bun run process --saved */}
+      <section className="pt-6 border-t border-white/[0.06] space-y-4">
+        <div>
+          <h2 className="text-[16px] font-medium text-white/90 mb-1">Capture source</h2>
+          <p className="text-[11px] text-white/35">
+            Optional import for Assets. Same pipeline as{' '}
+            <code className="text-white/45">bun run process --saved</code>
+            {' '}— Talkie clips or any folder (e.g. Downloads).
+          </p>
+        </div>
+
+        <Field label="Source">
+          <div className="flex gap-1.5">
+            {(['talkie', 'folder'] as const).map(k => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => {
+                  setIngest(s => ({ ...s, kind: k }));
+                  setIngestSaved(false);
+                }}
+                className={`px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-wider rounded-sm border transition-colors ${
+                  ingest.kind === k
+                    ? 'bg-cyan-500/10 text-cyan-300 border-cyan-400/25'
+                    : 'text-white/40 border-white/[0.08] hover:border-white/[0.14]'
+                }`}
+              >
+                {k === 'talkie' ? 'Talkie' : 'Folder'}
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field
+          label="Since"
+          hint="Relative (1d, 12h, 30m) or calendar day (2026-07-10)"
+        >
+          <input
+            type="text"
+            value={ingest.since}
+            onChange={e => {
+              setIngest(s => ({ ...s, since: e.target.value }));
+              setIngestSaved(false);
+            }}
+            placeholder="1d"
+            className="w-full bg-white/[0.03] border border-white/[0.08] rounded-sm px-3 py-2 text-[12px] font-mono text-white/70 placeholder:text-white/15 outline-none focus:border-white/[0.2] transition-colors"
+          />
+        </Field>
+
+        {ingest.kind === 'folder' && (
+          <Field label="Folder path" hint="Absolute path or ~/…">
+            <input
+              type="text"
+              value={ingest.folder}
+              onChange={e => {
+                setIngest(s => ({ ...s, folder: e.target.value }));
+                setIngestSaved(false);
+              }}
+              placeholder="~/Downloads"
+              className="w-full bg-white/[0.03] border border-white/[0.08] rounded-sm px-3 py-2 text-[12px] font-mono text-white/70 placeholder:text-white/15 outline-none focus:border-white/[0.2] transition-colors"
+            />
+          </Field>
+        )}
+
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={ingest.analyze}
+            onChange={e => {
+              setIngest(s => ({ ...s, analyze: e.target.checked }));
+              setIngestSaved(false);
+            }}
+            className="rounded-sm border-white/20"
+          />
+          <span className="text-[11px] text-white/55">
+            Analyze after import (enqueue MiniMax jobs)
+          </span>
+        </label>
+
+        <button
+          type="button"
+          disabled={ingestSaving}
+          onClick={async () => {
+            setIngestSaving(true);
+            try {
+              const res = await apiClient.fetch('/api/settings/ingest', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ingest),
+              });
+              if (res.ok) {
+                const data = (await res.json()) as IngestForm;
+                setIngest({
+                  kind: data.kind === 'folder' ? 'folder' : 'talkie',
+                  since: data.since || '1d',
+                  folder: data.folder || '~/Downloads',
+                  analyze: data.analyze !== false,
+                });
+                setIngestSaved(true);
+                setTimeout(() => setIngestSaved(false), 2000);
+              }
+            } finally {
+              setIngestSaving(false);
+            }
+          }}
+          className="flex items-center gap-2 px-4 py-2 rounded-sm text-[11px] font-mono uppercase tracking-wider bg-white/[0.04] border border-white/[0.1] text-white/70 hover:text-white/90 hover:border-white/[0.16] transition-all disabled:opacity-50"
+        >
+          {ingestSaving ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : ingestSaved ? (
+            <Check size={12} />
+          ) : null}
+          {ingestSaved ? 'Saved' : 'Save capture source'}
+        </button>
+      </section>
     </div>
   );
 }

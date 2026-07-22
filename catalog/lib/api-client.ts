@@ -6,8 +6,11 @@
  * - Embedded in Hudson (:3500): absolute fetch to preframe's origin
  *
  * All requests are network-safe — if the Preframe service is unreachable,
- * `request()` returns a synthetic `Response { status: 0 }` instead of throwing.
+ * `request()` returns a synthetic 503 Response instead of throwing.
  * Use `checkHealth()` to probe service availability before driving UI state.
+ *
+ * Note: `Response` status must be in [200, 599]; status 0 is invalid and throws
+ * RangeError in modern browsers.
  */
 
 const PREFRAME_ORIGIN = 'http://localhost:3100';
@@ -26,7 +29,14 @@ function base(): string {
 }
 
 function offlineResponse(): Response {
-  return new Response(null, { status: 0, statusText: 'Network unavailable' });
+  return new Response(
+    JSON.stringify({ error: 'network_unavailable', offline: true }),
+    {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
 }
 
 async function request(path: string, init?: RequestInit): Promise<Response> {

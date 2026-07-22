@@ -73,7 +73,7 @@ export default defineTool({
       clips,
       missing,
       response: result.body,
-      open: `${preframeUrl()}/?view=queue`,
+      open: `${preframeUrl()}/queue`,
     };
   },
 });

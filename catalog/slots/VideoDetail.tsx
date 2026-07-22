@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   ArrowLeft,
   Braces,
@@ -19,9 +19,11 @@ import { useReviewContext } from '../ReviewContext';
 import { apiClient } from '../lib/api-client';
 import { usePlayer } from '../PlayerContext';
 import { exportNotesAsPrompt } from '../reviewNotes';
-import { resolveVideoSrc } from '../../lib/media';
+import { resolvePublicAssetSrc, resolveVideoSrc } from '../../lib/media';
 import { formatDuration, formatTime } from '../../lib/types';
 import type { CompositionEngine, FrameOverlay, ReviewNoteKind, ReviewRect, Video, VisionTag } from '../../lib/types';
+import type { PlanClipZoom } from '../../lib/zoom-map';
+import { ZoomMapPanel, modelFromPlanClips, modelFromReviewNotes } from './ZoomMap';
 
 function aspectRatio(res?: string): string {
   if (!res) return '16 / 9';
@@ -75,6 +77,40 @@ export function VideoDetail({ video }: { video: Video }) {
   const isFinal = video.stage === 'final';
   const compositionId = isFinal ? inferCompositionId(video) : null;
   const canRevise = isFinal && compositionId && review.notes.length > 0;
+
+  // Composition plan (for zoom map on finals)
+  const [planClips, setPlanClips] = useState<PlanClipZoom[]>([]);
+  useEffect(() => {
+    if (!compositionId) {
+      setPlanClips([]);
+      return;
+    }
+    let cancelled = false;
+    apiClient
+      .get(`/api/compositions/${encodeURIComponent(compositionId)}/plan`)
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: { clips?: PlanClipZoom[] } | null) => {
+        if (!cancelled && data?.clips) setPlanClips(data.clips);
+      })
+      .catch(() => {
+        if (!cancelled) setPlanClips([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [compositionId]);
+
+  const zoomMapModel = useMemo(() => {
+    if (isFinal && planClips.length > 0) {
+      return modelFromPlanClips(review.currentTime, planClips, s =>
+        resolvePublicAssetSrc(s.startsWith('/') ? s : `/${s}`),
+      );
+    }
+    if (review.notes.some(n => n.kind === 'zoom' && n.rect)) {
+      return modelFromReviewNotes(src, review.currentTime, review.notes);
+    }
+    return null;
+  }, [isFinal, planClips, review.currentTime, review.notes, src]);
 
   const submitRevision = async () => {
     if (!compositionId || review.notes.length === 0) return;
@@ -337,6 +373,11 @@ export function VideoDetail({ video }: { video: Video }) {
           <div className="flex-1 min-h-0 bg-black/50 flex items-center justify-center">
             <span className="text-white/15 text-[12px] font-mono uppercase tracking-wider">No video file</span>
           </div>
+        )}
+
+        {/* Zoom map — full source frame + active viewport (secondary, not the editor) */}
+        {zoomMapModel && (zoomMapModel.zoom || (zoomMapModel.noteRects && zoomMapModel.noteRects.length > 0)) && (
+          <ZoomMapPanel model={zoomMapModel} />
         )}
 
         {/* Note markers timeline */}

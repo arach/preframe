@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement, useMemo, type ReactNode } from 'react';
+import { createElement, useMemo, type MouseEvent, type ReactNode } from 'react';
 import type { CommandOption, SearchConfig, StatusColor } from 'hudsonkit';
 import { useCatalog } from './Provider';
 
@@ -61,20 +61,84 @@ export function useCatalogSearch(): SearchConfig {
 }
 
 // ---------------------------------------------------------------------------
-// useNavCenter — breadcrumb when in detail view
+// useNavCenter — breadcrumb for view + detail
 // ---------------------------------------------------------------------------
+const VIEW_LABELS: Record<string, string> = {
+  queue: 'Queue',
+  assets: 'Assets',
+  music: 'Music',
+  logos: 'Logos',
+  frames: 'Frames',
+  fx: 'FX Browser',
+  prompts: 'Prompts',
+  settings: 'Settings',
+  new: 'New composition',
+  'new-music': 'New music',
+};
+
 export function useCatalogNavCenter(): ReactNode | null {
-  const { selectedVideo, closeVideo } = useCatalog();
-  if (!selectedVideo) return null;
-  return createElement(
-    'button',
-    {
-      onClick: closeVideo,
-      className:
-        'text-[10px] font-mono text-neutral-400 hover:text-neutral-200 tracking-wider uppercase transition-colors',
-    },
-    `← Catalog / ${selectedVideo.id}`,
-  );
+  const { selectedVideo, closeVideo, view, setView } = useCatalog();
+
+  if (selectedVideo) {
+    const parent = view === 'assets' ? 'Assets' : 'Treatments';
+    const parentHref = view === 'assets' ? '/assets' : '/treatments';
+    return createElement(
+      'div',
+      { className: 'flex items-center gap-1.5 min-w-0' },
+      createElement(
+        'a',
+        {
+          href: parentHref,
+          onClick: (e: MouseEvent) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            closeVideo();
+          },
+          className:
+            'text-[10px] font-mono text-neutral-400 hover:text-neutral-200 tracking-wider uppercase transition-colors shrink-0',
+        },
+        parent,
+      ),
+      createElement('span', { className: 'text-neutral-600 text-[10px] font-mono' }, '/'),
+      createElement(
+        'span',
+        {
+          className: 'text-[10px] font-mono text-neutral-300 tracking-wide truncate max-w-[28vw]',
+          title: selectedVideo.id,
+        },
+        selectedVideo.id,
+      ),
+    );
+  }
+
+  if (view && VIEW_LABELS[view]) {
+    return createElement(
+      'div',
+      { className: 'flex items-center gap-1.5' },
+      createElement(
+        'a',
+        {
+          href: '/treatments',
+          onClick: (e: MouseEvent) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            setView(null);
+          },
+          className:
+            'text-[10px] font-mono text-neutral-500 hover:text-neutral-300 tracking-wider uppercase transition-colors',
+        },
+        'Preframe',
+      ),
+      createElement('span', { className: 'text-neutral-700 text-[10px] font-mono' }, '/'),
+      createElement(
+        'span',
+        { className: 'text-[10px] font-mono text-neutral-300 tracking-wider uppercase' },
+        VIEW_LABELS[view],
+      ),
+    );
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------

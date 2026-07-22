@@ -131,6 +131,19 @@ async function retryJobRequest(jobId: string): Promise<void> {
   }
 }
 
+/** Flatten nested API error JSON (e.g. reasoning.effort) for list/detail UI. */
+function formatJobError(message: string | undefined | null): string {
+  if (!message) return 'Unknown error';
+  try {
+    const parsed = JSON.parse(message);
+    const nested = parsed?.error?.message || parsed?.message;
+    if (typeof nested === 'string' && nested.length > 0) return nested;
+  } catch {
+    /* plain string */
+  }
+  return message;
+}
+
 // ── Queue list ─────────────────────────────────────────────────
 
 export function QueueView() {
@@ -166,10 +179,25 @@ export function QueueView() {
     }
   }, [refreshCatalog]);
 
+  const [listRetryingId, setListRetryingId] = useState<string | null>(null);
+
   const handleRetry = useCallback(async (jobId: string) => {
     await retryJobRequest(jobId);
     await refresh();
   }, [refresh]);
+
+  const handleListRetry = useCallback(async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setListRetryingId(jobId);
+    try {
+      await handleRetry(jobId);
+    } catch (err) {
+      console.error('[queue] retry failed', err);
+    } finally {
+      setListRetryingId(null);
+    }
+  }, [handleRetry]);
 
   useEffect(() => {
     refresh();
@@ -190,6 +218,7 @@ export function QueueView() {
 
   const running = jobs.filter(j => j.status === 'running').length;
   const queued = jobs.filter(j => j.status === 'queued').length;
+  const failedCount = jobs.filter(j => j.status === 'failed').length;
   const completedTreatments = (data?.videos ?? []).filter(v => v.stage === 'final');
 
   return (
@@ -211,6 +240,11 @@ export function QueueView() {
             {queued > 0 && (
               <span className="text-[10px] font-mono text-white/40">
                 {queued} queued
+              </span>
+            )}
+            {failedCount > 0 && (
+              <span className="text-[10px] font-mono text-red-400/70">
+                {failedCount} failed
               </span>
             )}
           </div>
@@ -269,11 +303,21 @@ export function QueueView() {
               const soundtrack = job.params?.soundtrack as Record<string, unknown> | undefined;
               const musicMode = soundtrack?.instrumental === true ? 'instrumental' : 'vocal';
 
+              const listRetrying = listRetryingId === job.jobId;
+
               return (
-                <button
+                <div
                   key={job.jobId}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelected(job)}
-                  className={`group flex items-start gap-3 px-4 py-3.5 rounded text-left transition-all border ${
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelected(job);
+                    }
+                  }}
+                  className={`group flex items-start gap-3 px-4 py-3.5 rounded text-left transition-all border cursor-pointer ${
                     isRunning
                       ? 'bg-amber-400/[0.03] border-amber-400/[0.12] hover:border-amber-400/25'
                       : isFailed
@@ -330,12 +374,12 @@ export function QueueView() {
 
                     {isFailed && job.error && (
                       <div className="text-[10px] font-mono text-red-400/70 mt-1.5 truncate">
-                        {job.error.message}
+                        {formatJobError(job.error.message)}
                       </div>
                     )}
                   </div>
 
-                  <div className="shrink-0 mt-1">
+                  <div className="shrink-0 mt-0.5 flex flex-col items-end gap-1.5">
                     {isCompleted && (
                       <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400/70">Done</span>
                     )}
@@ -346,10 +390,19 @@ export function QueueView() {
                       <span className="text-[9px] font-mono text-amber-400/70">{job.progress ?? 0}%</span>
                     )}
                     {isFailed && (
-                      <span className="text-[9px] font-mono uppercase tracking-wider text-red-400/60">Failed</span>
+                      <button
+                        type="button"
+                        disabled={listRetrying}
+                        onClick={e => void handleListRetry(job.jobId, e)}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-red-400/[0.1] hover:bg-red-400/[0.18] border border-red-400/30 hover:border-red-400/50 transition-all text-[9px] font-mono uppercase tracking-wider text-red-300/90 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Re-queue this job"
+                      >
+                        {listRetrying ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                        {listRetrying ? 'Retrying…' : 'Retry'}
+                      </button>
                     )}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -840,8 +893,8 @@ function JobDetail({
           {/* ── Error ─────────────────────────────────────── */}
           {job.status === 'failed' && job.error && (
             <Section icon={<XCircle size={10} />} label="Error" color="red">
-              <div className="px-3 py-2.5 bg-red-400/[0.05] border border-red-400/15 rounded text-[12px] font-mono text-red-300/80 select-text leading-relaxed">
-                {job.error.message}
+              <div className="px-3 py-2.5 bg-red-400/[0.05] border border-red-400/15 rounded text-[12px] font-mono text-red-300/80 select-text leading-relaxed whitespace-pre-wrap break-words">
+                {formatJobError(job.error.message)}
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button

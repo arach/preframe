@@ -5,6 +5,7 @@ import { CatalogProvider } from './Provider';
 import { CatalogContent } from './slots/Content';
 import { CatalogLeftPanel } from './slots/LeftPanel';
 import { CatalogInspector } from './slots/Inspector';
+import { CraftChat } from './slots/CraftChat';
 import { preframePlayerEmbedSurface } from './embeds/PlayerEmbed';
 import {
   useCatalogCommands,
@@ -16,14 +17,19 @@ import {
 } from './hooks';
 import { useCatalogStatusRight } from './PlayerContext';
 import { preframePorts, usePreframePortOutput, usePreframePortInput } from './ports';
+import { CRAFT_AGENT_CONTEXT } from './lib/craft-context';
 
 export const catalogApp: HudsonApp = {
   id: 'preframe-catalog',
   name: 'Preframe',
-  description: 'Video catalog — browse, filter, and inspect recorded demos',
+  description:
+    'Creative catalog studio — assets, treatments, music, FX. Bottom drawer Craft chat for free-form technical direction on the current selection.',
   mode: 'panel',
 
   Provider: CatalogProvider,
+
+  /** Operating guide for Hudson workspace AI / assistant chat mode */
+  agentContext: CRAFT_AGENT_CONTEXT,
 
   ports: preframePorts,
 
@@ -40,6 +46,10 @@ export const catalogApp: HudsonApp = {
     Content: CatalogContent,
     LeftPanel: CatalogLeftPanel,
     Inspector: CatalogInspector,
+    /** Bottom drawer — free-form craft with live selection context */
+    Terminal: CraftChat,
+    /** Hudson workspace console "Chat" surface (same component) */
+    Chat: CraftChat,
   },
 
   hooks: {

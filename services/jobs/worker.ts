@@ -546,7 +546,13 @@ interface CompositionPlan {
 9. If the user asks for a "demo video", keep clips longer (15-60s) with minimal cuts.
 10. Always include a brief description of your editing rationale in the description field.
 11. When a brand input provides iconSrc, copy it into plan.brand.iconSrc and use that brand name in title/subtitle/tagline. Do not use Talkie assets unless the brief is explicitly about Talkie.
-12. If the brief mentions a gesture, cursor path, or a screen quadrant, treat that as the primary subject. Use the processed input video analysis motionArea/quadrants to choose start times and zoom origins. For quadrant emphasis, center the zoom on the visible UI element inside that quadrant, not the mathematical corner of the whole frame. For bottom-right gesture emphasis, prefer zoom origins around originX 0.74-0.88 and originY 0.66-0.86, with a scale around 1.35-1.7 unless the shot remains legible at higher scale. Avoid blank screen areas, browser chrome, and the recording pill unless the brief explicitly asks for those controls.
+12. Zoom is optional storytelling, not default spectacle. Prefer wide or lightly framed shots so the viewer keeps spatial context — especially for UI demos and multi-step flows.
+    - Default: NO zoom unless the brief clearly needs emphasis (tiny control, dense panel, cursor target).
+    - When zooming, keep scale modest: prefer 1.12–1.35. Rarely go above 1.45; never above 1.6 unless the user explicitly asks for a tight push-in.
+    - Prefer fewer zooms (0–1 per clip). Avoid stacking aggressive zooms back-to-back across cuts.
+    - Center zoom on the visible UI element (use motionArea/quadrants), not empty chrome, recording pills, or mathematical frame corners.
+    - For bottom-right gesture emphasis, originX ~0.72–0.88 and originY ~0.62–0.82 with scale ~1.15–1.35 is usually enough.
+    - Leave headroom: if text or UI would be clipped by the crop, reduce scale or skip the zoom.
 
 ## Revision jobs
 

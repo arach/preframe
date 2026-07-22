@@ -37,7 +37,7 @@ export default defineTool({
     const result = await postAnalyze(body);
     return {
       preframeUrl: preframeUrl(),
-      queue: `${preframeUrl()}/?view=queue`,
+      queue: `${preframeUrl()}/queue`,
       ...result,
       next:
         "Poll get_queue_jobs until analyze jobs complete, then list_assets { analyzedOnly: true } and enqueue_composition for 1–2 clips.",

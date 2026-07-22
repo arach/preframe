@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCatalog } from '../Provider';
 import {
   formatAbsoluteDate,
@@ -10,18 +10,47 @@ import {
   RECENCY_BUCKET_LABELS,
 } from '../../lib/types';
 import type { Video } from '../../lib/types';
-import { Eye, FileVideo, Loader2, Search } from 'lucide-react';
+import { Download, Eye, FileVideo, Loader2, Search } from 'lucide-react';
 import { apiClient } from '../lib/api-client';
 
 type AssetFilter = 'all' | 'analyzed' | 'needs-analysis';
 
 const VIDEO_EXTS = ['.mp4', '.mov', '.webm', '.mkv'];
 
+type IngestSettings = {
+  kind: 'talkie' | 'folder';
+  since: string;
+  folder: string;
+  analyze: boolean;
+};
+
 export function AssetsView() {
   const { data, openVideo, deleteVideo, sort, setSort, search, setSearch, setView, refreshCatalog } = useCatalog();
   const [assetFilter, setAssetFilter] = useState<AssetFilter>('all');
   const [analyzeBusy, setAnalyzeBusy] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [ingest, setIngest] = useState<IngestSettings | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .get('/api/settings/ingest')
+      .then(r => (r.ok ? r.json() : null))
+      .then((s: IngestSettings | null) => {
+        if (s) setIngest(s);
+      })
+      .catch(() => {});
+  }, []);
+
+  const importLabel = useMemo(() => {
+    if (!ingest) return 'Import latest';
+    if (ingest.kind === 'folder') {
+      const leaf = ingest.folder.replace(/\/$/, '').split('/').pop() || 'folder';
+      return `Import · ${leaf} · ${ingest.since}`;
+    }
+    return `Import · Talkie · ${ingest.since}`;
+  }, [ingest]);
 
   const sourceVideos = useMemo(() => {
     const vids = (data?.videos ?? []).filter(v => v.stage === 'source' || !v.stage);
@@ -114,6 +143,41 @@ export function AssetsView() {
     }
   }, [needsCount, analyzeBusy, refreshCatalog]);
 
+  const runImport = useCallback(async () => {
+    if (importBusy) return;
+    setImportBusy(true);
+    setImportMsg(null);
+    try {
+      const res = await apiClient.post('/api/catalog/import', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setImportMsg(body.error || `Import failed (${res.status})`);
+        return;
+      }
+      setImportMsg(body.message || 'Import done');
+      // Refresh ingest label in case settings changed elsewhere
+      if (body.source) {
+        /* keep */
+      }
+      void refreshCatalog?.();
+      // reload ingest settings label
+      apiClient
+        .get('/api/settings/ingest')
+        .then(r => (r.ok ? r.json() : null))
+        .then((s: IngestSettings | null) => {
+          if (s) setIngest(s);
+        })
+        .catch(() => {});
+    } catch (err: any) {
+      setImportMsg(err?.message || 'Import failed');
+    } finally {
+      setImportBusy(false);
+    }
+  }, [importBusy, refreshCatalog]);
+
   return (
     <div className="px-6 py-5">
       {/* Stats */}
@@ -133,6 +197,17 @@ export function AssetsView() {
 
         <button
           type="button"
+          disabled={importBusy}
+          onClick={() => void runImport()}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border border-cyan-400/25 text-cyan-200/80 hover:text-cyan-100 hover:border-cyan-400/40 hover:bg-cyan-400/[0.06] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          title="Import latest captures from the configured source (Settings → Capture source). Same as: bun run process --saved --analyze"
+        >
+          {importBusy ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
+          {importLabel}
+        </button>
+
+        <button
+          type="button"
           disabled={needsCount === 0 || analyzeBusy}
           onClick={() => void enqueueAnalyze()}
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm text-[10px] font-mono uppercase tracking-wider border border-white/[0.1] text-white/70 hover:text-white/90 hover:border-white/[0.18] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -142,17 +217,23 @@ export function AssetsView() {
           Analyze needs-analysis ({needsCount})
         </button>
 
-        {analyzeMsg && (
-          <div className="flex items-center gap-2 text-[10px] font-mono text-white/45">
-            <span>{analyzeMsg}</span>
-            {analyzeMsg.includes('Queue') && (
-              <button
-                type="button"
-                onClick={() => setView('queue')}
+        {(importMsg || analyzeMsg) && (
+          <div className="flex items-center gap-2 text-[10px] font-mono text-white/45 flex-wrap">
+            {importMsg && <span>{importMsg}</span>}
+            {analyzeMsg && <span>{analyzeMsg}</span>}
+            {((importMsg && importMsg.toLowerCase().includes('enqueue')) ||
+              (analyzeMsg && analyzeMsg.includes('Queue'))) && (
+              <a
+                href="/queue"
+                onClick={e => {
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                  e.preventDefault();
+                  setView('queue');
+                }}
                 className="text-cyan-400/70 hover:text-cyan-300/90 underline-offset-2 hover:underline"
               >
                 Open Queue
-              </button>
+              </a>
             )}
           </div>
         )}
