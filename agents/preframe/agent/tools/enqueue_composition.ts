@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
@@ -54,16 +55,32 @@ export default defineTool({
       .replace(/[^a-z0-9\-\u4e00-\u9fff]+/gi, "-")
       .replace(/^-|-$/g, "");
 
+    const kind = input.kind ?? "generate";
+    // Content-addressed key so prompt/clip revisions create a new job; identical
+    // retries remain idempotent. Active-job dedup still applies server-side.
+    const fingerprint = createHash("sha256")
+      .update(
+        JSON.stringify({
+          compositionId,
+          kind,
+          prompt: input.prompt,
+          clips,
+          analyzeInputs: input.analyzeInputs ?? false,
+        }),
+      )
+      .digest("hex")
+      .slice(0, 16);
+
     const result = await postJob({
       compositionId,
-      kind: input.kind ?? "generate",
+      kind,
       prompt: input.prompt,
       inputs: { clips },
       params: {
         name: input.name ?? compositionId,
         analyzeInputs: input.analyzeInputs ?? false,
       },
-      idempotencyKey: `eve:enqueue:${compositionId}:${input.kind ?? "generate"}:v1`,
+      idempotencyKey: `eve:enqueue:${compositionId}:${kind}:${fingerprint}`,
     });
 
     return {

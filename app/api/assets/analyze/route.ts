@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { createJob, ensureJobsRuntime } from '@/services/jobs/init';
 import type { Video } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 type FilterMode = 'needs-analysis' | 'all';
+
+const DEFAULT_ANALYZE_LIMIT = 20;
+const MAX_ANALYZE_LIMIT = 100;
 
 interface AnalyzeBody {
   ids?: string[];
@@ -52,13 +55,28 @@ function parseSince(value: string): Date | null {
   return Number.isNaN(abs.getTime()) ? null : abs;
 }
 
+/** Resolve a clip path under public/ with containment + existence checks. */
 function clipPublicPath(v: Video): string | null {
-  if (v.demosPath) return v.demosPath.replace(/^\/+/, '');
+  const publicDir = resolve(process.cwd(), 'public');
+
+  const underPublic = (rel: string): string | null => {
+    const normalized = rel.replace(/^\/+/, '');
+    const abs = resolve(publicDir, normalized);
+    const r = relative(publicDir, abs);
+    if (!r || r.startsWith('..') || r.startsWith(sep) || r.startsWith('/')) return null;
+    if (!existsSync(abs)) return null;
+    return r.replace(/\\/g, '/');
+  };
+
+  if (v.demosPath) {
+    const hit = underPublic(v.demosPath);
+    if (hit) return hit;
+  }
   if (v.filename) {
-    const demos = join(process.cwd(), 'public', 'demos', v.filename);
-    if (existsSync(demos)) return `demos/${v.filename}`;
-    const inbox = join(process.cwd(), 'public', 'inbox', v.filename);
-    if (existsSync(inbox)) return `inbox/${v.filename}`;
+    const demos = underPublic(`demos/${v.filename}`);
+    if (demos) return demos;
+    const inbox = underPublic(`inbox/${v.filename}`);
+    if (inbox) return inbox;
   }
   return null;
 }
@@ -74,14 +92,15 @@ function slugCompositionId(video: Video): string {
   return slug || `asset-${Date.now().toString(36)}`;
 }
 
-function selectVideos(body: AnalyzeBody): Video[] {
+function selectVideos(body: AnalyzeBody): { videos: Video[]; limitedFrom: number } {
   let list = loadCatalogVideos().filter(v => v.stage === 'source' || !v.stage);
 
   if (body.ids?.length) {
     const set = new Set(body.ids);
     list = list.filter(v => set.has(v.id) || set.has(v.filename));
   } else {
-    const filter = body.filter ?? 'needs-analysis';
+    // force re-analysis includes already-analyzed assets
+    const filter = body.force ? 'all' : (body.filter ?? 'needs-analysis');
     if (filter === 'needs-analysis') list = list.filter(needsAnalysis);
   }
 
@@ -93,8 +112,9 @@ function selectVideos(body: AnalyzeBody): Video[] {
   if (body.since) {
     const cutoff = parseSince(body.since);
     if (cutoff) {
+      // Missing timestamps are treated as outside the window (not "always match").
       list = list.filter(v => {
-        if (!v.capturedAt) return true;
+        if (!v.capturedAt) return false;
         return new Date(v.capturedAt).getTime() >= cutoff.getTime();
       });
     }
@@ -105,8 +125,14 @@ function selectVideos(body: AnalyzeBody): Video[] {
       new Date(b.capturedAt ?? 0).getTime() - new Date(a.capturedAt ?? 0).getTime(),
   );
 
-  if (body.limit && body.limit > 0) list = list.slice(0, body.limit);
-  return list;
+  const rawLimit =
+    typeof body.limit === 'number' && body.limit > 0
+      ? body.limit
+      : DEFAULT_ANALYZE_LIMIT;
+  const limit = Math.min(rawLimit, MAX_ANALYZE_LIMIT);
+  const limitedFrom = list.length;
+  if (list.length > limit) list = list.slice(0, limit);
+  return { videos: list, limitedFrom };
 }
 
 /**
@@ -123,7 +149,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
   }
 
-  const selected = selectVideos(body);
+  const { videos: selected, limitedFrom } = selectVideos(body);
   if (selected.length === 0) {
     return NextResponse.json({
       ok: true,
@@ -179,12 +205,24 @@ export async function POST(req: Request) {
     }
   }
 
+  const limitSkipped = Math.max(0, limitedFrom - selected.length);
+
   return NextResponse.json({
     ok: jobIds.length > 0,
     enqueued: jobIds.length,
     jobIds,
     jobs,
     skipped: skipped.length ? skipped : undefined,
+    limit: {
+      applied: Math.min(
+        typeof body.limit === 'number' && body.limit > 0
+          ? body.limit
+          : DEFAULT_ANALYZE_LIMIT,
+        MAX_ANALYZE_LIMIT,
+      ),
+      max: MAX_ANALYZE_LIMIT,
+      skipped: limitSkipped || undefined,
+    },
     queue: '/queue',
     analyzedAlready: selected.filter(isAnalyzed).length,
   }, { status: jobIds.length > 0 ? 201 : 200 });

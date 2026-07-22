@@ -79,8 +79,9 @@ export function filterSourceVideos(
   if (opts.since) {
     const cutoff = parseSince(opts.since);
     if (cutoff) {
+      // Missing timestamps are older than any relative window — exclude them.
       list = list.filter((v) => {
-        if (!v.capturedAt) return true;
+        if (!v.capturedAt) return false;
         return new Date(v.capturedAt).getTime() >= cutoff.getTime();
       });
     }

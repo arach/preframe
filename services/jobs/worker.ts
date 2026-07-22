@@ -12,7 +12,7 @@ import {
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { basename, join, resolve, sep } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
 
 // ── Types for the composition plan produced by the LLM ──────────
@@ -1181,10 +1181,20 @@ export function stopWorker() {
 function poll() {
   if (!polling) return;
   try {
+    // Atomic claim: flip queued → running in one statement so two workers
+    // cannot pick the same row.
+    const now = new Date().toISOString();
     const row = getDb().prepare(
-      `SELECT job_id, composition_id, kind, prompt, inputs_json, params_json
-       FROM jobs WHERE status = 'queued' ORDER BY created_at ASC LIMIT 1`
-    ).get() as any;
+      `UPDATE jobs
+       SET status = 'running', updated_at = ?
+       WHERE job_id = (
+         SELECT job_id FROM jobs
+         WHERE status = 'queued'
+         ORDER BY created_at ASC
+         LIMIT 1
+       )
+       RETURNING job_id, composition_id, kind, prompt, inputs_json, params_json`,
+    ).get(now) as any;
 
     if (row) {
       processJob({
@@ -1194,6 +1204,7 @@ function poll() {
         prompt: row.prompt,
         inputs: row.inputs_json ? JSON.parse(row.inputs_json) : null,
         params: row.params_json ? JSON.parse(row.params_json) : null,
+        alreadyRunning: true,
       }).then(() => {
         console.log(`[worker] Job ${row.job_id} completed`);
         schedulePoll(100);
@@ -1347,8 +1358,10 @@ function runWhisperTranscript(videoPath: string): { ok: boolean; detail: string 
     return { ok: false, detail: 'scripts/diarize.py missing' };
   }
   try {
-    execSync(
-      `python3 "${diarize}" "${videoPath}" --output "${outDir}" --model base --skip-diarization`,
+    // argv form — never interpolate paths into a shell string
+    execFileSync(
+      'python3',
+      [diarize, videoPath, '--output', outDir, '--model', 'base', '--skip-diarization'],
       {
         cwd: process.cwd(),
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -1385,10 +1398,13 @@ async function processJob(ctx: {
   prompt: string;
   inputs: Record<string, unknown> | null;
   params: Record<string, unknown> | null;
+  alreadyRunning?: boolean;
 }) {
   const { jobId, compositionId, kind, prompt, inputs, params } = ctx;
 
-  updateJobStatus(jobId, 'running');
+  if (!ctx.alreadyRunning) {
+    updateJobStatus(jobId, 'running');
+  }
 
   const updateState = (agentState: string, progress: number, lastMessage?: string) => {
     updateJobAgent(jobId, {

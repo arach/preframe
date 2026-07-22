@@ -1,15 +1,16 @@
 /**
  * POST /api/catalog/import
  *
- * Run capture ingest using saved settings (or body overrides).
+ * Run capture ingest using saved settings (body may override since/limit/analyze/dryRun
+ * and kind — but not folder path; folder always comes from saved settings).
  * Same outcome as `bun run process --from talkie|folder …`.
  *
  * Body (all optional):
- *   { since?, limit?, dryRun?, analyze?, kind?, folder? }
+ *   { since?, limit?, dryRun?, analyze?, kind? }
  */
 import { NextResponse } from 'next/server';
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import {
   readIngestSettings,
   runImport,
@@ -24,16 +25,15 @@ function loadCatalogVideos(): Video[] {
   const path = join(process.cwd(), 'public', 'catalog-data.json');
   if (!existsSync(path)) return [];
   try {
-    const data = JSON.parse(readFileSync(path, 'utf8'));
+    const data = JSON.parse(readFileSync(path, 'utf8')) as { videos?: Video[] };
     return Array.isArray(data.videos) ? data.videos : [];
   } catch {
     return [];
   }
 }
 
-function slugCompositionId(video: Video): string {
-  const base = video.id || video.filename || `asset-${Date.now()}`;
-  const slug = base
+function slugCompositionId(id: string): string {
+  const slug = id
     .toLowerCase()
     .replace(/[^a-z0-9\-\u4e00-\u9fff]+/gi, '-')
     .replace(/-+/g, '-')
@@ -42,39 +42,78 @@ function slugCompositionId(video: Video): string {
   return slug || `asset-${Date.now().toString(36)}`;
 }
 
+/** Ensure demos/<filename> stays under public/ and exists. */
+function demosClipPath(filename: string): string | null {
+  const publicDir = resolve(process.cwd(), 'public');
+  const abs = resolve(publicDir, 'demos', filename);
+  const r = relative(publicDir, abs);
+  if (!r || r.startsWith('..') || r.startsWith(sep) || r.startsWith('/')) return null;
+  if (!existsSync(abs)) return null;
+  return r.replace(/\\/g, '/');
+}
+
+function safePublicRel(relPath: string): string | null {
+  const publicDir = resolve(process.cwd(), 'public');
+  const rel = relPath.replace(/^\/+/, '');
+  const abs = resolve(publicDir, rel);
+  const r = relative(publicDir, abs);
+  if (!r || r.startsWith('..') || r.startsWith(sep) || r.startsWith('/')) return null;
+  if (!existsSync(abs)) return null;
+  return r.replace(/\\/g, '/');
+}
+
 async function enqueueAnalyze(filenames: string[]) {
   ensureJobsRuntime();
   const set = new Set(filenames);
-  const videos = loadCatalogVideos().filter(
+  const catalogVideos = loadCatalogVideos().filter(
     v =>
       (v.stage === 'source' || !v.stage) &&
       (set.has(v.id) || (v.filename != null && set.has(v.filename))),
   );
 
+  // Prefer catalog rows when present; fall back to demos/<filename> so analyze
+  // still runs if catalog rebuild lagged or failed.
+  const targets: Array<{ id: string; clip: string; name: string }> = [];
+  const seenClips = new Set<string>();
+
+  for (const video of catalogVideos) {
+    const safe =
+      (video.demosPath ? safePublicRel(video.demosPath) : null) ||
+      (video.filename ? demosClipPath(video.filename) : null);
+    if (!safe || seenClips.has(safe)) continue;
+    seenClips.add(safe);
+    targets.push({
+      id: video.id,
+      clip: safe,
+      name: video.filename || video.id,
+    });
+  }
+
+  for (const filename of filenames) {
+    const clip = demosClipPath(filename);
+    if (!clip || seenClips.has(clip)) continue;
+    seenClips.add(clip);
+    targets.push({ id: filename, clip, name: filename });
+  }
+
   const jobIds: string[] = [];
   const skipped: Array<{ id: string; reason: string }> = [];
 
-  for (const video of videos) {
-    const clip = video.demosPath?.replace(/^\/+/, '')
-      || (video.filename ? `demos/${video.filename}` : null);
-    if (!clip) {
-      skipped.push({ id: video.id, reason: 'no demos path' });
-      continue;
-    }
-    const compositionId = slugCompositionId(video);
+  for (const t of targets) {
+    const compositionId = slugCompositionId(t.id);
     const result = await createJob(compositionId, {
       kind: 'analyze',
-      prompt: `Analyze source asset ${video.id} (storyboard + VLM)`,
-      inputs: { clips: [clip] },
+      prompt: `Analyze source asset ${t.id} (storyboard + VLM)`,
+      inputs: { clips: [t.clip] },
       params: {
-        name: video.filename || video.id,
-        videoId: video.id,
+        name: t.name,
+        videoId: t.id,
         transcribe: false,
         force: false,
       },
     });
     if ('error' in result && result.error) {
-      skipped.push({ id: video.id, reason: String(result.error) });
+      skipped.push({ id: t.id, reason: String(result.error) });
       continue;
     }
     const data = (result as { data?: { jobId: string } }).data;
@@ -91,6 +130,7 @@ export async function POST(request: Request) {
     dryRun?: boolean;
     analyze?: boolean;
     kind?: IngestSettings['kind'];
+    /** @deprecated Ignored for security — folder always comes from saved settings */
     folder?: string;
   } = {};
 
@@ -104,12 +144,15 @@ export async function POST(request: Request) {
   }
 
   const saved = readIngestSettings();
+  // Do not accept folder path overrides from the request body (arbitrary
+  // directory listing + bulk copy into public/). Kind/since/limit are ok.
   const settings: IngestSettings = {
     ...saved,
-    ...(body.kind ? { kind: body.kind } : {}),
-    ...(body.folder ? { folder: body.folder } : {}),
+    ...(body.kind === 'talkie' || body.kind === 'folder' ? { kind: body.kind } : {}),
     ...(body.since ? { since: body.since } : {}),
   };
+
+  const ignoredFolderOverride = Boolean(body.folder && body.folder !== saved.folder);
 
   try {
     const result = runImport({
@@ -121,8 +164,23 @@ export async function POST(request: Request) {
 
     const doAnalyze = body.analyze ?? settings.analyze;
     let analyze: Awaited<ReturnType<typeof enqueueAnalyze>> | undefined;
+    const warnings: string[] = [];
+    if (ignoredFolderOverride) {
+      warnings.push('Request body "folder" was ignored; using saved ingest settings only.');
+    }
+    if (!result.dryRun && !result.catalogOk) {
+      warnings.push(
+        'Catalog rebuild failed or returned non-zero; analyze may use demos/ paths only.',
+      );
+    }
+
     if (!result.dryRun && doAnalyze && result.imported.length > 0) {
       analyze = await enqueueAnalyze(result.imported);
+      if (analyze.enqueued === 0 && result.imported.length > 0) {
+        warnings.push(
+          `Analyze requested for ${result.imported.length} import(s) but 0 jobs were enqueued.`,
+        );
+      }
     }
 
     if (!result.found.length) {
@@ -130,6 +188,7 @@ export async function POST(request: Request) {
         ok: true,
         ...result,
         analyze,
+        warnings: warnings.length ? warnings : undefined,
         message: `No captures found (${result.source})`,
         queue: '/queue',
         assets: '/assets',
@@ -137,13 +196,15 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      ok: true,
+      ok: result.catalogOk || result.dryRun,
       ...result,
       analyze,
+      warnings: warnings.length ? warnings : undefined,
       message: result.dryRun
         ? `Dry run: ${result.found.length} file(s)`
         : `Imported ${result.copied.length} new, ${result.existed.length} already present` +
-          (analyze ? ` · enqueued ${analyze.enqueued} analyze job(s)` : ''),
+          (analyze ? ` · enqueued ${analyze.enqueued} analyze job(s)` : '') +
+          (!result.catalogOk ? ' · catalog rebuild failed' : ''),
       queue: '/queue',
       assets: '/assets',
     });

@@ -214,7 +214,11 @@ export function rebuildCatalog(): { ok: boolean; detail: string } {
   const cat = spawnSync('bun', ['run', 'scripts/build-catalog.ts'], {
     cwd: process.cwd(),
     encoding: 'utf8',
+    timeout: 60_000,
   });
+  if (cat.error && (cat.error as NodeJS.ErrnoException).code === 'ETIMEDOUT') {
+    return { ok: false, detail: 'catalog rebuild timed out after 60s' };
+  }
   const detail = ((cat.stdout || '') + (cat.stderr || '')).trim().slice(-400);
   return { ok: cat.status === 0, detail };
 }

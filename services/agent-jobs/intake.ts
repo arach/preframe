@@ -1,11 +1,13 @@
 import { copyFile, mkdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { basename, extname, join, relative, resolve } from 'node:path';
+import { basename, extname, join, relative, resolve, sep } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { appendActivity, completeJob, findByIdempotencyKey, getJob, insertJob } from '@/services/jobs/db';
 import { createJob } from '@/services/jobs/init';
 import type { JobKind, JobRecord } from '@/services/jobs/types';
+import { expandHome, readIngestSettings } from '@/lib/ingest';
 
 const execFileAsync = promisify(execFile);
 
@@ -113,7 +115,7 @@ export async function submitAgentJob(body: AgentJobRequest): Promise<AgentJobSub
   const mode = body.mode ?? body.action ?? 'register';
   const prompt = stringValue(body.prompt) ?? stringValue(body.instructions) ?? `Prepare "${title}" for motion treatment.`;
   const kind = body.kind ?? (mode === 'queue' ? 'generate' : mode === 'treatment' ? 'render' : 'prepare');
-  const idempotencyKey = stringValue(body.idempotencyKey) ?? `agent:${mode}:${compositionId}`;
+  let idempotencyKey = stringValue(body.idempotencyKey) ?? `agent:${mode}:${compositionId}`;
 
   if (mode !== 'register' && mode !== 'queue' && mode !== 'treatment') {
     throw new IntakeError('mode must be "register", "queue", or "treatment"');
@@ -121,16 +123,21 @@ export async function submitAgentJob(body: AgentJobRequest): Promise<AgentJobSub
 
   const existing = findByIdempotencyKey(idempotencyKey);
   if (existing) {
-    return {
-      ok: true,
-      mode,
-      created: false,
-      job: existing,
-      assets: [],
-      attachments: [],
-      links: linksFor(existing),
-      warnings: ['idempotencyKey matched an existing job; no files were copied'],
-    };
+    // Only pin in-flight jobs. Completed/failed keys would permanently block
+    // re-register/re-queue for the same composition — bump the key instead.
+    if (existing.status === 'queued' || existing.status === 'running') {
+      return {
+        ok: true,
+        mode,
+        created: false,
+        job: existing,
+        assets: [],
+        attachments: [],
+        links: linksFor(existing),
+        warnings: ['idempotencyKey matched an active job; no files were copied'],
+      };
+    }
+    idempotencyKey = `${idempotencyKey}:r${Date.now().toString(36)}`;
   }
 
   const sourceInputs = collectSources(body);
@@ -429,9 +436,40 @@ async function registerAttachment(
   };
 }
 
+/** Roots from which agent jobs may copy files into public/. */
+function allowedSourceRoots(): string[] {
+  const roots = [PUBLIC, ROOT];
+  try {
+    roots.push(expandHome(readIngestSettings().folder));
+  } catch {
+    /* ignore */
+  }
+  // Common Talkie / capture locations on macOS
+  roots.push(join(homedir(), 'Library', 'Application Support', 'Talkie'));
+  roots.push(join(homedir(), '.talkie'));
+  roots.push(join(homedir(), 'Movies', 'Talkie'));
+  roots.push(join(homedir(), 'Downloads'));
+  return roots;
+}
+
+function isUnderRoot(resolvedPath: string, root: string): boolean {
+  const r = resolve(root);
+  return resolvedPath === r || resolvedPath.startsWith(`${r}${sep}`);
+}
+
+function assertAllowedSourcePath(resolvedPath: string, inputPath: string): void {
+  if (allowedSourceRoots().some((root) => isUnderRoot(resolvedPath, root))) return;
+  throw new IntakeError(
+    `Source path is outside allowlisted roots (public/, project, ingest folder, Talkie/Downloads): ${inputPath}`,
+    403,
+  );
+}
+
 async function resolveSourcePath(inputPath: string): Promise<{ resolvedPath: string; publicPath?: string }> {
   if (inputPath.startsWith('file://')) {
-    return { resolvedPath: await realpath(fileURLToPath(inputPath)) };
+    const resolvedPath = await realpath(fileURLToPath(inputPath));
+    assertAllowedSourcePath(resolvedPath, inputPath);
+    return { resolvedPath };
   }
 
   const maybePublic = inputPath.replace(/^\/+/, '');
@@ -440,7 +478,15 @@ async function resolveSourcePath(inputPath: string): Promise<{ resolvedPath: str
     return { resolvedPath: join(PUBLIC, publicPath), publicPath };
   }
 
-  return { resolvedPath: await realpath(resolve(ROOT, inputPath)) };
+  const candidate = resolve(ROOT, inputPath);
+  let resolvedPath: string;
+  try {
+    resolvedPath = await realpath(candidate);
+  } catch {
+    throw new IntakeError(`Source path not found: ${inputPath}`, 400);
+  }
+  assertAllowedSourcePath(resolvedPath, inputPath);
+  return { resolvedPath };
 }
 
 function normalizePublicPath(path: string): string {

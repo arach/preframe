@@ -28,8 +28,11 @@ export default defineTool({
       limit: input.limit,
       transcribe: input.transcribe,
       force: input.force,
+      // force re-analysis must include already-analyzed assets
       filter:
-        input.ids?.length || input.needsAnalysisOnly === false
+        input.ids?.length ||
+        input.needsAnalysisOnly === false ||
+        input.force
           ? ("all" as const)
           : ("needs-analysis" as const),
     };
