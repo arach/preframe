@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readProviderConfig, type ProviderConfig } from '@/lib/provider';
+import { getMiniMaxApiKey, readMusicModelConfig } from '@/lib/provider';
 
 export const runtime = 'nodejs';
 
@@ -8,16 +8,6 @@ interface LyricsRequest {
   prompt?: string;
   lyrics?: string;
   title?: string;
-}
-
-function getMiniMaxApiKey(config: ProviderConfig): string {
-  const looksLikeMiniMax =
-    config.name.toLowerCase().includes('minimax') ||
-    config.baseUrl.toLowerCase().includes('minimax') ||
-    config.model.toLowerCase().includes('minimax');
-
-  if (looksLikeMiniMax && config.apiKey) return config.apiKey;
-  return process.env.MINIMAX_API_KEY ?? '';
 }
 
 export async function POST(request: Request) {
@@ -36,10 +26,13 @@ export async function POST(request: Request) {
       payload.title = body.title.trim();
     }
 
-    const providerConfig = readProviderConfig();
-    const apiKey = getMiniMaxApiKey(providerConfig);
+    const musicConfig = readMusicModelConfig();
+    if (!musicConfig) {
+      return NextResponse.json({ error: 'Music model is not configured in Settings' }, { status: 400 });
+    }
+    const apiKey = getMiniMaxApiKey(musicConfig);
     if (!apiKey) {
-      return NextResponse.json({ error: 'MiniMax API key is not configured' }, { status: 400 });
+      return NextResponse.json({ error: 'Music model API key is not configured' }, { status: 400 });
     }
 
     const res = await fetch('https://api.minimax.io/v1/lyrics_generation', {

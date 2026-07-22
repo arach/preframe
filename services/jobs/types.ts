@@ -1,13 +1,31 @@
 export type JobKind =
+  | 'analyze'
   | 'generate'
   | 'revise'
   | 'revise-brief'
   | 'revise-render'
   | 'prepare'
   | 'render'
+  | 'music-generate'
   | 'logo-brief'
   | 'logo-render'
   | 'memo-reel';
+
+/** Single source of truth for job-kind validation (routes + init). */
+export const VALID_KINDS: readonly JobKind[] = [
+  'analyze',
+  'generate',
+  'revise',
+  'revise-brief',
+  'revise-render',
+  'prepare',
+  'render',
+  'music-generate',
+  'logo-brief',
+  'logo-render',
+  'memo-reel',
+] as const;
+
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'canceled';
 
 export interface CreateJobRequest {

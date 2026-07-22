@@ -21,6 +21,15 @@ import { ReviewProvider } from './ReviewContext';
 import { FxProvider } from './FxContext';
 import { PlayerProvider } from './PlayerContext';
 import { apiClient, checkHealth } from './lib/api-client';
+import {
+  collectionForVideo,
+  isCatalogPathname,
+  parseCatalogRoute,
+  pathForResource,
+  pathForView,
+  stripLegacyDetailParams,
+  withListQuery,
+} from './lib/routes';
 
 export type ServiceStatus = 'unknown' | 'checking' | 'online' | 'offline';
 
@@ -131,10 +140,6 @@ export function useCatalog() {
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
-const KNOWN_VIEWS = new Set([
-  'new', 'new-music', 'queue', 'assets', 'frames', 'fx', 'music', 'logos', 'prompts', 'settings',
-]);
-
 export interface CatalogProviderProps {
   children: ReactNode;
   /** Sync view state to URL pathname. Default: auto-detect (true if pathname matches a known view). */
@@ -146,31 +151,65 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Detect standalone: pathname is root or a known catalog view
-  const pathSegment = pathname === '/' ? null : pathname.replace(/^\//, '');
-  const isStandalone = standalone ?? (pathname === '/' || KNOWN_VIEWS.has(pathSegment ?? ''));
+  // Path is source of truth for view + resource identity
+  const route = useMemo(() => parseCatalogRoute(pathname), [pathname]);
+  const isStandalone = standalone ?? isCatalogPathname(pathname);
 
-  // --- URL-backed state ---
+  const [viewState, setViewState] = useState<string | null>(isStandalone ? route.view : null);
+  const view = isStandalone ? route.view : viewState;
+
+  // Resource ids from path (RESTful); fall back to legacy query during rewrite
+  const legacyVideo = searchParams.get('video');
+  const legacyProject = searchParams.get('project');
+  const legacyFrame = searchParams.get('frame');
+  const legacyReview = searchParams.get('review') === '1';
+
+  const videoId = route.videoId ?? legacyVideo;
+  const projectId = route.projectId ?? legacyProject ?? (route.collection === 'treatments' ? route.videoId : null);
+  const frameIndex =
+    route.frameIndex ??
+    (legacyFrame != null && legacyFrame !== '' && !Number.isNaN(Number(legacyFrame))
+      ? Number(legacyFrame)
+      : null);
+  const reviewOpen = route.review || legacyReview;
+
+  const setView = useCallback(
+    (v: string | null) => {
+      if (!isStandalone) {
+        setViewState(v);
+        return;
+      }
+      const target = pathForView(v);
+      if (pathname === target) return;
+      router.push(target);
+    },
+    [isStandalone, pathname, router],
+  );
+
+  // --- List query params ---
   const filter = searchParams.get('filter') ?? 'all';
   const search = searchParams.get('q') ?? '';
-  const videoId = searchParams.get('video');
-  const projectId = searchParams.get('project');
-  const frameParam = searchParams.get('frame');
-  const frameIndex = frameParam != null && frameParam !== '' && !Number.isNaN(Number(frameParam))
-    ? Number(frameParam)
-    : null;
-  const reviewOpen = searchParams.get('review') === '1';
   const snippetCategory = searchParams.get('category') ?? 'all';
   const sort = searchParams.get('sort') ?? 'newest';
 
   const writeParams = useCallback(
     (mutate: (p: URLSearchParams) => void) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = stripLegacyDetailParams(searchParams);
       mutate(params);
       const qs = params.toString();
+      // replace: filter/search tweaks shouldn't spam history
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [pathname, router, searchParams],
+  );
+
+  const navigatePath = useCallback(
+    (path: string, mode: 'push' | 'replace' = 'push') => {
+      const url = withListQuery(path, stripLegacyDetailParams(searchParams));
+      if (mode === 'replace') router.replace(url, { scroll: false });
+      else router.push(url, { scroll: false });
+    },
+    [router, searchParams],
   );
 
   const setFilter = useCallback(
@@ -194,59 +233,110 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     [writeParams],
   );
 
+  // data ref for openVideo path resolution without stale closures / dep churn
+  const dataRef = useRef<CatalogData | null>(null);
+
   const openVideo = useCallback(
     (id: string) => {
-      writeParams(p => {
-        p.set('video', id);
-        p.set('project', id);
-      });
+      const video = dataRef.current?.videos.find(v => v.id === id);
+      const collection = isStandalone
+        ? collectionForVideo(view, video?.stage)
+        : (route.collection ?? 'treatments');
+
+      navigatePath(
+        pathForResource({ collection, id }),
+        'push',
+      );
     },
-    [writeParams],
+    [isStandalone, navigatePath, route.collection, view],
   );
 
   const closeVideo = useCallback(() => {
-    writeParams(p => {
-      p.delete('video');
-      p.delete('project');
-      p.delete('frame');
-      p.delete('review');
-    });
-  }, [writeParams]);
+    // Return to collection list
+    const list =
+      route.collection === 'assets' || view === 'assets'
+        ? pathForView('assets')
+        : pathForView(null);
+    navigatePath(list, 'push');
+  }, [navigatePath, route.collection, view]);
 
   const openProjectInput = useCallback(
     (id: string) => {
-      writeParams(p => p.set('video', id));
+      const pid = projectId ?? videoId;
+      if (!pid) {
+        navigatePath(pathForResource({ collection: 'assets', id }), 'push');
+        return;
+      }
+      navigatePath(
+        pathForResource({ collection: 'treatments', id, projectId: pid }),
+        'push',
+      );
     },
-    [writeParams],
+    [navigatePath, projectId, videoId],
   );
 
   const closeProjectInput = useCallback(() => {
     if (projectId) {
-      writeParams(p => p.set('video', projectId));
+      navigatePath(pathForResource({ collection: 'treatments', id: projectId }), 'push');
     }
-  }, [writeParams, projectId]);
+  }, [navigatePath, projectId]);
 
   const openFrame = useCallback(
     (idx: number) => {
-      writeParams(p => p.set('frame', String(idx)));
+      if (!videoId) return;
+      if (route.collection === 'assets' || view === 'assets') {
+        navigatePath(
+          pathForResource({ collection: 'assets', id: videoId, frameIndex: idx }),
+          'replace',
+        );
+        return;
+      }
+      navigatePath(
+        pathForResource({
+          collection: 'treatments',
+          id: videoId,
+          projectId: projectId && projectId !== videoId ? projectId : undefined,
+          frameIndex: idx,
+        }),
+        'replace',
+      );
     },
-    [writeParams],
+    [navigatePath, projectId, route.collection, videoId, view],
   );
 
   const closeFrame = useCallback(() => {
-    writeParams(p => p.delete('frame'));
-  }, [writeParams]);
+    if (!videoId) return;
+    if (route.collection === 'assets' || view === 'assets') {
+      navigatePath(pathForResource({ collection: 'assets', id: videoId }), 'replace');
+      return;
+    }
+    navigatePath(
+      pathForResource({
+        collection: 'treatments',
+        id: videoId,
+        projectId: projectId && projectId !== videoId ? projectId : undefined,
+      }),
+      'replace',
+    );
+  }, [navigatePath, projectId, route.collection, videoId, view]);
 
   const openReview = useCallback(() => {
-    writeParams(p => {
-      p.set('review', '1');
-      p.delete('frame');
-    });
-  }, [writeParams]);
+    // Review is a treatment workflow — use project when viewing a source input
+    const id = projectId && projectId === videoId
+      ? videoId
+      : (projectId && videoId && projectId !== videoId ? projectId : videoId);
+    if (!id) return;
+    navigatePath(
+      pathForResource({ collection: 'treatments', id, review: true }),
+      'replace',
+    );
+  }, [navigatePath, projectId, videoId]);
 
   const closeReview = useCallback(() => {
-    writeParams(p => p.delete('review'));
-  }, [writeParams]);
+    const id = projectId ?? videoId;
+    if (!id) return;
+    navigatePath(pathForResource({ collection: 'treatments', id }), 'replace');
+  }, [navigatePath, projectId, videoId]);
 
   const setSnippetCategory = useCallback(
     (c: string) => {
@@ -268,8 +358,47 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     [writeParams],
   );
 
+  // Rewrite legacy ?video= / ?project= / ?frame= / ?review= into RESTful paths
+  useEffect(() => {
+    if (!isStandalone) return;
+    const qVideo = searchParams.get('video');
+    if (!qVideo) return;
+    // Already on a resource path — just strip legacy query keys
+    if (route.videoId) {
+      const cleaned = stripLegacyDetailParams(searchParams);
+      const qs = cleaned.toString();
+      const next = qs ? `${pathname}?${qs}` : pathname;
+      const cur = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
+      if (next !== cur) router.replace(next, { scroll: false });
+      return;
+    }
+    const video = dataRef.current?.videos.find(v => v.id === qVideo);
+    const collection = collectionForVideo(route.view, video?.stage);
+    const qProject = searchParams.get('project');
+    const qFrame = searchParams.get('frame');
+    const qReview = searchParams.get('review') === '1';
+    const frameNum =
+      qFrame != null && qFrame !== '' && !Number.isNaN(Number(qFrame)) ? Number(qFrame) : null;
+
+    let path: string;
+    if (collection === 'assets') {
+      path = pathForResource({ collection: 'assets', id: qVideo });
+    } else if (qProject && qProject !== qVideo) {
+      path = pathForResource({ collection: 'treatments', id: qVideo, projectId: qProject });
+    } else if (qReview) {
+      path = pathForResource({ collection: 'treatments', id: qVideo, review: true });
+    } else if (frameNum != null) {
+      path = pathForResource({ collection: 'treatments', id: qVideo, frameIndex: frameNum });
+    } else {
+      path = pathForResource({ collection: 'treatments', id: qVideo });
+    }
+
+    router.replace(withListQuery(path, stripLegacyDetailParams(searchParams)), { scroll: false });
+  }, [isStandalone, pathname, route.videoId, route.view, router, searchParams]);
+
   // --- Data loading ---
   const [data, setData] = useState<CatalogData | null>(null);
+  dataRef.current = data;
   const [snippetsData, setSnippetsData] = useState<CuratedSnippetsData | null>(
     null,
   );
@@ -514,14 +643,6 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
   const notifyMusicQueued = useCallback(() => setPendingMusicCount(c => c + 1), []);
   const notifyMusicSettled = useCallback(() => setPendingMusicCount(c => Math.max(0, c - 1)), []);
 
-  // --- View state — in-memory source of truth, optional URL sync in standalone ---
-  const [view, setViewState] = useState<string | null>(isStandalone ? pathSegment : null);
-  const setView = useCallback((v: string | null) => {
-    setViewState(v);
-    if (isStandalone) {
-      router.push(v ? `/${v}` : '/');
-    }
-  }, [isStandalone, router]);
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
 
   // --- Code viewer ---

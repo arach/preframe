@@ -18,6 +18,7 @@
     "render:mira-intro": "remotion render src/projects/mira-intro/mira-intro-entry.tsx MiraIntro out/mira-intro.mp4 --concurrency=4",
     "quote": "node scripts/make-quote.mjs",
     "analyze": "bun run scripts/analyze-video.ts",
+    "process": "bun run scripts/process-captures.ts",
     "postinstall": "rm -rf node_modules/hudsonkit && cp -R ../hudson/packages/web/hudsonkit node_modules/hudsonkit"
   },
   "dependencies": {

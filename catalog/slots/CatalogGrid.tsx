@@ -85,7 +85,7 @@ function StatsRow({
   onNew: () => void;
 }) {
   const items = [
-    { label: 'Videos', value: counts.final },
+    { label: 'Treatments', value: counts.final },
     { label: 'Curated', value: counts.curated },
   ];
   return (
@@ -128,7 +128,7 @@ function VideoGrid({
   if (finals.length === 0) {
     return (
       <div className="py-16 text-center text-white/20 text-[12px] font-mono tracking-wider uppercase">
-        No finished videos yet
+        No completed treatments yet
       </div>
     );
   }

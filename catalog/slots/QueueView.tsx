@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Clock, CheckCircle2, Loader2, FileVideo, MessageSquare, Zap, XCircle, RefreshCw, FolderOpen, ChevronRight, Play, FileCode, Braces, Database, Images, ExternalLink, RotateCcw, X } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, Loader2, FileVideo, MessageSquare, Music, Zap, XCircle, RefreshCw, FolderOpen, ChevronRight, Play, FileCode, Braces, Database, Images, ExternalLink, RotateCcw, X } from 'lucide-react';
 import { useCatalog } from '../Provider';
 import type { Video } from '../../lib/types';
 import { apiClient } from '../lib/api-client';
@@ -131,10 +131,23 @@ async function retryJobRequest(jobId: string): Promise<void> {
   }
 }
 
+/** Flatten nested API error JSON (e.g. reasoning.effort) for list/detail UI. */
+function formatJobError(message: string | undefined | null): string {
+  if (!message) return 'Unknown error';
+  try {
+    const parsed = JSON.parse(message);
+    const nested = parsed?.error?.message || parsed?.message;
+    if (typeof nested === 'string' && nested.length > 0) return nested;
+  } catch {
+    /* plain string */
+  }
+  return message;
+}
+
 // ── Queue list ─────────────────────────────────────────────────
 
 export function QueueView() {
-  const { setView, refreshCatalog } = useCatalog();
+  const { setView, refreshCatalog, data, openVideo } = useCatalog();
   const [jobs, setJobs] = useState<CompositionJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<CompositionJob | null>(null);
@@ -166,10 +179,25 @@ export function QueueView() {
     }
   }, [refreshCatalog]);
 
+  const [listRetryingId, setListRetryingId] = useState<string | null>(null);
+
   const handleRetry = useCallback(async (jobId: string) => {
     await retryJobRequest(jobId);
     await refresh();
   }, [refresh]);
+
+  const handleListRetry = useCallback(async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setListRetryingId(jobId);
+    try {
+      await handleRetry(jobId);
+    } catch (err) {
+      console.error('[queue] retry failed', err);
+    } finally {
+      setListRetryingId(null);
+    }
+  }, [handleRetry]);
 
   useEffect(() => {
     refresh();
@@ -190,6 +218,8 @@ export function QueueView() {
 
   const running = jobs.filter(j => j.status === 'running').length;
   const queued = jobs.filter(j => j.status === 'queued').length;
+  const failedCount = jobs.filter(j => j.status === 'failed').length;
+  const completedTreatments = (data?.videos ?? []).filter(v => v.stage === 'final');
 
   return (
     <div className="flex flex-col h-full">
@@ -212,6 +242,11 @@ export function QueueView() {
                 {queued} queued
               </span>
             )}
+            {failedCount > 0 && (
+              <span className="text-[10px] font-mono text-red-400/70">
+                {failedCount} failed
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -228,6 +263,13 @@ export function QueueView() {
           <div className="flex items-center justify-center h-32 text-white/30 text-[11px] font-mono uppercase tracking-wider">
             Loading…
           </div>
+        )}
+
+        {!loading && completedTreatments.length > 0 && (
+          <CompletedTreatments
+            treatments={completedTreatments}
+            onOpen={openVideo}
+          />
         )}
 
         {!loading && jobs.length === 0 && (
@@ -257,12 +299,25 @@ export function QueueView() {
               const isRunning = job.status === 'running';
               const isFailed = job.status === 'failed';
               const isCompleted = job.status === 'completed';
+              const isMusicJob = job.kind === 'music-generate';
+              const soundtrack = job.params?.soundtrack as Record<string, unknown> | undefined;
+              const musicMode = soundtrack?.instrumental === true ? 'instrumental' : 'vocal';
+
+              const listRetrying = listRetryingId === job.jobId;
 
               return (
-                <button
+                <div
                   key={job.jobId}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelected(job)}
-                  className={`group flex items-start gap-3 px-4 py-3.5 rounded text-left transition-all border ${
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelected(job);
+                    }
+                  }}
+                  className={`group flex items-start gap-3 px-4 py-3.5 rounded text-left transition-all border cursor-pointer ${
                     isRunning
                       ? 'bg-amber-400/[0.03] border-amber-400/[0.12] hover:border-amber-400/25'
                       : isFailed
@@ -281,7 +336,7 @@ export function QueueView() {
                     <div className="text-[10px] font-mono text-white/40 mt-1 flex items-center gap-1.5">
                       <span className="uppercase">{job.kind}</span>
                       <span className="text-white/20">·</span>
-                      <span>{job.inputs?.clips?.length ?? 0} clip{(job.inputs?.clips?.length ?? 0) !== 1 ? 's' : ''}</span>
+                      <span>{isMusicJob ? musicMode : `${job.inputs?.clips?.length ?? 0} clip${(job.inputs?.clips?.length ?? 0) !== 1 ? 's' : ''}`}</span>
                       <span className="text-white/20">·</span>
                       <span>{relativeTime(job.createdAt)}</span>
                     </div>
@@ -319,12 +374,12 @@ export function QueueView() {
 
                     {isFailed && job.error && (
                       <div className="text-[10px] font-mono text-red-400/70 mt-1.5 truncate">
-                        {job.error.message}
+                        {formatJobError(job.error.message)}
                       </div>
                     )}
                   </div>
 
-                  <div className="shrink-0 mt-1">
+                  <div className="shrink-0 mt-0.5 flex flex-col items-end gap-1.5">
                     {isCompleted && (
                       <span className="text-[9px] font-mono uppercase tracking-wider text-emerald-400/70">Done</span>
                     )}
@@ -335,16 +390,70 @@ export function QueueView() {
                       <span className="text-[9px] font-mono text-amber-400/70">{job.progress ?? 0}%</span>
                     )}
                     {isFailed && (
-                      <span className="text-[9px] font-mono uppercase tracking-wider text-red-400/60">Failed</span>
+                      <button
+                        type="button"
+                        disabled={listRetrying}
+                        onClick={e => void handleListRetry(job.jobId, e)}
+                        className="flex items-center gap-1 px-2 py-1 rounded bg-red-400/[0.1] hover:bg-red-400/[0.18] border border-red-400/30 hover:border-red-400/50 transition-all text-[9px] font-mono uppercase tracking-wider text-red-300/90 hover:text-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Re-queue this job"
+                      >
+                        {listRetrying ? <Loader2 size={10} className="animate-spin" /> : <RotateCcw size={10} />}
+                        {listRetrying ? 'Retrying…' : 'Retry'}
+                      </button>
                     )}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function CompletedTreatments({
+  treatments,
+  onOpen,
+}: {
+  treatments: Video[];
+  onOpen: (id: string) => void;
+}) {
+  return (
+    <section className="px-4 pt-4 pb-2 border-b border-white/[0.04]">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 size={12} className="text-emerald-400/70" />
+          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-white/35">
+            Completed Treatments
+          </span>
+        </div>
+        <span className="text-[10px] font-mono text-white/30">
+          {treatments.length}
+        </span>
+      </div>
+      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+        {treatments.slice(0, 6).map((video) => (
+          <button
+            key={video.id}
+            onClick={() => onOpen(video.id)}
+            className="group flex items-center gap-3 rounded border border-emerald-400/[0.12] bg-emerald-400/[0.035] px-3 py-2.5 text-left transition-colors hover:border-emerald-400/30 hover:bg-emerald-400/[0.07]"
+          >
+            <Play size={12} className="text-emerald-300/70 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[12px] text-white/80 group-hover:text-white">
+                {video.id}
+              </div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[9px] font-mono text-white/35">
+                <span>{formatDuration(Math.round(video.duration))}</span>
+                <span className="text-white/15">·</span>
+                <span>{video.resolution}</span>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -392,6 +501,12 @@ function JobDetail({
     : null;
   const sourceAssets = matchSourceAssets(job.inputs?.clips, data?.videos ?? []);
   const isBriefJob = job.kind === 'revise-brief';
+  const isAnalyzeJob = job.kind === 'analyze';
+  const isMusicJob = job.kind === 'music-generate';
+  const analyzeComplete = metaNumber(meta, 'complete');
+  const analyzeFailed = metaNumber(meta, 'failed');
+  const analyzeReused = metaNumber(meta, 'reused');
+  const analyzeTranscriptCount = Array.isArray(meta?.transcripts) ? meta.transcripts.length : 0;
   const briefPath = metaString(meta, 'briefPath') || `${compositionDir}/revision-brief.json`;
   const sourceCompositionId = metaString(meta, 'sourceCompositionId') || brief?.sourceCompositionId;
 
@@ -625,8 +740,35 @@ function JobDetail({
             </div>
           )}
 
+          {isAnalyzeJob && job.status === 'completed' && (
+            <div className="px-4 py-4 bg-emerald-400/[0.04] border border-emerald-400/[0.15] rounded">
+              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-emerald-300/80 mb-3">
+                Analyze Summary
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {analyzeComplete != null && (
+                  <Tag color="emerald">{analyzeComplete} complete</Tag>
+                )}
+                {analyzeFailed != null && analyzeFailed > 0 && (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-red-400/[0.1] text-red-300/80">
+                    {analyzeFailed} failed
+                  </span>
+                )}
+                {analyzeReused != null && analyzeReused > 0 && (
+                  <Tag>{analyzeReused} reused</Tag>
+                )}
+                {analyzeTranscriptCount > 0 && (
+                  <Tag color="cyan">{analyzeTranscriptCount} transcript{analyzeTranscriptCount !== 1 ? 's' : ''}</Tag>
+                )}
+              </div>
+              <div className="mt-3 text-[11px] font-mono text-white/45">
+                Storyboard / EDL output is listed below; catalog refresh is handled by the worker.
+              </div>
+            </div>
+          )}
+
           {/* ── Completed: summary + video link ──────────── */}
-          {job.status === 'completed' && meta && !isBriefJob && (
+          {job.status === 'completed' && meta && !isBriefJob && !isAnalyzeJob && !isMusicJob && (
             <div className="px-4 py-4 bg-emerald-400/[0.04] border border-emerald-400/[0.15] rounded">
               {description && (
                 <div className="text-[12px] text-white/65 leading-relaxed mb-3 select-text">
@@ -656,7 +798,7 @@ function JobDetail({
               <div className="flex items-center gap-2 pt-3 border-t border-emerald-400/[0.1]">
                 {catalogVideo ? (
                   <button
-                    onClick={() => { openVideo(catalogVideo.id); setView(null); }}
+                    onClick={() => openVideo(catalogVideo.id)}
                     className="flex items-center gap-2 px-3 py-2 rounded bg-emerald-400/[0.12] hover:bg-emerald-400/[0.2] border border-emerald-400/30 hover:border-emerald-400/50 transition-all text-[11px] font-mono font-medium text-emerald-300 hover:text-emerald-200"
                   >
                     <Play size={12} />
@@ -684,6 +826,23 @@ function JobDetail({
             </div>
           )}
 
+          {isMusicJob && job.status === 'completed' && (
+            <div className="px-4 py-4 bg-emerald-400/[0.04] border border-emerald-400/[0.15] rounded">
+              <div className="flex items-center gap-2 text-[12px] text-white/70">
+                <Music size={14} className="text-emerald-300/80" />
+                Track generated and added to the music library.
+              </div>
+              <button
+                type="button"
+                onClick={() => setView('music')}
+                className="mt-4 flex items-center gap-2 px-3 py-2 rounded bg-emerald-400/[0.12] hover:bg-emerald-400/[0.2] border border-emerald-400/30 text-[11px] font-mono font-medium text-emerald-300"
+              >
+                <Play size={12} />
+                Open in Music
+              </button>
+            </div>
+          )}
+
           {/* ── Output files ──────────────────────────────── */}
           {job.status === 'completed' && job.result && (
             <Section icon={<FolderOpen size={10} />} label="Output" color="emerald">
@@ -691,7 +850,7 @@ function JobDetail({
                 {job.result.outputUrls.map((url, i) => (
                   <button
                     key={i}
-                    onClick={() => openFile(url.replace('file://', ''))}
+                    onClick={() => isMusicJob ? setView('music') : openFile(url.replace('file://', ''))}
                     className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded text-[11px] font-mono text-white/60 truncate select-text text-left hover:bg-white/[0.06] hover:border-white/[0.1] transition-colors"
                   >
                     {url.replace('file://', '')}
@@ -723,7 +882,7 @@ function JobDetail({
                   <SourceAnalysisCard
                     key={`${asset.src}-${i}`}
                     match={asset}
-                    onOpenAsset={(video) => { openVideo(video.id); setView(null); }}
+                    onOpenAsset={(video) => openVideo(video.id)}
                     onOpenJson={(label, value) => openJson(label, value)}
                   />
                 ))}
@@ -734,8 +893,8 @@ function JobDetail({
           {/* ── Error ─────────────────────────────────────── */}
           {job.status === 'failed' && job.error && (
             <Section icon={<XCircle size={10} />} label="Error" color="red">
-              <div className="px-3 py-2.5 bg-red-400/[0.05] border border-red-400/15 rounded text-[12px] font-mono text-red-300/80 select-text leading-relaxed">
-                {job.error.message}
+              <div className="px-3 py-2.5 bg-red-400/[0.05] border border-red-400/15 rounded text-[12px] font-mono text-red-300/80 select-text leading-relaxed whitespace-pre-wrap break-words">
+                {formatJobError(job.error.message)}
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <button
@@ -977,7 +1136,7 @@ function SourceAnalysisCard({
   const frames = video?.frames ?? [];
   const scenes = video?.scenes ?? [];
   const hasFrames = !!video?.storyboardDir && frames.length > 0;
-  const analyzed = video?.analysisStatus === 'complete' || video?.analysisStatus === 'analyzed' || video?.analysisStatus === 'frames-only';
+  const analyzed = video?.analysisStatus === 'complete' || video?.analysisStatus === 'analyzed';
   const status = video ? video.analysisStatus : 'missing';
   const stats = video?.edl?.stats;
 

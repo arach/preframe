@@ -35,6 +35,7 @@ import {
   saveNotes,
 } from '../reviewNotes';
 import { resolveVideoSrc } from '../../lib/media';
+import { ZoomMapPanel, modelFromReviewNotes } from './ZoomMap';
 
 function aspectRatio(res?: string): string {
   if (!res) return '16 / 9';
@@ -559,6 +560,29 @@ export function ReviewPlayer() {
           </div>
         </div>
       </div>
+
+      {/* Zoom map — full frame + viewport / note regions (secondary, not the editor) */}
+      {(sortedNotes.some(n => n.kind === 'zoom' && n.rect) || composing?.kind === 'zoom') && src && (
+        <ZoomMapPanel
+          model={modelFromReviewNotes(
+            src,
+            currentTime,
+            composing?.rect && composing.kind === 'zoom'
+              ? ([
+                  ...sortedNotes,
+                  {
+                    id: '__composing',
+                    kind: 'zoom' as const,
+                    time: composing.time,
+                    rect: composing.rect,
+                    comment: composing.comment || 'draft',
+                    createdAt: new Date().toISOString(),
+                  },
+                ] as ReviewNote[])
+              : sortedNotes,
+          )}
+        />
+      )}
 
       {/* Footer */}
       <div className="shrink-0 border-t border-white/[0.04] bg-black/40">

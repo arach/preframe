@@ -10,6 +10,7 @@ import {
   findByIdempotencyKey,
 } from './db';
 import type { CreateJobRequest, JobRecord, CreateJobResponse } from './types';
+import { VALID_KINDS } from './types';
 
 const DATA_PATH = join(import.meta.dir, '../../.data/bunqueue.sqlite');
 const queue = new Queue('composition-jobs', { embedded: true, dataPath: DATA_PATH });
@@ -117,9 +118,8 @@ async function createJob(compositionId: string, body: CreateJobRequest): Promise
     return json({ error: 'prompt is required' }, 400);
   }
 
-  const validKinds = ['generate', 'revise', 'revise-brief', 'revise-render', 'prepare', 'render'];
-  if (!validKinds.includes(kind)) {
-    return json({ error: `kind must be one of: ${validKinds.join(', ')}` }, 400);
+  if (!VALID_KINDS.includes(kind as (typeof VALID_KINDS)[number])) {
+    return json({ error: `kind must be one of: ${VALID_KINDS.join(', ')}` }, 400);
   }
 
   // Idempotency check

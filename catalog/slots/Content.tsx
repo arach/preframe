@@ -40,6 +40,7 @@ export function CatalogContent() {
   }
 
   if (view === 'assets') {
+    if (selectedVideo && frameIndex != null) return <FrameViewer />;
     if (selectedVideo) return <VideoDetail video={selectedVideo} />;
     return <AssetsView />;
   }

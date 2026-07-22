@@ -20,6 +20,18 @@ function compactJson(data: unknown): string {
   }
 }
 
+function formatGeneratedAt(value: string, compact = false): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: compact ? undefined : 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export function MusicView() {
   const { data, refreshCatalog, deleteAudio, setView, pendingMusicCount, notifyMusicSettled } = useCatalog();
   const { playTrack, track: currentTrack, playing, togglePlay, insertNext, addToQueue } = usePlayer();
@@ -37,6 +49,7 @@ export function MusicView() {
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [reviseLyrics, setReviseLyrics] = useState<Record<string, boolean>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [revisingId, setRevisingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const prevCountRef = useRef(audioAssets.length);
 
@@ -82,31 +95,41 @@ export function MusicView() {
     await deleteAudio(asset.id);
   };
 
-  const submitFeedback = (asset: AudioAsset) => {
+  const submitFeedback = async (asset: AudioAsset) => {
     const note = feedback[asset.id]?.trim();
-    if (!note) return;
+    if (!note || revisingId) return;
+    setRevisingId(asset.id);
+    setMessage('Generating revision with MiniMax...');
     notifyMusicQueued();
-    apiClient.post('/api/music/generate', {
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sourceAsset: asset,
-        feedback: note,
-        prompt: asset.prompt,
-        lyrics: asset.lyrics,
-        instrumental: asset.instrumental,
-        model: asset.model || 'music-2.6',
-        generateLyrics: reviseLyrics[asset.id] ?? (!!asset.lyrics && !asset.instrumental),
-        lyricsMode: asset.lyrics ? 'edit' : 'write_full_song',
-        lyricsPrompt: `Revise the lyrics for this track using the feedback, then generate the revised music.\n\nFeedback: ${note}\n\nMusic prompt: ${asset.prompt ?? ''}`,
-        title: asset.songTitle || asset.id,
-      }),
-    }).then(async (res) => {
-      if (res.ok) await refreshCatalog();
-    }).catch(() => {}).finally(() => {
+    try {
+      const res = await apiClient.post('/api/music/generate', {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceAsset: asset,
+          feedback: note,
+          prompt: asset.prompt,
+          lyrics: asset.lyrics,
+          instrumental: asset.instrumental,
+          model: asset.model || 'music-2.6',
+          generateLyrics: reviseLyrics[asset.id] ?? (!!asset.lyrics && !asset.instrumental),
+          lyricsMode: asset.lyrics ? 'edit' : 'write_full_song',
+          lyricsPrompt: `Revise the lyrics for this track using the feedback, then generate the revised music.\n\nFeedback: ${note}\n\nMusic prompt: ${asset.prompt ?? ''}`,
+          title: asset.songTitle || asset.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(data.error || 'Music revision failed');
+
+      await refreshCatalog();
+      setFeedback(prev => ({ ...prev, [asset.id]: '' }));
+      setMessage('Revision generated.');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      setMessage(`Revision failed: ${detail}`);
+    } finally {
       notifyMusicSettled();
-    });
-    setFeedback(prev => ({ ...prev, [asset.id]: '' }));
-    setMessage('Revision queued.');
+      setRevisingId(null);
+    }
   };
 
   return (
@@ -189,6 +212,7 @@ export function MusicView() {
                       <span>{formatDuration(asset.duration)}</span>
                       <span>{asset.codec}</span>
                       {asset.model && <span>{asset.model}</span>}
+                      {asset.generated && <span>{formatGeneratedAt(asset.generatedAt || asset.capturedAt, true)}</span>}
                     </div>
                   </button>
                   {confirmDeleteId === asset.id ? (
@@ -250,6 +274,7 @@ export function MusicView() {
             feedback={feedback[selected.id] ?? ''}
             message={message}
             reviseLyrics={reviseLyrics[selected.id] ?? (!!selected.lyrics && !selected.instrumental)}
+            revising={revisingId === selected.id}
             onFeedbackChange={(value) => setFeedback(prev => ({ ...prev, [selected.id]: value }))}
             onReviseLyricsChange={(value) => setReviseLyrics(prev => ({ ...prev, [selected.id]: value }))}
             onSubmitFeedback={() => submitFeedback(selected)}
@@ -279,6 +304,7 @@ function MusicDetail({
   feedback,
   message,
   reviseLyrics,
+  revising,
   confirmDelete,
   onFeedbackChange,
   onReviseLyricsChange,
@@ -293,6 +319,7 @@ function MusicDetail({
   feedback: string;
   message: string | null;
   reviseLyrics: boolean;
+  revising: boolean;
   confirmDelete: boolean;
   onFeedbackChange: (value: string) => void;
   onReviseLyricsChange: (value: boolean) => void;
@@ -319,6 +346,7 @@ function MusicDetail({
     parentTrackId: asset.parentTrackId,
     revisionOf: asset.revisionOf,
     capturedAt: asset.capturedAt,
+    generatedAt: asset.generatedAt,
   };
 
   return (
@@ -339,6 +367,9 @@ function MusicDetail({
             <span>{asset.codec}</span>
             {asset.sampleRate && <span>{asset.sampleRate / 1000}kHz</span>}
             <span>{asset.sizeMB.toFixed(1)} MB</span>
+            {asset.generated && (
+              <span className="text-cyan-300/55">Generated {formatGeneratedAt(asset.generatedAt || asset.capturedAt)}</span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -390,14 +421,20 @@ function MusicDetail({
           </DetailsSection>
 
           <DetailsSection title="Lyrics" defaultOpen={!!asset.lyrics}>
-            {asset.songTitle && (
+            {asset.instrumental ? (
+              <div className="text-[12px] text-white/45 font-mono">
+                Instrumental track — no lyrics were sent to MiniMax.
+              </div>
+            ) : asset.songTitle && (
               <div className="mb-2 text-[11px] font-mono text-white/45">
                 {asset.songTitle}{asset.styleTags ? ` · ${asset.styleTags}` : ''}
               </div>
             )}
-            <pre className="text-[12px] leading-relaxed font-mono text-white/60 whitespace-pre-wrap select-text">
-              {asset.lyrics || 'No lyrics stored for this track.'}
-            </pre>
+            {!asset.instrumental && (
+              <pre className="text-[12px] leading-relaxed font-mono text-white/60 whitespace-pre-wrap select-text">
+                {asset.lyrics || 'No lyrics stored for this track.'}
+              </pre>
+            )}
           </DetailsSection>
 
           <DetailsSection title="Lyrics Result">
@@ -455,20 +492,25 @@ function MusicDetail({
               </label>
             )}
             {message && (
-              <div className="mt-2 text-[10px] font-mono text-white/42">{message}</div>
+              <div
+                className={`mt-2 text-[10px] font-mono ${message.startsWith('Revision failed:') ? 'text-red-300/75' : 'text-white/42'}`}
+                role="status"
+              >
+                {message}
+              </div>
             )}
             <button
               type="button"
               onClick={onSubmitFeedback}
-              disabled={!feedback.trim()}
+              disabled={!feedback.trim() || revising}
               className={`mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm text-[11px] font-mono uppercase tracking-wider transition-colors ${
-                feedback.trim()
+                feedback.trim() && !revising
                   ? 'bg-cyan-400/[0.1] border border-cyan-400/25 text-cyan-300 hover:bg-cyan-400/[0.15]'
                   : 'bg-white/[0.02] border border-white/[0.06] text-white/22 cursor-not-allowed'
               }`}
             >
-              <Send size={11} />
-              Generate Revision
+              {revising ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
+              {revising ? 'Generating Revision...' : 'Generate Revision'}
             </button>
           </DetailsSection>
         </aside>

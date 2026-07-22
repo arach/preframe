@@ -192,6 +192,7 @@ interface AudioAsset {
   sourcePath: string | null;
   path: string;
   capturedAt: string;
+  generatedAt?: string;
   duration: number;
   codec: string;
   sampleRate: number | null;
@@ -271,6 +272,7 @@ async function scanAudioAssets(): Promise<AudioAsset[]> {
       sourcePath: null,
       path: file.relativePath,
       capturedAt: fileStat.mtime.toISOString(),
+      generatedAt: generated ? (sidecar.createdAt || fileStat.mtime.toISOString()) : undefined,
       duration: probe.duration,
       codec: probe.codec,
       sampleRate: probe.sampleRate ?? null,
@@ -282,7 +284,7 @@ async function scanAudioAssets(): Promise<AudioAsset[]> {
       provider: sidecar.provider,
       model: sidecar.model,
       prompt: sidecar.prompt,
-      lyrics: sidecar.lyrics,
+      lyrics: sidecar.instrumental ? undefined : sidecar.lyrics,
       instrumental: sidecar.instrumental,
       songTitle: sidecar.songTitle || sidecar.lyricsGeneration?.song_title,
       styleTags: sidecar.styleTags || sidecar.lyricsGeneration?.style_tags,

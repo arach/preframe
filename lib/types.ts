@@ -168,6 +168,7 @@ export interface AudioAsset {
   sourcePath: string | null;
   path: string;
   capturedAt: string;
+  generatedAt?: string;
   duration: number;
   codec: string;
   sampleRate: number | null;
@@ -313,3 +314,96 @@ export function formatDuration(s: number | null | undefined): string {
   const sec = Math.round(s % 60);
   return `${m}m ${sec}s`;
 }
+
+/** Absolute local date/time for tooltips and secondary lines. */
+export function formatAbsoluteDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Human recency for capture dates — primary label on Assets.
+ * Examples: just now, 12m ago, 3h ago, Today 4:12 PM, Yesterday, 3d ago, Jul 3.
+ */
+export function formatRecency(
+  iso: string | null | undefined,
+  nowMs: number = Date.now(),
+): string {
+  if (!iso) return "Unknown date";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Unknown date";
+
+  const diff = nowMs - d.getTime();
+  if (diff < 0) return formatAbsoluteDate(iso);
+
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+
+  const startOfToday = new Date(nowMs);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfThatDay = new Date(d);
+  startOfThatDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round(
+    (startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000,
+  );
+
+  if (dayDiff === 0) {
+    return `Today ${d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+  }
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff < 7) return `${dayDiff}d ago`;
+
+  // Older than a week: compact calendar date
+  const sameYear = d.getFullYear() === startOfToday.getFullYear();
+  return d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
+/** Bucket label for grouping assets by recency. */
+export function recencyBucket(
+  iso: string | null | undefined,
+  nowMs: number = Date.now(),
+): "today" | "yesterday" | "this-week" | "earlier" | "unknown" {
+  if (!iso) return "unknown";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "unknown";
+
+  const startOfToday = new Date(nowMs);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfThatDay = new Date(d);
+  startOfThatDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round(
+    (startOfToday.getTime() - startOfThatDay.getTime()) / 86_400_000,
+  );
+
+  if (dayDiff <= 0) return "today";
+  if (dayDiff === 1) return "yesterday";
+  if (dayDiff < 7) return "this-week";
+  return "earlier";
+}
+
+export const RECENCY_BUCKET_LABELS: Record<
+  ReturnType<typeof recencyBucket>,
+  string
+> = {
+  today: "Today",
+  yesterday: "Yesterday",
+  "this-week": "This week",
+  earlier: "Earlier",
+  unknown: "Unknown date",
+};

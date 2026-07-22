@@ -1,5 +1,14 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join } from "path";
+
+export function cacheClear(outDir: string, key: string): void {
+	const p = join(outDir, `.cache-${key}.json`);
+	try {
+		if (existsSync(p)) unlinkSync(p);
+	} catch {
+		/* ignore */
+	}
+}
 
 export function cacheGet<T>(outDir: string, key: string): T | null {
 	const path = join(outDir, `.cache-${key}.json`);

@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { Buffer } from 'node:buffer';
-import { readProviderConfig, type ProviderConfig } from '@/lib/provider';
+import { getMiniMaxApiKey, readMusicModelConfig } from '@/lib/provider';
 import type { AudioAsset } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -20,16 +20,6 @@ interface MusicGenerateRequest {
   lyricsPrompt?: string;
   lyricsResult?: Record<string, any>;
   title?: string;
-}
-
-function getMiniMaxApiKey(config: ProviderConfig): string {
-  const looksLikeMiniMax =
-    config.name.toLowerCase().includes('minimax') ||
-    config.baseUrl.toLowerCase().includes('minimax') ||
-    config.model.toLowerCase().includes('minimax');
-
-  if (looksLikeMiniMax && config.apiKey) return config.apiKey;
-  return process.env.MINIMAX_API_KEY ?? '';
 }
 
 function slugify(value: string): string {
@@ -110,20 +100,23 @@ export async function POST(request: Request) {
     const body = await request.json() as MusicGenerateRequest;
     const source = body.sourceAsset ?? {};
     const feedback = body.feedback?.trim() ?? '';
-    const model = body.model || source.model || 'music-2.6';
+    const musicConfig = readMusicModelConfig();
+    const model = body.model || source.model || musicConfig?.model || 'music-2.6';
     const sourcePrompt = body.prompt || source.prompt || 'Product demo soundtrack';
     const prompt = [
       sourcePrompt,
       feedback ? `Revision feedback: ${feedback}` : '',
       feedback ? 'Create a revised version that addresses the feedback while preserving the useful musical identity of the source track.' : '',
     ].filter(Boolean).join('\n\n').slice(0, 2000);
-    let lyrics = (body.lyrics ?? source.lyrics ?? '').slice(0, 3500);
     const instrumental = body.instrumental ?? source.instrumental ?? false;
+    let lyrics = instrumental ? '' : (body.lyrics ?? source.lyrics ?? '').slice(0, 3500);
 
-    const providerConfig = readProviderConfig();
-    const apiKey = getMiniMaxApiKey(providerConfig);
+    if (!musicConfig) {
+      return NextResponse.json({ error: 'Music model is not configured in Settings' }, { status: 400 });
+    }
+    const apiKey = getMiniMaxApiKey(musicConfig);
     if (!apiKey) {
-      return NextResponse.json({ error: 'MiniMax API key is not configured' }, { status: 400 });
+      return NextResponse.json({ error: 'Music model API key is not configured' }, { status: 400 });
     }
 
     let lyricsGeneration = body.lyricsResult;

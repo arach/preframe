@@ -20,7 +20,7 @@ export { detectSceneBreaks } from "./scene-detect.ts";
 export { computeDiffSegments } from "./pixel-diff.ts";
 export { tagFrames, createAnthropicVision, createMiniMaxMcpVision, askMoondreamOnVideoFrames } from "./vision.ts";
 export { editorialPass } from "./editorial.ts";
-export { cacheGet, cacheSet } from "./cache.ts";
+export { cacheGet, cacheSet, cacheClear } from "./cache.ts";
 export { run, log, formatTime } from "./utils.ts";
 
 import type { EditDecisionList, VisionProvider } from "./types.ts";
@@ -29,7 +29,7 @@ import { detectSceneBreaks } from "./scene-detect.ts";
 import { computeDiffSegments } from "./pixel-diff.ts";
 import { tagFrames, createAnthropicVision } from "./vision.ts";
 import { editorialPass } from "./editorial.ts";
-import { cacheGet, cacheSet } from "./cache.ts";
+import { cacheGet, cacheSet, cacheClear } from "./cache.ts";
 import { log, formatTime } from "./utils.ts";
 
 export async function analyzeVideo(inputPath: string, options?: {
@@ -37,6 +37,10 @@ export async function analyzeVideo(inputPath: string, options?: {
 	outDir?: string;
 	skipVision?: boolean;
 	analyzeAllFrames?: boolean;
+	/** Drop layer caches before running (re-run VLM even if frames exist). */
+	force?: boolean;
+	/** Drop only layer3 vision + editorial caches; keep scene/diff work. */
+	refreshVision?: boolean;
 }): Promise<EditDecisionList> {
 	const meta = getVideoMeta(inputPath);
 	const id = basename(inputPath, ".mp4")
@@ -47,6 +51,16 @@ export async function analyzeVideo(inputPath: string, options?: {
 	const outDir = options?.outDir || join(process.cwd(), `storyboard-${id}`);
 
 	mkdirSync(outDir, { recursive: true });
+
+	if (options?.force) {
+		// Full re-run: drop all layer caches (frames may still exist on disk).
+		for (const key of ["layer1-breaks", "layer2-segments", "layer3-tags", "layer3-editorial"] as const) {
+			cacheClear(outDir, key);
+		}
+	} else if (options?.refreshVision) {
+		cacheClear(outDir, "layer3-tags");
+		cacheClear(outDir, "layer3-editorial");
+	}
 
 	let breaks = cacheGet<import("./types.ts").SceneBreak[]>(outDir, "layer1-breaks");
 	if (breaks) {
