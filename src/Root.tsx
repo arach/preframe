@@ -41,6 +41,7 @@ import { SocialReel } from "./components/SocialReel";
 import { ChapterSlate } from "./intros/ChapterSlate";
 import { KineticTitle } from "./intros/KineticTitle";
 import { MemoReel, memoReelDefaultProps, memoReelTotalFrames, type MemoReelProps } from "./projects/memo-reel/MemoReel";
+import { BlinkSpatialDemo, BLINK_SPATIAL_FRAMES } from "./projects/blink-demo/BlinkSpatialDemo";
 
 // Video settings
 const FPS = 30;
@@ -99,6 +100,15 @@ function introCompositions(baseId: string, component: React.FC, duration: number
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="BlinkSpatialDemo"
+        component={BlinkSpatialDemo}
+        durationInFrames={BLINK_SPATIAL_FRAMES}
+        fps={FPS}
+        width={1920}
+        height={1080}
+      />
+
       {/* MemoReel — agentic routine treatment, fully driven by input props */}
       <Composition<any, MemoReelProps>
         id="MemoReel"
