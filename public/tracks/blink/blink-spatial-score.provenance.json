@@ -1,0 +1,50 @@
+{
+  "asset": "tracks/blink/blink-spatial-score.wav",
+  "title": "Blink Spatial Desk",
+  "chosen": true,
+  "alternate": false,
+  "generator": {
+    "provider": "MiniMax",
+    "model": "music-2.6",
+    "endpoint": "https://api.minimax.io/v1/music_generation",
+    "traceId": "06bd5d395feb23aed7085104b6600853",
+    "generatedAt": "2026-08-01T17:20:41.806Z",
+    "instrumental": true,
+    "prompt": "A 48-second instrumental modern chamber-electronic cue at a calm, unhurried pulse: soft bowed glass and warm viola harmonics suspended over tonal air, with a sparse tactile wood-and-felt pulse only in the opening 12 seconds. Keep harmony nearly still and leave generous negative space; at 17.4 seconds open one clear gentle chord, at 24.1 seconds make one short dry spatial handoff, at 30.5 seconds widen subtly with a second airy voice, at 41 seconds subtract and narrow, then at 46 seconds give the warmest restrained resolution with a clean natural tail. Precise, intimate, low-density, no vocals, no spoken words, no corporate uplift, no lo-fi beat, no synthwave, no big drums, no riser, no impact, no drop, no constant arpeggio, no dense melody.",
+    "request": {
+      "sampleRate": 44100,
+      "bitrate": 256000,
+      "format": "mp3",
+      "outputFormat": "hex"
+    },
+    "returnedDurationSeconds": 184.35483,
+    "sourceSha256": "e03691f2ff76b6e65bda859b894eb5536aac5c47b604cbddc5e573d9cd8dd178"
+  },
+  "edit": {
+    "selection": "00:00.000-00:47.300 of the generated source",
+    "processing": [
+      "trim to 47.300 seconds",
+      "resample 44.1 kHz to 48 kHz",
+      "apply -3 dB gain",
+      "0.600-second linear fade-in",
+      "1.200-second linear fade-out from 46.100 seconds",
+      "encode as stereo 24-bit PCM WAV"
+    ],
+    "command": "ffmpeg -i <generated-source.mp3> -af atrim=0:47.3,asetpts=N/SR/TB,aresample=48000,volume=-3dB,afade=t=in:st=0:d=0.6,afade=t=out:st=46.1:d=1.2 -c:a pcm_s24le -map_metadata -1 blink-spatial-score.wav"
+  },
+  "master": {
+    "durationSeconds": 47.3,
+    "sampleRate": 48000,
+    "channels": 2,
+    "bitsPerSample": 24,
+    "integratedLoudnessLufs": -23.2,
+    "loudnessRangeLu": 9.9,
+    "truePeakDbfs": -3.2,
+    "sha256": "8a6dafde9d4dd5a1fea78d2d2a43df07d5b597d6a45748dc885baef1aa6e46d2"
+  },
+  "provenance": {
+    "externalReferenceAudioSupplied": false,
+    "externalSamplesAddedDuringEdit": false,
+    "rightsNote": "Generated through the workspace owner's MiniMax account. No external reference audio or samples were supplied during generation or mastering. Use remains subject to the owner's MiniMax service terms; copyright status and exclusivity were not independently audited."
+  }
+}
