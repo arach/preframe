@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>preframe - a video is just code.</title>
+<style>
+  :root{
+    --bg:#08090a; --bg-alt:#0a0a0c; --term:#050607;
+    --s1:rgba(255,255,255,.03); --s2:rgba(255,255,255,.05); --s3:rgba(255,255,255,.07);
+    --b1:rgba(255,255,255,.07); --b2:rgba(255,255,255,.13); --row:rgba(255,255,255,.04);
+    --t1:rgba(255,255,255,.92); --t2:rgba(255,255,255,.65); --t3:rgba(255,255,255,.45);
+    --t4:rgba(255,255,255,.30); --t5:rgba(255,255,255,.18);
+    --cyan:#22d3ee; --emerald:#34d399; --amber:#fbbf24; --red:#f87171;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,monospace;
+    --ease:cubic-bezier(.2,0,0,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--t1); font-family:var(--mono); font-size:13px;
+    line-height:1.6; -webkit-font-smoothing:antialiased; font-variant-ligatures:none;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:60; opacity:.025;
+    mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  .micro{font-size:10px; text-transform:uppercase; letter-spacing:.15em}
+  .nano{font-size:9px; text-transform:uppercase; letter-spacing:.15em}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* nav: a status bar */
+  nav{
+    position:sticky; top:0; z-index:50; display:flex; align-items:center; gap:18px;
+    height:44px; padding:0 24px; background:rgba(8,9,10,.82); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--b1);
+  }
+  .brand{display:flex; align-items:baseline; gap:8px; color:var(--t1); font-weight:600; letter-spacing:-.02em}
+  .brand b{font-weight:700}
+  .brand .ver{color:var(--t4)}
+  nav .links{display:flex; gap:18px; margin-left:8px}
+  nav a{color:var(--t3); text-decoration:none}
+  nav a:hover{color:var(--t1)}
+  nav .spacer{flex:1}
+  .branch{display:flex; align-items:center; gap:6px; color:var(--t3)}
+  .branch .dot{width:6px; height:6px; border-radius:50%; background:var(--emerald); box-shadow:0 0 8px rgba(52,211,153,.6)}
+
+  /* hero shell */
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px}
+  .wrap-wide{max-width:1320px; margin:0 auto; padding:0 24px}
+  section.hero-sec{padding:84px 0 120px}
+  .kicker{color:var(--t4)}
+  .kicker b{color:var(--t3); font-weight:500}
+  h1{
+    font-size:56px; line-height:1.05; font-weight:700; letter-spacing:-.02em;
+    margin:18px 0 0; color:var(--t1);
+  }
+  h1 .dot{color:var(--cyan)}
+  .sub{max-width:60ch; margin:18px 0 0; color:var(--t2)}
+  .cta{display:flex; gap:12px; margin-top:26px}
+  .btn{
+    font-family:var(--mono); font-size:13px; cursor:pointer; padding:9px 16px; border-radius:6px;
+    background:rgba(34,211,238,.10); border:1px solid rgba(34,211,238,.35); color:var(--cyan);
+    transition:background .16s var(--ease), border-color .16s var(--ease);
+  }
+  .btn:hover{background:rgba(34,211,238,.16); border-color:rgba(34,211,238,.6)}
+  .btn.ghost{background:rgba(255,255,255,.04); border-color:var(--b2); color:var(--t2)}
+  .btn.ghost:hover{background:rgba(255,255,255,.08); color:var(--t1)}
+
+  /* the split-editor stage */
+  .stage{position:relative; margin-top:40px}
+  .stage::before{
+    content:""; position:absolute; left:-4%; top:-8%; width:62%; height:120%; z-index:0;
+    background:radial-gradient(60% 60% at 40% 40%, rgba(34,211,238,.07), transparent 70%);
+    pointer-events:none; filter:blur(8px);
+  }
+  .panel{
+    position:relative; z-index:1; background:var(--s1); border:1px solid var(--b1);
+    border-radius:8px; overflow:hidden;
+  }
+  .titlebar{
+    display:flex; align-items:center; gap:10px; height:30px; padding:0 12px;
+    border-bottom:1px solid var(--b1); background:var(--s1); color:var(--t4);
+  }
+  .titlebar .name{color:var(--t3)}
+  .titlebar .name b{color:var(--t2); font-weight:500}
+  .titlebar .right{margin-left:auto; display:flex; align-items:center; gap:12px}
+  .ctl{color:var(--t4); cursor:pointer; user-select:none}
+  .ctl:hover{color:var(--t2)}
+  .ctl.armed{color:var(--cyan)}
+
+  .pill{
+    display:inline-flex; align-items:center; gap:5px; height:18px; padding:0 7px; border-radius:4px;
+    font-size:9px; text-transform:uppercase; letter-spacing:.15em;
+    color:var(--t3); background:rgba(255,255,255,.06); border:1px solid var(--b1);
+  }
+  .pill.wip{color:var(--amber); background:rgba(251,191,36,.10); border-color:rgba(251,191,36,.25)}
+  .pill.final{color:var(--emerald); background:rgba(52,211,153,.10); border-color:rgba(52,211,153,.25)}
+
+  .split{display:grid; grid-template-columns:1fr 1fr}
+  .split > .pane + .pane{border-left:1px solid var(--b1)}
+  .pane{min-width:0}
+
+  /* left: the player / rendered take */
+  .player{position:relative; aspect-ratio:16/10; background:#0b0d10; overflow:hidden}
+  .take{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column;
+        transition:opacity .3s var(--ease)}
+  .take.before{background:radial-gradient(120% 100% at 50% 30%, #11161c, #0a0c10)}
+  .take.after{background:radial-gradient(120% 100% at 50% 30%, #0e1620, #090d12); opacity:0}
+  .hero[data-final] .take.before{opacity:0}
+  .hero[data-final] .take.after{opacity:1}
+  .wordmark{position:relative; z-index:2; font-size:30px; font-weight:700; letter-spacing:-.02em; color:#eaf6fb}
+  .wordmark .accent{color:var(--cyan)}
+  .tagline{position:relative; z-index:2; margin-top:8px; color:rgba(234,246,251,.5); font-size:11px; letter-spacing:.04em}
+  .uline{position:relative; z-index:2; height:2px; width:0; margin-top:14px; background:var(--cyan); border-radius:2px}
+  /* before: logo just there at frame 0 (lands too early) */
+  .take.before .wordmark{animation:popEarly 2.4s steps(1) infinite}
+  @keyframes popEarly{0%,100%{transform:scale(1);opacity:1}}
+  /* after: eased entrance + bloom-halation glow (product fx) */
+  .take.after .wordmark{animation:easeIn 2.6s var(--ease) infinite}
+  .take.after .uline{animation:draw 2.6s var(--ease) infinite}
+  @keyframes easeIn{
+    0%{transform:scale(.92);opacity:0;text-shadow:none}
+    18%{transform:scale(.92);opacity:0;text-shadow:none}
+    46%{transform:scale(1.012);opacity:1;text-shadow:0 0 24px rgba(34,211,238,.55),0 0 60px rgba(52,211,153,.25)}
+    62%,100%{transform:scale(1);opacity:1;text-shadow:0 0 18px rgba(34,211,238,.35),0 0 44px rgba(52,211,153,.18)}
+  }
+  @keyframes draw{0%,30%{width:0}62%,100%{width:72px}}
+
+  /* product fx: aurora wash + bloom, lives INSIDE the render only */
+  .fxlayer{position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .5s var(--ease); pointer-events:none;
+    background:
+      radial-gradient(40% 60% at 22% 30%, rgba(52,211,153,.18), transparent 60%),
+      radial-gradient(45% 55% at 78% 38%, rgba(34,211,238,.20), transparent 62%),
+      radial-gradient(50% 60% at 55% 80%, rgba(167,139,250,.14), transparent 65%);
+    filter:blur(14px) saturate(120%); mix-blend-mode:screen;
+    animation:auroraDrift 9s ease-in-out infinite alternate}
+  .hero[data-final] .take.after .fxlayer{opacity:1}
+  @keyframes auroraDrift{
+    0%{transform:translate3d(-3%,2%,0) scale(1.05)}
+    100%{transform:translate3d(4%,-3%,0) scale(1.12)}}
+  /* faint film-grade vignette + scanline inside the frame */
+  .player .grade{position:absolute; inset:0; z-index:5; pointer-events:none; opacity:0; transition:opacity .5s var(--ease);
+    background:
+      radial-gradient(120% 120% at 50% 45%, transparent 58%, rgba(0,0,0,.45) 100%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 3px);}
+  .hero[data-final] .player .grade{opacity:1}
+  .fxchip{position:absolute; left:12px; top:10px; z-index:6; display:flex; align-items:center; gap:6px;
+    height:18px; padding:0 7px; border-radius:4px; color:var(--cyan);
+    background:rgba(34,211,238,.10); border:1px solid rgba(34,211,238,.28);
+    opacity:0; transform:translateY(-4px); transition:opacity .3s var(--ease), transform .3s var(--ease)}
+  .hero[data-final] .fxchip{opacity:1; transform:none}
+
+  /* playhead / transport under the frame */
+  .transport{display:flex; align-items:center; gap:10px; height:26px; padding:0 12px;
+             border-top:1px solid var(--b1); color:var(--t4); background:rgba(0,0,0,.25)}
+  .transport .glyph{color:var(--t3)}
+  .track{position:relative; flex:1; height:3px; background:rgba(255,255,255,.08); border-radius:2px}
+  .track .play-fill{position:absolute; inset:0 auto 0 0; width:30%; background:rgba(34,211,238,.25); border-radius:2px;
+                    animation:scrub 2.4s linear infinite}
+  .track .play-head{position:absolute; top:-3px; width:2px; height:9px; background:var(--cyan); border-radius:2px;
+                    left:30%; animation:scrubHead 2.4s linear infinite}
+  @keyframes scrub{0%{width:8%}100%{width:96%}}
+  @keyframes scrubHead{0%{left:8%}100%{left:96%}}
+
+  /* annotation rect (emerald = feedback) */
+  .annotation{position:absolute; z-index:3; left:30%; top:30%; width:40%; height:30%;
+    border:1.5px solid var(--emerald); border-radius:2px; background:rgba(52,211,153,.06);
+    opacity:0; transform:scale(.96); transition:opacity .35s var(--ease), transform .35s var(--ease);
+    pointer-events:none}
+  .hero[data-annotated]:not([data-final]) .annotation{opacity:1; transform:scale(1)}
+  .annotation .tick{position:absolute; width:7px; height:7px; border:1.5px solid var(--emerald)}
+  .annotation .tick.tl{left:-4px; top:-4px; border-right:0; border-bottom:0}
+  .annotation .tick.tr{right:-4px; top:-4px; border-left:0; border-bottom:0}
+  .annotation .tick.bl{left:-4px; bottom:-4px; border-right:0; border-top:0}
+  .annotation .tick.br{right:-4px; bottom:-4px; border-left:0; border-top:0}
+  .annotation .badge{position:absolute; left:-1px; top:-26px; display:flex; align-items:center; gap:6px;
+    height:20px; padding:0 8px; border-radius:4px; white-space:nowrap;
+    color:var(--emerald); background:rgba(52,211,153,.12); border:1px solid rgba(52,211,153,.28)}
+  .annotation .badge .ts{color:var(--t2)}
+
+  /* change-plan card */
+  .plan{position:absolute; z-index:4; right:14px; bottom:46px; width:62%;
+    background:var(--s2); border:1px solid var(--b2); border-radius:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,.5);
+    opacity:0; transform:translateY(8px); transition:opacity .24s var(--ease), transform .24s var(--ease);
+    pointer-events:none}
+  .hero[data-planned]:not([data-final]) .plan{opacity:1; transform:translateY(0)}
+  .plan .head{display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--b1); color:var(--t4)}
+  .plan .head .agent{width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px rgba(34,211,238,.7);
+    animation:pulse 2s var(--ease) infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .plan ul{list-style:none; margin:0; padding:8px 10px; display:flex; flex-direction:column; gap:6px}
+  .plan li{display:flex; gap:8px; color:var(--t2); font-size:12px; opacity:0; transform:translateY(3px);
+    transition:opacity .2s var(--ease), transform .2s var(--ease)}
+  .plan li.on{opacity:1; transform:none}
+  .plan li .g{color:var(--amber)}
+  .plan li.done .g{color:var(--emerald)}
+  .plan .foot{display:flex; align-items:center; gap:8px; padding:7px 10px; border-top:1px solid var(--b1); color:var(--t3)}
+  .plan .foot .path{flex:1; color:var(--t3)}
+  .plan .foot .apply{color:var(--cyan)}
+
+  /* right: code panel */
+  .code{position:relative; height:100%; background:#0a0e11; padding:10px 0; overflow:hidden; min-height:340px}
+  .ln{display:flex; align-items:flex-start; padding:0; min-height:20px;
+      border-left:2px solid transparent; transition:background .3s var(--ease), opacity .25s var(--ease)}
+  .ln .g{flex:0 0 auto; width:3ch; padding-right:10px; text-align:right; color:var(--t5); user-select:none}
+  .ln pre{margin:0; white-space:pre; color:rgba(255,255,255,.85); font-family:var(--mono); font-size:13px; line-height:1.55}
+  .c-com{color:var(--t4)} .c-str{color:var(--emerald)} .c-kw{color:var(--cyan)} .c-num{color:var(--amber)}
+  .c-tag{color:var(--cyan)} .c-punc{color:var(--t3)}
+  .ln.add{display:none}
+  .hero[data-diffed] .ln.add{display:flex}
+  .hero[data-diffed]:not([data-rendered]) .ln.add{background:rgba(52,211,153,.08); border-left-color:rgba(52,211,153,.55)}
+  .hero[data-diffed]:not([data-rendered]) .ln.add .g{color:var(--emerald)}
+  .hero[data-diffed]:not([data-rendered]) .ln.del{background:rgba(248,113,113,.08); border-left-color:rgba(248,113,113,.55)}
+  .hero[data-diffed]:not([data-rendered]) .ln.del .g{color:var(--red)}
+  .hero[data-rendered] .ln.del{display:none}
+
+  /* render queue strip */
+  .queue{display:flex; align-items:center; gap:14px; height:34px; padding:0 14px;
+         border-top:1px solid var(--b1); background:var(--s1); color:var(--t4)}
+  .queue .lbl{color:var(--t4)}
+  .qrow{display:flex; align-items:center; gap:10px; opacity:0; transform:translateY(3px);
+        transition:opacity .2s var(--ease), transform .2s var(--ease)}
+  .hero[data-rendered] .qrow, .hero[data-rendering] .qrow{opacity:1; transform:none}
+  .qrow .nm{color:var(--t2)}
+  .qbar{position:relative; width:120px; height:4px; border-radius:3px; background:rgba(255,255,255,.08); overflow:hidden}
+  .qbar i{position:absolute; inset:0 100% 0 0; background:var(--amber); transition:right 1.4s linear}
+  .hero[data-rendering] .qbar i{right:6%}
+  .hero[data-rendered] .qbar i{right:0; background:var(--emerald); transition:right .2s var(--ease), background .2s var(--ease)}
+  .qstat{color:var(--amber)} .hero[data-rendered] .qstat{display:none}
+  .qrow .done-time{color:var(--emerald); display:none} .hero[data-rendered] .qrow .done-time{display:inline}
+  .qrow .run-time{color:var(--t4)} .hero[data-rendered] .qrow .run-time{display:none}
+
+  /* reduced-motion / replay overlay */
+  .replay{position:absolute; inset:0; z-index:8; display:none; align-items:center; justify-content:center;
+          background:rgba(5,6,7,.55); cursor:pointer}
+  .replay.show{display:flex}
+  .replay .btn{pointer-events:none}
+
+  @media (max-width:880px){
+    h1{font-size:38px}
+    .split{grid-template-columns:1fr}
+    .split > .pane + .pane{border-left:0; border-top:1px solid var(--b1)}
+    nav .links{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .take.before .wordmark,.take.after .wordmark,.take.after .uline,.fxlayer,
+    .track .play-fill,.track .play-head,.plan .head .agent{animation:none !important}
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="brand"><b>preframe</b> <span class="ver micro">v0.1</span></div>
+    <div class="links micro">
+      <a href="#">studio</a><a href="#">engines</a><a href="#">docs</a><a href="#">github</a>
+    </div>
+    <div class="spacer"></div>
+    <div class="branch micro"><span class="dot"></span> main</div>
+  </nav>
+
+  <section class="hero-sec">
+    <div class="wrap">
+      <div class="kicker micro">scene 01 <b>/ the loop</b></div>
+      <h1>A video is just code<span class="dot">.</span></h1>
+      <p class="sub">Mark the frame that's wrong. The agent rewrites the source and renders a new take.
+        preframe is the studio where that loop lives - catalog, review, compose.</p>
+      <div class="cta">
+        <button class="btn">Clone the studio</button>
+        <button class="btn ghost">Watch a revise loop</button>
+      </div>
+    </div>
+
+    <div class="wrap-wide">
+      <div class="stage">
+        <div class="hero panel" id="hero">
+          <div class="titlebar micro">
+            <span class="name"><b>reviewer</b> &mdash; product-launch.tsx</span>
+            <div class="right">
+              <span class="pill wip" id="stage-pill">wip &middot; take_03</span>
+              <span class="ctl" id="snd" title="toggle sound">&#9834; sound off</span>
+              <span class="ctl" id="replay-ctl" title="replay">&#10227; replay</span>
+            </div>
+          </div>
+
+          <div class="split">
+            <!-- LEFT: the rendered take -->
+            <div class="pane">
+              <div class="player">
+                <div class="take before">
+                  <div class="wordmark">aurora<span class="accent">.</span></div>
+                  <div class="tagline">ship the launch, not the timeline</div>
+                  <div class="uline"></div>
+                </div>
+                <div class="take after">
+                  <div class="fxlayer"></div>
+                  <div class="wordmark">aurora<span class="accent">.</span></div>
+                  <div class="tagline">ship the launch, not the timeline</div>
+                  <div class="uline"></div>
+                </div>
+
+                <div class="grade"></div>
+                <span class="fxchip nano">fx &middot; bloom-halation</span>
+
+                <div class="annotation">
+                  <span class="tick tl"></span><span class="tick tr"></span>
+                  <span class="tick bl"></span><span class="tick br"></span>
+                  <span class="badge nano"><span class="ts tnum">00:02:14</span> logo lands too early</span>
+                </div>
+
+                <div class="plan">
+                  <div class="head micro"><span class="agent"></span> change plan</div>
+                  <ul>
+                    <li><span class="g">&#9680;</span><span>hold the wordmark 18 frames, then ease it in</span></li>
+                    <li><span class="g">&#9680;</span><span>draw the accent underline on settle</span></li>
+                  </ul>
+                  <div class="foot nano"><span class="path">.compositions/product-launch/Composition.tsx</span><span class="apply">apply &#9166;</span></div>
+                </div>
+
+                <div class="replay" id="replay"><button class="btn">&#9654; play loop</button></div>
+              </div>
+              <div class="transport micro">
+                <span class="glyph">&#9612;&#9612;</span>
+                <div class="track"><span class="play-fill"></span><span class="play-head"></span></div>
+                <span class="tnum" style="color:var(--t3)">00:02 / 00:08</span>
+              </div>
+            </div>
+
+            <!-- RIGHT: the source -->
+            <div class="pane">
+              <div class="code" id="code"></div>
+            </div>
+          </div>
+
+          <!-- render queue strip across both panes -->
+          <div class="queue micro">
+            <span class="lbl">render queue</span>
+            <div class="qrow">
+              <span class="nm">take_04</span>
+              <div class="qbar"><i></i></div>
+              <span class="qstat">rendering<span class="run-time">&#8230;</span></span>
+              <span class="done-time tnum">&#10003; 00:08.2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+<script>
+(() => {
+  const hero = document.getElementById('hero');
+  const codeEl = document.getElementById('code');
+  const pill = document.getElementById('stage-pill');
+  const replay = document.getElementById('replay');
+  const replayCtl = document.getElementById('replay-ctl');
+  const sndCtl = document.getElementById('snd');
+  const planItems = [...hero.querySelectorAll('.plan li')];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ── product sound design (public/sfx) ──────────────────────────
+  const SND = {
+    annotate: 'sfx/tap.wav',
+    plan:     'sfx/synaptic_fire.wav',
+    diff:     'sfx/creamy_typing.wav',
+    render:   'sfx/quantum_cascade.wav',
+    final:    'sfx/cortex_wave.wav',
+    confirm:  'sfx/click-confirm.mp3',
+  };
+  const A = {};
+  for (const [k, src] of Object.entries(SND)) { const a = new Audio(src); a.preload = 'auto'; a.volume = .35; A[k] = a; }
+  let soundOn = false;
+  function sfx(k){ if(!soundOn) return; const a = A[k]; if(!a) return; try{ a.currentTime = 0; a.play().catch(()=>{}); }catch(e){} }
+  sndCtl.addEventListener('click', () => {
+    soundOn = !soundOn;
+    sndCtl.innerHTML = '&#9834; sound ' + (soundOn ? 'on' : 'off');
+    sndCtl.classList.toggle('armed', soundOn);
+    if(soundOn) sfx('confirm');           // gesture unlocks audio + gives feedback
+  });
+
+  // ── source lines (real-ish TSX). k: ctx | del | add ────────────
+  const LINES = [
+    {k:'ctx', n:1,  t:"import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate } from 'remotion';"},
+    {k:'ctx', n:2,  t:""},
+    {k:'ctx', n:3,  t:"export const LaunchTitle = () => {"},
+    {k:'ctx', n:4,  t:"  const frame = useCurrentFrame();"},
+    {k:'ctx', n:5,  t:"  const { fps } = useVideoConfig();"},
+    {k:'ctx', n:6,  t:""},
+    {k:'del', t:"  // logo entrance"},
+    {k:'del', t:"  const scale = 1;"},
+    {k:'del', t:"  const opacity = 1;"},
+    {k:'add', t:"  // logo eases in on a spring, 18-frame hold"},
+    {k:'add', t:"  const enter = spring({ frame: frame - 18, fps, config: { damping: 14 } });"},
+    {k:'add', t:"  const scale = interpolate(enter, [0, 1], [0.92, 1]);"},
+    {k:'add', t:"  const opacity = interpolate(frame, [18, 30], [0, 1], { extrapolateLeft: 'clamp' });"},
+    {k:'ctx', n:7,  t:""},
+    {k:'ctx', n:8,  t:"  return ("},
+    {k:'ctx', n:9,  t:"    <AbsoluteFill style={{ background: '#0b0d10' }}>"},
+    {k:'ctx', n:10, t:"      <Wordmark style={{ transform: `scale(${scale})`, opacity }} />"},
+    {k:'ctx', n:11, t:"    </AbsoluteFill>"},
+    {k:'ctx', n:12, t:"  );"},
+    {k:'ctx', n:13, t:"};"},
+  ];
+
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const SEN = '§';                  // letter sentinel so number/keyword passes can't corrupt strings
+  function hl(raw){
+    if(raw.trim().startsWith('//')) return '<span class="c-com">'+esc(raw)+'</span>';
+    let s = esc(raw); const str = [];
+    s = s.replace(/('[^']*'|`[^`]*`)/g, m => { str.push(m); return SEN+String.fromCharCode(65+str.length-1)+SEN; });
+    s = s.replace(/(&lt;\/?)([A-Z][A-Za-z0-9]*)/g, '$1<span class="c-tag">$2</span>');
+    s = s.replace(/\b(import|from|export|const|return|new)\b/g, '<span class="c-kw">$1</span>');
+    s = s.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="c-num">$1</span>');
+    s = s.replace(new RegExp(SEN+'([A-Z])'+SEN,'g'), (m,c) => '<span class="c-str">'+esc(str[c.charCodeAt(0)-65])+'</span>');
+    return s;
+  }
+  codeEl.innerHTML = LINES.map(l => {
+    const g = l.k==='add' ? '+' : l.k==='del' ? '-' : (l.n ?? '');
+    return '<div class="ln '+l.k+'"><span class="g">'+g+'</span><pre>'+(hl(l.t)||' ')+'</pre></div>';
+  }).join('');
+
+  // ── loop machine ───────────────────────────────────────────────
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  let running = false, token = 0;
+
+  function clear(){
+    ['data-annotated','data-planned','data-diffed','data-rendering','data-rendered','data-final']
+      .forEach(a => hero.removeAttribute(a));
+    pill.innerHTML = 'wip &middot; take_03'; pill.className = 'pill wip';
+    planItems.forEach(li => li.classList.remove('on','done'));
+  }
+
+  async function once(my){
+    clear();                                   if(token!==my) return;
+    await wait(2000);                          if(token!==my) return; // 1 idle
+    hero.setAttribute('data-annotated',''); sfx('annotate');         // 2 annotate
+    await wait(2400);                          if(token!==my) return;
+    hero.setAttribute('data-planned',''); sfx('plan');               // 3 plan
+    planItems[0].classList.add('on'); await wait(500);  if(token!==my) return;
+    planItems[1].classList.add('on'); await wait(1500); if(token!==my) return;
+    hero.setAttribute('data-diffed',''); sfx('diff');                // 4 diff
+    await wait(2400);                          if(token!==my) return;
+    planItems.forEach(li => li.classList.add('done'));
+    hero.setAttribute('data-rendering','');                          // 5 render
+    pill.innerHTML = 'rendering &middot; take_04'; pill.className = 'pill wip';
+    await wait(1800);                          if(token!==my) return;
+    hero.removeAttribute('data-rendering'); hero.setAttribute('data-rendered',''); sfx('render');
+    await wait(500);                           if(token!==my) return;
+    hero.setAttribute('data-final',''); sfx('final');                // 6 payoff
+    pill.innerHTML = 'final &middot; take_04'; pill.className = 'pill final';
+    await wait(2600);                          if(token!==my) return;
+  }
+
+  async function loop(){ const my = token; running = true; while(token===my) await once(my); }
+  function stop(){ token++; running = false; }
+
+  function showFinal(){       // reduced-motion / paused resting state = the payoff
+    stop(); clear();
+    ['data-annotated','data-diffed','data-rendered','data-final'].forEach(a=>hero.setAttribute(a,''));
+    planItems.forEach(li => li.classList.add('on','done'));
+    pill.innerHTML = 'final &middot; take_04'; pill.className = 'pill final';
+  }
+
+  replayCtl.addEventListener('click', () => {
+    if(running){ stop(); showFinal(); replayCtl.innerHTML='&#9654; play'; }
+    else { replay.classList.remove('show'); token++; loop(); replayCtl.innerHTML='&#10227; replay'; }
+  });
+  replay.addEventListener('click', () => { replay.classList.remove('show'); token++; loop(); replayCtl.innerHTML='&#10227; replay'; });
+
+  if(reduce){ showFinal(); replay.classList.add('show'); replayCtl.innerHTML='&#9654; play'; }
+  else { loop(); }
+})();
+</script>
+</body>
+</html>

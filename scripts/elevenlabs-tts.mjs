@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const DEFAULT_VOICE_ID = 'j9jfwdrw7BRfcR43Qohk';
+const DEFAULT_VOICE_ID = process.env.NARRATION_VOICE || 'EXAVITQu4vr4xnSDxMaL';
 const DEFAULT_MODEL = 'eleven_multilingual_v2'; // Supports SSML break tags
 
 async function generateSpeech(text, outputPath, voiceId = DEFAULT_VOICE_ID) {

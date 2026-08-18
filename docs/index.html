@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preframe - Hudson demo player</title>
-  <meta name="description" content="Preframe is a Hudson-powered creative workspace for staging media demos, review loops, and effect passes before the final frame.">
+  <title>Preframe - agentic video editor</title>
+  <meta name="description" content="Preframe is an agentic video editor for raw captures. Agents edit; reviewers steer the cut.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -325,6 +325,115 @@
       border: 1px solid rgba(245, 240, 228, 0.12);
     }
 
+    /* --- narrated walkthrough (story mode) --- */
+    .story-stage {
+      position: absolute;
+      inset: 0.45rem;
+      border: 1px solid rgba(245, 240, 228, 0.12);
+      overflow: hidden;
+      background: #030403;
+      z-index: 4;
+    }
+    .story-stage[hidden] { display: none; }
+    .story-still {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 620ms ease;
+    }
+    .story-still.is-active {
+      opacity: 1;
+      animation: storyZoom 9s ease-out both;
+    }
+    @keyframes storyZoom {
+      from { transform: scale(1.04); }
+      to   { transform: scale(1.12); }
+    }
+    .story-scrim {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(0deg, rgba(3, 4, 3, 0.88) 0%, rgba(3, 4, 3, 0.32) 32%, transparent 56%),
+        linear-gradient(180deg, rgba(3, 4, 3, 0.42) 0%, transparent 22%);
+      pointer-events: none;
+    }
+    .story-caption {
+      position: absolute;
+      left: clamp(1rem, 4%, 2.4rem);
+      right: clamp(1rem, 4%, 2.4rem);
+      bottom: clamp(1.5rem, 9%, 3rem);
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(1.05rem, 2.2vw, 1.72rem);
+      line-height: 1.32;
+      color: var(--paper);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 460ms ease, transform 460ms ease;
+    }
+    .story-caption.is-shown { opacity: 1; transform: none; }
+    .story-dots {
+      position: absolute;
+      left: clamp(1rem, 4%, 2.4rem);
+      bottom: clamp(0.7rem, 4%, 1.2rem);
+      display: flex;
+      gap: 0.42rem;
+      z-index: 2;
+    }
+    .story-dots button {
+      width: 1.6rem;
+      height: 3px;
+      padding: 0;
+      border: 0;
+      background: rgba(245, 240, 228, 0.26);
+      cursor: pointer;
+      overflow: hidden;
+      position: relative;
+    }
+    .story-dots button.is-done { background: rgba(245, 240, 228, 0.6); }
+    .story-dots button > i {
+      position: absolute;
+      inset: 0;
+      transform-origin: left;
+      background: var(--cyan);
+      width: 0;
+    }
+    .story-dots button.is-active > i { width: var(--p, 0%); }
+    .story-exit {
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      z-index: 3;
+      border: 1px solid var(--line-strong);
+      background: rgba(11, 12, 11, 0.62);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.5rem;
+      cursor: pointer;
+    }
+    .story-exit:hover,
+    .story-exit:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+    .story-trigger::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-left: 8px solid currentColor;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      margin-right: 0.5rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .story-still.is-active { animation: none; }
+      .story-still, .story-caption { transition-duration: 0ms; }
+    }
+
     .view-panel {
       min-height: 5.8rem;
       border: 1px solid var(--line);
@@ -425,11 +534,11 @@
       align-items: start;
     }
 
-    .player-meta h1 {
-      font-size: clamp(2.4rem, 5vw, 5rem);
+    .player-meta h2 {
+      font-size: clamp(2rem, 4.2vw, 3.4rem);
       font-weight: 500;
-      line-height: 0.98;
-      max-width: 12ch;
+      line-height: 1;
+      max-width: 14ch;
     }
 
     .player-meta p {
@@ -548,13 +657,25 @@
       font-size: 0.68rem;
     }
 
-    .copy-band {
-      border-top: 1px solid var(--line);
-      padding: clamp(1.4rem, 4vw, 2.6rem);
-      display: grid;
-      grid-template-columns: minmax(15rem, 0.72fr) minmax(0, 1.28fr);
-      gap: clamp(1.2rem, 4vw, 3rem);
-      align-items: start;
+    .intro {
+      padding: clamp(1.6rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem) clamp(1rem, 2vw, 1.5rem);
+      border-bottom: 1px solid var(--line);
+      max-width: 46rem;
+    }
+
+    .intro h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 500;
+      line-height: 1.05;
+      max-width: 16ch;
+    }
+
+    .intro-copy {
+      margin-top: 1rem;
+      color: var(--paper-soft);
+      font-size: clamp(1.02rem, 1.8vw, 1.2rem);
+      line-height: 1.55;
+      max-width: 42rem;
     }
 
     .eyebrow {
@@ -566,36 +687,91 @@
       margin-bottom: 0.8rem;
     }
 
-    .copy-band h2 {
-      font-size: clamp(2rem, 4vw, 4rem);
-      font-weight: 500;
-      line-height: 1;
-      max-width: 12ch;
+    .loop-band {
+      border-top: 1px solid var(--line);
+      padding: clamp(1.4rem, 4vw, 2.6rem);
+      display: grid;
+      gap: clamp(1.2rem, 3vw, 2rem);
     }
 
-    .copy-grid {
+    .loop-band h2 {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 500;
+      line-height: 1.05;
+      max-width: 18ch;
+    }
+
+    .loop-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 1rem;
     }
 
-    .copy-note {
-      border-left: 1px solid var(--line-strong);
-      padding-left: 1rem;
+    .loop-step {
+      border: 1px solid var(--line);
+      padding: 1rem;
+      background: rgba(245, 240, 228, 0.02);
+      display: grid;
+      gap: 0.55rem;
+      align-content: start;
     }
 
-    .copy-note strong {
-      display: block;
+    .loop-step strong {
       color: var(--paper);
       font-family: var(--mono);
       font-size: 0.72rem;
-      margin-bottom: 0.55rem;
     }
 
-    .copy-note p {
+    .loop-step p {
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.5;
+    }
+
+    .try-band {
+      border-top: 1px solid var(--line);
+      padding: clamp(1.2rem, 3vw, 2rem);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .try-band p {
       color: var(--muted);
       font-size: 0.96rem;
-      line-height: 1.55;
+      max-width: 28rem;
+      line-height: 1.5;
+    }
+
+    .try-code {
+      border: 1px solid var(--line-strong);
+      padding: 0.65rem 0.85rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--paper-soft);
+      background: rgba(245, 240, 228, 0.03);
+      white-space: nowrap;
+    }
+
+    .playlist-group {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .playlist-group + .playlist-group {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .playlist-group-label {
+      color: var(--paper-soft);
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
 
     .actions {
@@ -645,6 +821,12 @@
       font-size: 0.68rem;
     }
 
+    .footer a:hover,
+    .footer a:focus-visible {
+      color: var(--paper);
+      outline: none;
+    }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.001ms !important;
@@ -663,6 +845,10 @@
         grid-column: 1 / -1;
         border-left: 0;
         border-top: 1px solid var(--line);
+      }
+
+      .loop-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .demo-list {
@@ -712,11 +898,20 @@
       }
 
       .workspace,
-      .copy-band,
-      .copy-grid,
+      .loop-grid,
       .demo-list,
       .meter {
         grid-template-columns: 1fr;
+      }
+
+      .try-band {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .try-code {
+        white-space: normal;
+        word-break: break-all;
       }
 
       .sidebar {
@@ -741,8 +936,8 @@
         padding: 0.85rem;
       }
 
-      .player-meta h1 {
-        font-size: clamp(2.5rem, 15vw, 4rem);
+      .player-meta h2 {
+        font-size: clamp(1.8rem, 12vw, 2.8rem);
       }
     }
 
@@ -772,29 +967,33 @@
           <span class="brand-name">preframe<span>.dev</span></span>
         </a>
         <nav class="nav" aria-label="Site">
-          <a href="#player">Player</a>
-          <a href="#loop">Loop</a>
-          <a href="/concepts/">Concepts</a>
+          <a href="#watch">Watch</a>
+          <a href="#loop">How it works</a>
           <a href="https://github.com/arach/preframe">GitHub</a>
         </nav>
       </header>
 
-      <section class="hero" id="player">
-        <div class="hudson-window" aria-label="Hudson player embed">
+      <section class="intro">
+        <h1>Preframe</h1>
+        <p class="intro-copy">Preframe is an agentic video editor for raw captures. Agents edit; reviewers steer the cut. Watch a take, mark the rough spots, adjust the controls, and send it back for another pass.</p>
+      </section>
+
+      <section class="hero" id="watch">
+        <div class="hudson-window" aria-label="Preframe player">
           <div class="window-head">
             <div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
-            <span>preframe / hudson surface: player</span>
-            <span data-current-status>embed surface ready</span>
+            <span>preframe / player</span>
+            <span data-current-status>ready</span>
           </div>
 
           <div class="workspace">
             <aside class="sidebar">
-              <div class="rail-label"><span>apps</span><span>hudson</span></div>
+              <div class="rail-label"><span>studio</span><span>local</span></div>
               <div class="rail-list">
-                <span class="rail-item active">Player</span>
-                <span class="rail-item">Sources</span>
-                <span class="rail-item">Effects</span>
+                <span class="rail-item active">Catalog</span>
                 <span class="rail-item">Review</span>
+                <span class="rail-item">Composer</span>
+                <span class="rail-item">Render</span>
               </div>
             </aside>
 
@@ -802,7 +1001,7 @@
               <div class="tabs" aria-label="Open workspace tabs">
                 <button class="view-button" type="button" data-view-target="watch" aria-pressed="true">Watch</button>
                 <button class="view-button" type="button" data-view-target="review" aria-pressed="false">Review</button>
-                <button class="view-button" type="button" data-view-target="effects" aria-pressed="false">Effects</button>
+                <button class="view-button" type="button" data-view-target="effects" aria-pressed="false">Controls</button>
               </div>
 
               <div class="player-stage">
@@ -813,78 +1012,100 @@
                       controls
                       playsinline
                       preload="metadata"
-                      poster="media/mira-control-lanes-poster.png"
-                      src="media/mira-control-lanes-demo.mp4">
-                      <source src="media/mira-control-lanes-demo.mp4" type="video/mp4">
+                      poster="media/app/studio-new.png"
+                      src="media/app/preframe-guided-tour.mp4">
+                      <source src="media/app/preframe-guided-tour.mp4" type="video/mp4">
                     </video>
+                    <div class="story-stage" data-story hidden>
+                      <img class="story-still" data-still alt="" draggable="false">
+                      <img class="story-still" data-still alt="" draggable="false">
+                      <div class="story-scrim"></div>
+                      <p class="story-caption" data-story-caption></p>
+                      <div class="story-dots" data-story-dots></div>
+                      <button class="story-exit" type="button" data-story-exit>esc</button>
+                    </div>
+                    <audio data-story-audio preload="auto"></audio>
                   </div>
                   <div class="view-panel" data-view-panel></div>
                 </div>
 
                 <div class="player-meta">
                   <div>
-                    <p class="eyebrow" data-current-kind>Mira demo</p>
-                    <h1 data-current-title>Your cut, before the cut.</h1>
-                    <p data-current-description>Preframe stages source clips, motion prompts, and output loops inside a Hudson AppShell. The public page is a player first; the runtime surface is the limited Preframe player embed.</p>
+                    <p class="eyebrow" data-current-kind>clip</p>
+                    <h2 data-current-title>OpenScout demo cut</h2>
+                    <p data-current-description>This one starts with a raw OpenScout capture. The agent makes a cut, then notes and controls steer the next take.</p>
                     <div class="actions">
-                      <a class="button-link primary" href="https://github.com/arach/preframe">View on GitHub</a>
-                      <a class="button-link" href="#loop">Inspect the loop</a>
+                      <button class="button-link primary story-trigger" type="button" data-story-play>Stills tour</button>
+                      <a class="button-link" href="#loop">How it works</a>
+                      <a class="button-link" href="https://github.com/arach/preframe">GitHub</a>
                     </div>
                   </div>
                   <div class="status-card">
-                    <span>current slot</span>
-                    <strong data-current-slot>preframe.player</strong>
-                    <span>source</span>
-                    <strong data-current-source>Mira control lanes</strong>
-                    <span>route</span>
-                    <strong>/embed/preframe/player</strong>
+                    <span>now playing</span>
+                    <strong data-current-source>CDP capture + Remotion</strong>
+                    <span>tab</span>
+                    <strong data-current-view>watch</strong>
+                    <span>format</span>
+                    <strong data-current-format>mp4 / remotion</strong>
                   </div>
                 </div>
               </div>
             </div>
 
             <aside class="inspector">
-              <div class="rail-label"><span>playlist</span><span>embed media</span></div>
+              <div class="rail-label"><span>playlist</span><span>local clips</span></div>
               <div class="demo-list" data-demo-list></div>
-              <div class="meter" aria-label="Workspace status">
-                <div class="meter-row"><span>surface</span><strong>player</strong></div>
-                <div class="meter-row"><span>enabled</span><strong>3 views</strong></div>
-                <div class="meter-row"><span>locked</span><strong>AI/render</strong></div>
+              <div class="meter" aria-label="Player status">
+                <div class="meter-row"><span>mode</span><strong>preview</strong></div>
+                <div class="meter-row"><span>tabs</span><strong>watch / review / controls</strong></div>
+                <div class="meter-row"><span>notes</span><strong>timestamped</strong></div>
               </div>
             </aside>
           </div>
 
           <div class="window-foot">
-            <span>Hudson AppShell -> AppExports.embeds -> preframe.player -> watch / review / effects</span>
-            <span>read-only landing preview</span>
+            <span>video file + source file</span>
+            <span>local preview</span>
           </div>
         </div>
 
-        <div class="copy-band" id="loop">
+        <div class="loop-band" id="loop">
           <div>
-            <p class="eyebrow">Hudson surface, limited capability</p>
-            <h2>The player is the landing page.</h2>
+            <h2>How it works</h2>
           </div>
-          <div class="copy-grid">
-            <div class="copy-note">
-              <strong>Use our footage first</strong>
-              <p>The page runs local Preframe/Mira/Hudson clips today. It is structured so a Talkie walkthrough can become the next main source clip without changing the player surface.</p>
+          <div class="loop-grid">
+            <div class="loop-step">
+              <strong>1 · capture</strong>
+              <p>Start with a raw capture: screen, camera, audio, stills, whatever is available.</p>
             </div>
-            <div class="copy-note">
-              <strong>Use the embed contract</strong>
-              <p>The app now declares a Hudson embed surface named player. The hosted app route can expose watch, review, and effects without exposing revise or render actions.</p>
+            <div class="loop-step">
+              <strong>2 · shape</strong>
+              <p>The agent makes a first cut and breaks the work into useful pieces: takes, frames, notes, timing, captions, music, treatments.</p>
             </div>
-            <div class="copy-note">
-              <strong>Keep Hudson visible</strong>
-              <p>The shell remains the frame around the media work: playlist, player, effects, and review. The landing preview follows the same shape as the runtime Hudson surface.</p>
+            <div class="loop-step">
+              <strong>3 · review</strong>
+              <p>Review the take. Box the rough frame. Leave the note right where the problem happens.</p>
+            </div>
+            <div class="loop-step">
+              <strong>4 · control</strong>
+              <p>Steer pacing, emphasis, music, captions, framing, and treatments. These are real controls, not a blank prompt box.</p>
+            </div>
+            <div class="loop-step">
+              <strong>5 · render</strong>
+              <p>The agent renders another take from that feedback. Keep the one that works.</p>
             </div>
           </div>
+        </div>
+
+        <div class="try-band" id="try">
+          <p>To run it locally:</p>
+          <code class="try-code">git clone github.com/arach/preframe && cd preframe && bun install && bun run dev</code>
         </div>
       </section>
 
       <footer class="footer">
         <span>preframe.dev</span>
-        <span>Hudson-powered creative workspace for the loop before the final frame</span>
+        <span>built on <a href="https://github.com/arach/hudson">Hudson</a> · <a href="/concepts/">design drafts</a></span>
       </footer>
     </div>
   </main>
@@ -892,84 +1113,128 @@
   <script>
     const demos = [
       {
-        id: 'mira-control',
-        label: 'Mira control lanes',
-        badge: 'demo',
-        title: 'Your cut, before the cut.',
-        kind: 'Mira demo',
-        slot: 'preframe.player',
-        source: 'Mira control lanes',
-        status: 'embed source loaded',
-        src: 'media/mira-control-lanes-demo.mp4',
-        poster: 'media/mira-control-lanes-poster.png',
-        description: 'A local Mira demo clip inside the Hudson player surface. This is the current homepage proof: the landing can be a player for actual work, not just product copy.'
+        id: 'guided-tour',
+        group: 'clips',
+        label: 'OpenScout demo',
+        badge: 'clip',
+        listNote: 'Website capture example.',
+        title: 'OpenScout demo cut',
+        kind: 'clip',
+        source: 'OpenScout capture → montage',
+        format: 'mp4 / remotion',
+        status: 'ready',
+        src: 'media/app/preframe-guided-tour.mp4',
+        poster: 'media/app/studio-new.png',
+        description: 'This one starts with a raw OpenScout capture. Notes and controls steer the next take.'
+      },
+      {
+        id: 'talkie-promo',
+        group: 'clips',
+        label: 'Talkie promo',
+        badge: 'clip',
+        listNote: 'Finished Talkie video.',
+        title: 'Talkie promo',
+        kind: 'clip',
+        source: 'Talkie promo',
+        format: 'mp4',
+        status: 'ready',
+        src: 'media/app/talkiepromo.mp4',
+        poster: 'media/app/studio-code.png',
+        description: 'Finished video for Talkie, made with the same loop.'
       },
       {
         id: 'mira-produced',
+        group: 'other takes',
         label: 'Produced reference',
-        badge: 'demo',
-        title: 'A reference take you can inspect.',
-        kind: 'Mira demo',
-        slot: 'preframe.player',
+        badge: 'take',
+        listNote: 'Reference take.',
+        title: 'Produced reference',
+        kind: 'take',
         source: 'Produced reference',
-        status: 'reference take ready',
+        format: 'mp4',
+        status: 'ready',
         src: 'media/mira-produced-reference.mp4',
         poster: 'media/mira-final-poster.png',
-        description: 'A finished reference take for comparing source, review notes, and render treatments before we settle on the final frame.'
+        description: 'Reference version kept around so later notes and controls have something to compare against.'
       },
       {
         id: 'mira-intro',
+        group: 'other takes',
         label: 'Intro first cut',
-        badge: 'demo',
-        title: 'One take, then iterate.',
-        kind: 'Render demo',
-        slot: 'preframe.player',
+        badge: 'take',
+        listNote: 'Short first cut.',
+        title: 'Intro first cut',
+        kind: 'take',
         source: 'Mira intro first cut',
-        status: 'first cut staged',
+        format: 'mp4',
+        status: 'ready',
         src: 'media/mira-intro-first-cut.mp4',
         poster: 'media/mira-produced-contact-sheet.png',
-        description: 'A short first cut that makes the review loop concrete: stage the source, watch the take, mark it up, render again.'
+        description: 'Early cut. Watch it, leave notes, tweak the controls, render again.'
+      },
+      {
+        id: 'mira-control',
+        group: 'other takes',
+        label: 'Control lanes',
+        badge: 'take',
+        listNote: 'Cut from a long capture.',
+        title: 'Control lanes',
+        kind: 'take',
+        source: 'Mira control lanes',
+        format: 'mp4',
+        status: 'ready',
+        src: 'media/mira-control-lanes-demo.mp4',
+        poster: 'media/mira-control-lanes-poster.png',
+        description: 'Long raw capture cut into lanes.'
       },
       {
         id: 'glass-grade',
-        label: 'Hudson glass grade',
-        badge: 'effect',
-        title: 'Effects need a stable subject.',
-        kind: 'Effects bench',
-        slot: 'preframe.player',
+        group: 'fx tries',
+        label: 'Glass grade',
+        badge: 'fx',
+        listNote: 'Soft grade.',
+        title: 'Glass grade',
+        kind: 'fx',
         source: 'Hudson glass grade',
-        status: 'effect pass ready',
+        format: 'mp4',
+        status: 'ready',
         src: 'media/hudson-glass-graded.mp4',
         poster: 'media/hudson-glass-graded-poster.jpg',
-        description: 'A compact Hudson effects pass. This is the direction for the next iteration: same source clip, multiple treatment passes.'
+        description: 'Light glass grade on the same clip, kept as an operator-controlled treatment.'
       },
       {
         id: 'glass-fx',
-        label: 'Hudson glass FX',
-        badge: 'effect',
-        title: 'Treatment passes, side by side.',
-        kind: 'Effects bench',
-        slot: 'preframe.player',
+        group: 'fx tries',
+        label: 'Glass FX',
+        badge: 'fx',
+        listNote: 'More motion.',
+        title: 'Glass FX',
+        kind: 'fx',
         source: 'Hudson glass FX',
-        status: 'effect pass ready',
+        format: 'mp4',
+        status: 'ready',
         src: 'media/hudson-glass-fx.mp4',
         poster: 'media/hudson-glass-fx-poster.jpg',
-        description: 'A more active glass and FX pass. Useful as a reference for what the Talkie walkthrough could become once captured.'
+        description: 'Same clip with heavier glass motion, easy to compare against the softer pass.'
       },
       {
         id: 'lattice-born',
-        label: 'Lattice grid born',
-        badge: 'effect',
-        title: 'A frame system becoming visible.',
-        kind: 'Effects bench',
-        slot: 'preframe.player',
+        group: 'fx tries',
+        label: 'Lattice grid',
+        badge: 'fx',
+        listNote: 'Grid intro.',
+        title: 'Lattice grid',
+        kind: 'fx',
         source: 'Lattice grid born',
-        status: 'effect pass ready',
+        format: 'mp4',
+        status: 'ready',
         src: 'media/lattices-grid-born.mp4',
         poster: 'media/lattices-grid-born-poster.jpg',
-        description: 'A small lattice intro pass that keeps the Hudson/Preframe frame language alive without overwhelming the actual player.'
+        description: 'Short grid intro from the Lattices work, kept as another reusable treatment primitive.'
       }
     ];
+
+    const demoGroups = ['clips', 'other takes', 'fx tries'];
 
     const video = document.querySelector('[data-demo-video]');
     const list = document.querySelector('[data-demo-list]');
@@ -980,52 +1245,87 @@
       title: document.querySelector('[data-current-title]'),
       description: document.querySelector('[data-current-description]'),
       status: document.querySelector('[data-current-status]'),
-      slot: document.querySelector('[data-current-slot]'),
-      source: document.querySelector('[data-current-source]')
+      source: document.querySelector('[data-current-source]'),
+      format: document.querySelector('[data-current-format]'),
+      view: document.querySelector('[data-current-view]')
     };
 
-    const views = {
-      watch: `
+    let activeView = 'watch';
+
+    const viewContent = {
+      watch: (demo) => `
         <div class="watch-view">
-          <div class="timeline" aria-label="Playback timeline"><span></span><span></span><span></span></div>
+          <div class="timeline" aria-label="Playback timeline" style="--progress: ${demo.badge === 'fx' ? '62%' : '48%'}"><span></span><span></span><span></span></div>
           <div class="view-row">
-            <span class="view-pill">take-04</span>
-            <span class="view-pill">source / wip / final</span>
-            <span class="view-pill">native controls</span>
+            <span class="view-pill">${demo.badge === 'fx' ? 'treatment' : 'take-02'}</span>
+            <span class="view-pill">capture / take / render</span>
+            <span class="view-pill">${demo.format}</span>
           </div>
         </div>
       `,
-      review: `
+      review: (demo) => demo.id === 'guided-tour' ? `
         <div class="review-view">
-          <div class="review-note"><strong>00:14</strong>Hold this beat one second longer.</div>
-          <div class="review-note"><strong>00:18</strong>Soften the transition into the UI detail.</div>
-          <div class="review-note"><strong>general</strong>Keep the player readable before any AI actions exist.</div>
+          <div class="review-note"><strong>00:25</strong>Hold the trace loading beat — let the network graph settle.</div>
+          <div class="review-note"><strong>00:19</strong>Transition into the code view feels rushed.</div>
+          <div class="review-note"><strong>general</strong>Lead with the agent grid. Steer pacing in controls.</div>
+        </div>
+      ` : demo.badge === 'fx' ? `
+        <div class="review-view">
+          <div class="review-note"><strong>general</strong>Grain is a bit heavy on the UI.</div>
+          <div class="review-note"><strong>general</strong>Dial back bloom on the logo.</div>
+          <div class="review-note"><strong>general</strong>Background can move more, UI should stay readable.</div>
+        </div>
+      ` : `
+        <div class="review-view">
+          <div class="review-note"><strong>00:14</strong>Hold this beat longer.</div>
+          <div class="review-note"><strong>00:18</strong>Softer transition into the UI.</div>
+          <div class="review-note"><strong>general</strong>Mostly timing notes now.</div>
         </div>
       `,
-      effects: `
+      effects: (demo) => demo.badge === 'fx' ? `
         <div class="effects-view">
-          <div class="effect-pass active"><strong>glass</strong>active treatment</div>
-          <div class="effect-pass"><strong>grain</strong>reference pass</div>
-          <div class="effect-pass"><strong>scan</strong>timed pulse</div>
-          <div class="effect-pass"><strong>lattice</strong>frame language</div>
+          <div class="effect-pass active"><strong>${demo.label.toLowerCase()}</strong>on</div>
+          <div class="effect-pass"><strong>glass</strong>off</div>
+          <div class="effect-pass"><strong>grain</strong>off</div>
+          <div class="effect-pass"><strong>lattice</strong>off</div>
+        </div>
+      ` : `
+        <div class="effects-view">
+          <div class="effect-pass active"><strong>clean</strong>on</div>
+          <div class="effect-pass"><strong>glass</strong>off</div>
+          <div class="effect-pass"><strong>grain</strong>off</div>
+          <div class="effect-pass"><strong>scan</strong>off</div>
         </div>
       `
     };
 
     function setView(view) {
-      viewPanel.innerHTML = views[view] || views.watch;
+      activeView = view;
+      const demo = demos.find((item) => item.id === list.dataset.activeId) || demos[0];
+      viewPanel.innerHTML = viewContent[view](demo);
       viewButtons.forEach((button) => {
         button.setAttribute('aria-pressed', String(button.dataset.viewTarget === view));
       });
+      if (fields.view) fields.view.textContent = view === 'effects' ? 'controls' : view;
     }
 
     function renderList(activeId) {
-      list.innerHTML = demos.map((demo) => `
-        <button class="demo-button" type="button" data-demo-id="${demo.id}" aria-pressed="${demo.id === activeId}">
-          <span><strong>${demo.label}</strong><em class="badge ${demo.badge === 'effect' ? 'effect' : ''}">${demo.badge}</em></span>
-          <p>${demo.badge === 'effect' ? 'Effect treatment for the bench.' : 'Local product demo source.'}</p>
-        </button>
-      `).join('');
+      list.dataset.activeId = activeId;
+      list.innerHTML = demoGroups.map((group) => {
+        const items = demos.filter((demo) => demo.group === group);
+        if (!items.length) return '';
+        return `
+          <div class="playlist-group">
+            <div class="playlist-group-label">${group}</div>
+            ${items.map((demo) => `
+              <button class="demo-button" type="button" data-demo-id="${demo.id}" aria-pressed="${demo.id === activeId}">
+                <span><strong>${demo.label}</strong><em class="badge ${demo.badge === 'fx' ? 'effect' : ''}">${demo.badge}</em></span>
+                <p>${demo.listNote}</p>
+              </button>
+            `).join('')}
+          </div>
+        `;
+      }).join('');
     }
 
     function setDemo(id) {
@@ -1033,6 +1333,8 @@
       const wasPlaying = !video.paused;
       video.pause();
       video.src = demo.src;
+      const sourceEl = video.querySelector('source');
+      if (sourceEl) sourceEl.src = demo.src;
       if (demo.poster) {
         video.poster = demo.poster;
       } else {
@@ -1046,9 +1348,10 @@
       fields.title.textContent = demo.title;
       fields.description.textContent = demo.description;
       fields.status.textContent = demo.status;
-      fields.slot.textContent = demo.slot;
       fields.source.textContent = demo.source;
+      if (fields.format) fields.format.textContent = demo.format;
       renderList(demo.id);
+      setView(activeView);
     }
 
     list.addEventListener('click', (event) => {
@@ -1060,8 +1363,111 @@
       button.addEventListener('click', () => setView(button.dataset.viewTarget));
     });
 
-    renderList(demos[0].id);
-    setView('watch');
+    setDemo('guided-tour');
+
+    // --- narrated walkthrough (story mode) ---
+    const BEATS = [
+      { still: 'media/app/studio-code.png',        line: 'Start with the raw capture, before it has become a take.' },
+      { still: 'media/app/studio-new.png',         line: 'The agent makes a first cut, then leaves me ways to steer it.' },
+      { still: 'media/app/studio-grid.png',        line: 'Takes, frames, notes, timing, captions, music, treatments. Those are the controls I want to keep making better.' },
+      { still: 'media/app/reviewer-clean.png',     line: 'This transition felt abrupt — box the frame.' },
+      { still: 'media/app/reviewer-annotated.png', line: 'Hold the trace loading beat longer.' },
+      { still: 'media/app/studio-queue.png',       line: 'Then it renders another take. If it works, I keep it.' }
+    ];
+
+    const story = {
+      stage: document.querySelector('[data-story]'),
+      audio: document.querySelector('[data-story-audio]'),
+      caption: document.querySelector('[data-story-caption]'),
+      dotsWrap: document.querySelector('[data-story-dots]'),
+      layers: Array.from(document.querySelectorAll('[data-still]')),
+      playBtn: document.querySelector('[data-story-play]'),
+      exitBtn: document.querySelector('[data-story-exit]'),
+      i: -1,
+      active: 0
+    };
+
+    // preload stills so crossfades are instant
+    BEATS.forEach((beat) => { const im = new Image(); im.src = beat.still; });
+
+    story.dotsWrap.innerHTML = BEATS.map((_, idx) =>
+      `<button type="button" data-beat="${idx}" aria-label="Beat ${idx + 1} of ${BEATS.length}"><i></i></button>`
+    ).join('');
+
+    function paintDots() {
+      Array.from(story.dotsWrap.children).forEach((dot, idx) => {
+        dot.classList.toggle('is-active', idx === story.i);
+        dot.classList.toggle('is-done', idx < story.i);
+        if (idx !== story.i) dot.style.removeProperty('--p');
+      });
+    }
+
+    function showBeat(idx) {
+      if (idx < 0 || idx >= BEATS.length) { endStory(false); return; }
+      story.i = idx;
+      const beat = BEATS[idx];
+      // crossfade the two still layers
+      const incoming = story.layers[(story.active + 1) % 2];
+      const outgoing = story.layers[story.active];
+      incoming.src = beat.still;
+      incoming.classList.remove('is-active');
+      void incoming.offsetWidth; // restart the zoom animation
+      incoming.classList.add('is-active');
+      outgoing.classList.remove('is-active');
+      story.active = (story.active + 1) % 2;
+      // caption fade-in
+      story.caption.classList.remove('is-shown');
+      story.caption.textContent = beat.line;
+      requestAnimationFrame(() => requestAnimationFrame(() => story.caption.classList.add('is-shown')));
+      // audio
+      story.audio.src = `media/app/narration-${idx}.mp3`;
+      story.audio.play().catch(() => {});
+      paintDots();
+    }
+
+    function startStory() {
+      video.pause();
+      story.stage.hidden = false;
+      story.playBtn.setAttribute('aria-pressed', 'true');
+      story.playBtn.textContent = 'Restart';
+      showBeat(0);
+    }
+
+    function endStory(reset) {
+      story.audio.pause();
+      story.playBtn.setAttribute('aria-pressed', 'false');
+      if (reset) {
+        story.stage.hidden = true;
+        story.i = -1;
+        story.layers.forEach((layer) => layer.classList.remove('is-active'));
+        story.playBtn.textContent = 'Stills tour';
+      } else {
+        // finished naturally: hold the final frame, invite a replay
+        story.playBtn.textContent = 'Watch again';
+      }
+    }
+
+    story.audio.addEventListener('ended', () => {
+      if (story.i + 1 < BEATS.length) showBeat(story.i + 1);
+      else endStory(false);
+    });
+
+    story.audio.addEventListener('timeupdate', () => {
+      const dot = story.dotsWrap.children[story.i];
+      if (dot && story.audio.duration) {
+        dot.style.setProperty('--p', `${(story.audio.currentTime / story.audio.duration) * 100}%`);
+      }
+    });
+
+    story.playBtn.addEventListener('click', startStory);
+    story.exitBtn.addEventListener('click', () => endStory(true));
+    story.dotsWrap.addEventListener('click', (event) => {
+      const dot = event.target.closest('[data-beat]');
+      if (dot) showBeat(Number(dot.dataset.beat));
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !story.stage.hidden) endStory(true);
+    });
   </script>
 </body>
 </html>

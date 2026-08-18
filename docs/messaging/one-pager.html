@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preframe — narrative one-pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+
+    :root {
+      --bg: #0b0c0b;
+      --paper: #f5f0e4;
+      --soft: #cec6b6;
+      --muted: #8d938b;
+      --line: rgba(245, 240, 228, 0.16);
+      --line-strong: rgba(245, 240, 228, 0.29);
+      --cyan: #43d8d3;
+      --green: #9ee493;
+      --shadow: rgba(0, 0, 0, 0.42);
+      --serif: 'EB Garamond', Georgia, serif;
+      --mono: 'JetBrains Mono', Menlo, monospace;
+    }
+
+    html {
+      color-scheme: only dark;
+      background: var(--bg);
+      color: var(--paper);
+      font-family: var(--serif);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      padding: 1.25rem;
+      background:
+        linear-gradient(90deg, rgba(245, 240, 228, 0.034) 1px, transparent 1px),
+        linear-gradient(rgba(245, 240, 228, 0.028) 1px, transparent 1px),
+        radial-gradient(circle at 62% 0%, rgba(67, 216, 211, 0.1), transparent 30rem),
+        radial-gradient(circle at 0% 85%, rgba(158, 228, 147, 0.07), transparent 28rem),
+        var(--bg);
+      background-size: 44px 44px, 44px 44px, auto, auto, auto;
+    }
+
+    .page {
+      max-width: 56rem;
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      background: rgba(11, 12, 11, 0.82);
+      box-shadow: 0 28px 80px var(--shadow);
+    }
+
+    .topbar {
+      border-bottom: 1px solid var(--line);
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted);
+    }
+
+    .topbar a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+
+    .topbar a:hover { color: var(--paper); }
+
+    .sheet {
+      padding: clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem) clamp(2.5rem, 5vw, 3.5rem);
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 1rem;
+    }
+
+    h1 {
+      font-size: clamp(2.8rem, 8vw, 4.2rem);
+      font-weight: 500;
+      line-height: 0.98;
+      letter-spacing: -0.02em;
+    }
+
+    .lede {
+      margin-top: 1.35rem;
+      font-size: clamp(1.2rem, 2.6vw, 1.45rem);
+      color: var(--soft);
+      max-width: 36rem;
+      line-height: 1.52;
+    }
+
+    .lede em {
+      font-style: italic;
+      color: var(--paper);
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 2.5rem 0;
+    }
+
+    h2 {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+
+    .origin {
+      font-size: 1.05rem;
+      color: var(--soft);
+      line-height: 1.55;
+      max-width: 40rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .origin p + p { margin-top: 0; }
+
+    .shot {
+      margin-top: 1.5rem;
+      border: 1px solid var(--line-strong);
+      background: rgba(0, 0, 0, 0.32);
+      overflow: hidden;
+    }
+
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .shot figcaption {
+      padding: 0.75rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      border-top: 1px solid var(--line);
+      line-height: 1.5;
+    }
+
+    .shot figcaption em {
+      font-family: var(--serif);
+      font-style: italic;
+      color: var(--soft);
+      letter-spacing: 0;
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.45rem;
+      margin-top: 1.25rem;
+    }
+
+    @media (max-width: 700px) {
+      .pipeline { grid-template-columns: 1fr 1fr; }
+      .pipeline .pipe:last-child { grid-column: 1 / -1; }
+    }
+
+    .pipe {
+      border: 1px solid var(--line);
+      padding: 0.65rem 0.55rem;
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(245, 240, 228, 0.015);
+    }
+
+    .pipe span {
+      display: block;
+      margin-top: 0.35rem;
+      font-family: var(--serif);
+      font-size: 0.82rem;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--soft);
+      line-height: 1.3;
+    }
+
+    .loop {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+    }
+
+    .loop-label {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 600px) {
+      .loop { grid-template-columns: 1fr; }
+      body { padding: 0; }
+      .page { border-left: 0; border-right: 0; }
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      padding: 1rem 0.85rem;
+      background: rgba(245, 240, 228, 0.02);
+      min-height: 6.5rem;
+      display: grid;
+      align-content: start;
+      gap: 0.45rem;
+    }
+
+    .step strong {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cyan);
+    }
+
+    .step p {
+      font-size: 0.95rem;
+      color: var(--soft);
+      line-height: 1.4;
+    }
+
+    .beats {
+      list-style: none;
+      counter-reset: beat;
+      display: grid;
+      gap: 0.65rem;
+      border: 1px solid var(--line-strong);
+      padding: 1.25rem 1.25rem 1.25rem 1rem;
+      background: rgba(245, 240, 228, 0.018);
+    }
+
+    .beats li {
+      counter-increment: beat;
+      display: grid;
+      grid-template-columns: 2rem 1fr;
+      gap: 0.85rem;
+      align-items: baseline;
+      font-size: 1.08rem;
+    }
+
+    .beats li::before {
+      content: counter(beat, decimal-leading-zero);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--muted);
+      text-align: right;
+      padding-top: 0.15rem;
+    }
+
+    .grid-2 {
+      display: grid;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      padding: 1.15rem;
+      background: rgba(245, 240, 228, 0.015);
+      height: 100%;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 0.65rem;
+    }
+
+    .card ul {
+      list-style: none;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .card li {
+      font-size: 0.96rem;
+      color: var(--muted);
+      line-height: 1.45;
+      padding-left: 0.85rem;
+      border-left: 1px solid var(--line);
+    }
+
+    .strike {
+      text-decoration: line-through;
+      text-decoration-color: rgba(255, 145, 173, 0.5);
+      color: var(--muted);
+    }
+
+    .pull {
+      margin: 1.5rem 0 0;
+      padding: 1.25rem 0 1.25rem 1.25rem;
+      border-left: 2px solid var(--green);
+      font-size: clamp(1.25rem, 2.8vw, 1.55rem);
+      font-style: italic;
+      color: var(--paper);
+      line-height: 1.38;
+      max-width: 34rem;
+    }
+
+    .map {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      line-height: 1.75;
+      color: var(--muted);
+      white-space: pre;
+      overflow-x: auto;
+      padding: 1.1rem 1.25rem;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.28);
+    }
+
+    .map b { color: var(--soft); font-weight: 500; }
+
+    .foot {
+      border-top: 1px solid var(--line);
+      padding: 0.9rem 1.5rem;
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .page { border: 0; box-shadow: none; background: white; color: #111; }
+      .topbar, .foot { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <span>preframe / narrative</span>
+      <span><a href="/">site</a> · one-pager</span>
+    </header>
+
+    <article class="sheet">
+      <p class="eyebrow">messaging · june 2026</p>
+      <h1>Preframe</h1>
+      <p class="lede">
+        I make product videos from screen recordings.
+        Watch a take, mark a frame, leave a note, render again.
+        <em>That's the whole thing.</em>
+      </p>
+
+      <div class="divider"></div>
+
+      <h2>How it starts</h2>
+      <div class="origin">
+        <p>First thing I do is capture it raw — one long screen recording, like a take. I don't cut anything yet. I just grab the whole thing.</p>
+        <p>Then I drop that capture into Preframe and write what I want — the objective. Drop zone, one prompt field. Hit Create and the tool splits it into scenes, runs vision, pulls transcription, and does a content pass. A montage prompt comes back — beats, order, what to keep.</p>
+        <p><em>That's where the loop kicks in.</em></p>
+      </div>
+      <figure class="shot">
+        <img src="../media/app/studio-new.png" alt="New Composition — drop a screen recording and write Video Instructions for the LLM to unpack" width="1440" height="900" loading="lazy">
+        <figcaption><em>New Composition</em> — drop the raw capture, write the objective in Video Instructions, Create. The multimodal pass runs after that.</figcaption>
+      </figure>
+      <div class="pipeline" aria-label="Ingest pipeline">
+        <div class="pipe">raw take<span>one long capture</span></div>
+        <div class="pipe">scenes<span>split into beats</span></div>
+        <div class="pipe">vision<span>multimodal LLM</span></div>
+        <div class="pipe">transcript<span>content analysis</span></div>
+        <div class="pipe">montage<span>high-level prompt</span></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>The loop</h2>
+      <p class="loop-label">after the first cut exists — repeat until it's right</p>
+      <div class="loop">
+        <div class="step"><strong>Review</strong><p>Watch the take. Box what's wrong. Add a note if you need to.</p></div>
+        <div class="step"><strong>Revise</strong><p>Notes go in. Another render comes out.</p></div>
+        <div class="step"><strong>Export</strong><p>Pick the take you like. Done.</p></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>Quick tour</h2>
+      <ol class="beats">
+        <li>First I capture raw — one long take, the whole screen. No cutting yet.</li>
+        <li>Drop the capture, write the objective — Video Instructions. Create kicks off scene split, vision, transcription.</li>
+        <li>A prompt suggests a montage. That's where I start actually working it.</li>
+        <li>Bad frame? I put a box on it.</li>
+        <li>Add a note — something like, more motion here.</li>
+        <li>It renders again. I pick a take and export.</li>
+      </ol>
+
+      <div class="divider"></div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Voice</h3>
+          <ul>
+            <li>First person. Plain sentences.</li>
+            <li>Showing my setup, not selling a product.</li>
+            <li>Chrome stays chrome — don't narrate the sidebar.</li>
+            <li>Say less. Cut the thesis lines.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Cut these</h3>
+          <ul>
+            <li><span class="strike">A video is just code</span></li>
+            <li><span class="strike">Your cut, before the cut</span></li>
+            <li><span class="strike">The source is the output</span></li>
+            <li><span class="strike">stage the prompt, review the cut, ship the frame</span></li>
+            <li><span class="strike">the video and source should match</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>Landing copy</h2>
+      <p class="pull">I make product videos from screen recordings. Watch a take, mark a frame, leave a note, render again.</p>
+
+      <div class="grid-2" style="margin-top:1.5rem">
+        <div class="card">
+          <h3>Featured clip</h3>
+          <ul>
+            <li><strong style="color:var(--paper);font-weight:500">Talkie promo</strong> — finished video for Talkie. Made with this same setup.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Playlist groups</h3>
+          <ul>
+            <li><strong style="font-family:var(--mono);font-size:0.7rem;color:var(--paper)">clips</strong> — finished</li>
+            <li><strong style="font-family:var(--mono);font-size:0.7rem;color:var(--paper)">other takes</strong> — drafts</li>
+            <li><strong style="font-family:var(--mono);font-size:0.7rem;color:var(--paper)">fx tries</strong> — experiments</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>Site map</h2>
+      <pre class="map"><b>/</b>           landing — player, tour, loop, try locally
+<b>/concepts/</b>  design drafts (footer link only)
+<b>README</b>     same loop words, architecture stays off-site</pre>
+    </article>
+
+    <footer class="foot">
+      <span>docs/messaging/one-pager.html</span>
+      <span>print-friendly · Cmd+P</span>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "example": "scout",
+  "variant": "diary",
+  "assetSlug": "",
+  "sceneLabel": "OPENSCOUT DEMO",
+  "voice": "SAz9YHcvj6GT2YYXdXww",
+  "voiceLabel": "River",
+  "model": "eleven_multilingual_v2",
+  "mode": "beat-segments",
+  "minPauseSec": 1.7,
+  "segments": [
+    {
+      "src": "guided-tour/narration-0.mp3",
+      "videoAtSec": 2.15,
+      "durationSec": 5.15483
+    },
+    {
+      "src": "guided-tour/narration-1.mp3",
+      "videoAtSec": 9.2,
+      "durationSec": 3.111474
+    },
+    {
+      "src": "guided-tour/narration-2.mp3",
+      "videoAtSec": 17.249999999999996,
+      "durationSec": 3.715193
+    },
+    {
+      "src": "guided-tour/narration-3.mp3",
+      "videoAtSec": 25.299999999999997,
+      "durationSec": 3.761633
+    },
+    {
+      "src": "guided-tour/narration-4.mp3",
+      "videoAtSec": 32.199999999999996,
+      "durationSec": 3.111474
+    },
+    {
+      "src": "guided-tour/narration-5.mp3",
+      "videoAtSec": 39.099999999999994,
+      "durationSec": 3.715193
+    }
+  ],
+  "generatedAt": "2026-06-17T00:21:09.267Z"
+}

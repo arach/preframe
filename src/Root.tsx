@@ -42,6 +42,12 @@ import { ChapterSlate } from "./intros/ChapterSlate";
 import { KineticTitle } from "./intros/KineticTitle";
 import { MemoReel, memoReelDefaultProps, memoReelTotalFrames, type MemoReelProps } from "./projects/memo-reel/MemoReel";
 import { BlinkSpatialDemo, BLINK_SPATIAL_FRAMES } from "./projects/blink-demo/BlinkSpatialDemo";
+import {
+  GuidedTourVideo,
+  guidedTourDefaultProps,
+  guidedTourTotalFrames,
+  type GuidedTourVideoProps,
+} from "./projects/guided-tour/GuidedTourVideo";
 
 // Video settings
 const FPS = 30;
@@ -107,6 +113,24 @@ export const RemotionRoot: React.FC = () => {
         fps={FPS}
         width={1920}
         height={1080}
+      />
+
+      {/* Guided tour — CDP capture + narrated landing story */}
+      <Composition<any, GuidedTourVideoProps>
+        id="GuidedTour"
+        component={GuidedTourVideo}
+        fps={FPS}
+        width={WIDTH}
+        height={HEIGHT}
+        defaultProps={guidedTourDefaultProps}
+        durationInFrames={guidedTourTotalFrames(guidedTourDefaultProps)}
+        calculateMetadata={async ({ defaultProps, props }) => {
+          const merged: GuidedTourVideoProps = { ...defaultProps, ...props };
+          return {
+            durationInFrames: guidedTourTotalFrames(merged),
+            props: merged,
+          };
+        }}
       />
 
       {/* MemoReel — agentic routine treatment, fully driven by input props */}
