@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Braces,
   Clock,
+  FileCode2,
   Film,
   Images,
   Info,
@@ -33,7 +34,7 @@ function aspectRatio(res?: string): string {
 }
 
 export function VideoDetail({ video }: { video: Video }) {
-  const { closeVideo, openFrame, projectVideo, projectId, videoId, closeProjectInput, setView, reviewOpen } = useCatalog();
+  const { closeVideo, openFrame, openFile, projectVideo, projectId, videoId, closeProjectInput, setView, reviewOpen } = useCatalog();
   const review = useReviewContext();
   const player = usePlayer();
   const stageRef = useRef<HTMLDivElement>(null);
@@ -75,8 +76,12 @@ export function VideoDetail({ video }: { video: Video }) {
   const isComposing = !!review.composing;
   const isViewingInput = projectId != null && videoId !== projectId;
   const isFinal = video.stage === 'final';
-  const compositionId = isFinal ? inferCompositionId(video) : null;
-  const canRevise = isFinal && compositionId && review.notes.length > 0;
+  const compositionId = inferCompositionId(video);
+  // A composition result (final/wip) is, ultimately, code that renders to video.
+  const compositionSource =
+    video.stage === 'final' || video.stage === 'wip' ? resolveCompositionSource(video) : null;
+  const isComposition = !!compositionSource;
+  const canRevise = isFinal && !!compositionId && review.notes.length > 0;
 
   // Composition plan (for zoom map on finals)
   const [planClips, setPlanClips] = useState<PlanClipZoom[]>([]);
@@ -185,6 +190,16 @@ export function VideoDetail({ video }: { video: Video }) {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {compositionSource && (
+            <button
+              onClick={() => openFile(compositionSource)}
+              className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-wider text-white/50 hover:text-white/80 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] px-2 py-1 rounded-sm transition-colors"
+              title="View the source that renders this video"
+            >
+              <FileCode2 size={10} />
+              Code
+            </button>
+          )}
           {isFinal && (
             <div className="flex items-center border border-white/[0.08] rounded-sm overflow-hidden">
               {(['remotion', 'hyperframes'] as const).map(e => (
@@ -455,6 +470,29 @@ function inferCompositionId(video: Video): string | null {
   return filename.replace(/\.mp4$/i, '');
 }
 
+// Hand-authored Remotion compositions live in src/ and render to out/<Name>-*.mp4.
+// Matched by output-filename prefix so a final render maps back to its source.
+const REGISTERED_COMPOSITION_SOURCES: { prefix: string; path: string }[] = [
+  { prefix: 'MemoReel', path: 'src/projects/memo-reel/MemoReel.tsx' },
+  { prefix: 'TalkiePromo', path: 'src/components/TalkiePromoVideo.tsx' },
+];
+
+/** Resolve the source file that renders a composition video, or null if unknown. */
+function resolveCompositionSource(video: Video): string | null {
+  // Generated composition with an explicit id → .compositions/<id>/Composition.{tsx,html}
+  if (video.composition) {
+    const ext = video.engine === 'hyperframes' ? 'html' : 'tsx';
+    return `.compositions/${video.composition}/Composition.${ext}`;
+  }
+  // Registered Remotion composition, matched by output filename prefix.
+  const name = video.filename ?? video.videoUrl?.split('/').pop() ?? '';
+  const registered = REGISTERED_COMPOSITION_SOURCES.find(r => name.startsWith(r.prefix));
+  if (registered) return registered.path;
+  // Fallback: derive a .compositions/<id> path from the output filename.
+  const id = inferCompositionId(video);
+  return id ? `.compositions/${id}/Composition.tsx` : null;
+}
+
 function VideoMetadata({ video }: { video: Video }) {
   return (
     <>
@@ -469,13 +507,6 @@ function VideoMetadata({ video }: { video: Video }) {
         <span>{video.codec}</span>
         {video.reelCandidate && <span className="text-amber-400/70">Reel</span>}
       </div>
-      {video.tags?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {video.tags.map(t => (
-            <span key={t} className="text-[9px] font-mono text-white/40 px-1.5 py-0.5 rounded-sm bg-white/[0.03]">{t}</span>
-          ))}
-        </div>
-      )}
       {video.transcript && video.transcript.segments.length > 0 && (
         <section>
           <SectionTitle label="Transcript" count={video.transcript.segments.length} />

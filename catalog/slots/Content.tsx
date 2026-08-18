@@ -31,6 +31,13 @@ export function CatalogContent() {
     );
   }
 
+  // A file is open in the code viewer — show it regardless of which view we
+  // came from (catalog grid, video detail, queue, assets…). Closing it returns
+  // to the preserved view.
+  if (viewingFile) {
+    return <CodePanel />;
+  }
+
   if (view === 'new' || view === 'new-music') {
     return <NewComposition initialMode={view === 'new-music' ? 'music' : undefined} />;
   }
@@ -67,10 +74,6 @@ export function CatalogContent() {
 
   if (view === 'settings') {
     return <SettingsView />;
-  }
-
-  if (viewingFile) {
-    return <CodePanel />;
   }
 
   return (

@@ -1,15 +1,29 @@
 'use client';
 
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Check, FileCode2, Save } from 'lucide-react';
+import { CodeEditor } from 'hudsonkit';
 import { useCatalog } from '../Provider';
 import { apiClient } from '../lib/api-client';
 
-function langFromPath(path: string): string {
+type EditorLanguage =
+  | 'typescript'
+  | 'javascript'
+  | 'json'
+  | 'css'
+  | 'html'
+  | 'shell'
+  | 'markdown'
+  | 'plain';
+
+function langFromPath(path: string): EditorLanguage {
   if (path.endsWith('.tsx') || path.endsWith('.ts')) return 'typescript';
-  if (path.endsWith('.js') || path.endsWith('.jsx')) return 'javascript';
+  if (path.endsWith('.js') || path.endsWith('.jsx') || path.endsWith('.mjs')) return 'javascript';
   if (path.endsWith('.json')) return 'json';
   if (path.endsWith('.css')) return 'css';
+  if (path.endsWith('.html')) return 'html';
+  if (path.endsWith('.md') || path.endsWith('.mdx')) return 'markdown';
+  if (path.endsWith('.sh')) return 'shell';
   return 'plain';
 }
 
@@ -64,13 +78,6 @@ export function CodePanel() {
     }
   }, [viewingFile]);
 
-  const handleEditorKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-      event.preventDefault();
-      void save(code);
-    }
-  }, [code, save]);
-
   if (!viewingFile) return null;
 
   return (
@@ -116,13 +123,13 @@ export function CodePanel() {
             Loading…
           </div>
         ) : (
-          <textarea
-            value={code}
-            onChange={event => setCode(event.target.value)}
-            onKeyDown={handleEditorKeyDown}
-            data-language={langFromPath(viewingFile)}
-            spellCheck={false}
-            className="h-full w-full resize-none border-0 bg-[#0d0d0d] px-4 py-3 font-mono text-[12px] leading-relaxed text-white/75 outline-none caret-cyan-300 selection:bg-cyan-400/20"
+          <CodeEditor
+            code={code}
+            language={langFromPath(viewingFile)}
+            onChange={setCode}
+            onSave={save}
+            showLineNumbers
+            className="h-full"
           />
         )}
       </div>

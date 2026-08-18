@@ -84,13 +84,6 @@ export function CatalogInspector() {
             <Row label="Analysis" value={v.analysisStatus.replace('-', ' ')} />
             <Row label="Frames" value={v.frameCount != null ? `${v.frameCount}` : '—'} />
             {v.reelCandidate && <Row label="Reel" value="✓" />}
-            {v.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {v.tags.map(t => (
-                  <span key={t} className="text-[9px] font-mono text-white/40 px-1.5 py-0.5 rounded-sm bg-white/[0.03]">{t}</span>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>

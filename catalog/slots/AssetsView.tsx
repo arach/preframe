@@ -394,13 +394,6 @@ function AssetCard({ video, onOpen, onDelete, dim }: { video: Video; onOpen: (id
         {video.scenes?.length > 0 && <span>{video.scenes.length} scenes</span>}
       </div>
 
-      {video.tags?.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {video.tags.slice(0, 4).map(t => (
-            <span key={t} className="text-[9px] font-mono text-white/30 px-1.5 py-0.5 rounded-sm bg-white/[0.03]">{t}</span>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

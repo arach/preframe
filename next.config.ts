@@ -4,11 +4,15 @@ import { fileURLToPath } from "node:url";
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
 
+// Local dev render backend: any localhost host can embed the catalog (Hudson
+// :3500, Atelier :3034, standalone :3100, …). A static header can only emit one
+// origin and can't echo the request, so a hardcoded :3500 silently breaks every
+// other embedder's cross-origin probe. Wildcard is fine here — preframe binds to
+// localhost only and these endpoints are unauthenticated (no Allow-Credentials).
 const corsHeaders = [
-  { key: "Access-Control-Allow-Origin", value: "http://localhost:3500" },
+  { key: "Access-Control-Allow-Origin", value: "*" },
   { key: "Access-Control-Allow-Methods", value: "GET, POST, PUT, PATCH, DELETE, OPTIONS" },
   { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization" },
-  { key: "Vary", value: "Origin" },
 ];
 
 const nextConfig: NextConfig = {
