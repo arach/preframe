@@ -44,12 +44,58 @@ public/mira-action/source/*.mov
 hyperframes/**/*.mp3
 hyperframes/**/*.mp4
 hyperframes/**/*.mov
+hyperframes/**/*.wav
 tools/hyperframes-toolkit/**/*.mp3
 tools/hyperframes-toolkit/**/*.mp4
 tools/hyperframes-toolkit/**/*.mov
 tools/hyperframes-toolkit/inventory/media/
 tools/hyperframes-toolkit/inventory/videos/
 tools/hyperframes-toolkit/renders/
+
+# Local scratch / throwaway experiments
+.scratch/
+*.tmp.*
+
+# Per-project render + capture artifacts (regenerable, large)
+hyperframes/**/work-*/
+hyperframes/**/renders/
+hyperframes/**/snapshots/
+hyperframes/**/takes/
+hyperframes/**/.thumbnails/
+hyperframes/**/.waveform-cache/
+hyperframes/**/.media/
+
+# Compiled local staging helpers (Swift sources are tracked)
+hyperframes/**/stage/audiodev
+hyperframes/**/stage/mousedrag
+
+# Screen-recording session sidecars
+*.mov.log
+*.mov.stop
+*.mov.finished
+*.mov.pointer-events.jsonl
+
+# Raw app captures — only the cuts docs/index.html loads are tracked
+docs/media/app/capture-*/
+docs/media/**/*.mov
+
+# Stills and stitched narration the site doesn't load — regenerate on demand
+docs/media/app/studio-assets.png
+docs/media/app/studio-detail.png
+docs/media/app/studio-fx.png
+docs/media/app/narration-full.*
+public/guided-tour/narration-full.*
+
+# Generated narration takes, one dir per TOUR_EXAMPLE x TOUR_SCRIPT pair.
+# Regenerate with `bun run gen:narration:all`; the source of truth is
+# src/projects/guided-tour/scripts.data.ts. Nothing links to these.
+docs/media/app/*/
+public/guided-tour/*/
+
+# Guided-tour renders (regenerate with `bun run render:guided-tour`)
+public/guided-tour/**/*.mp3
+public/guided-tour/**/*.mp4
+public/guided-tour/**/*.mov
 
 # Transcripts
 public/transcripts/
@@ -65,6 +111,13 @@ src/components/debug/
 src/projects/hostai-montage/
 src/projects/audit-demo/
 public/hostai-*
+
+# Product-bespoke reels and research — these are Talkie/Scout content that
+# happens to be authored here, not reusable preframe compositions. Universal
+# reels (evidence-reel, work-reel, codex-reel) stay tracked.
+hyperframes/talkie-*/
+docs/talkie-capture-slate.md
+docs/messaging/scout-talkie-*.audit.md
 .data/
 .clip-cache/
 .queue/
