@@ -1,0 +1,88 @@
+{
+  "film": "OpenScout — theme range",
+  "runtime_frames": 1872,
+  "runtime_s": 31.2,
+  "fps": 60,
+  "note": "One locked picture, two scores. These are the only two assets that differ between deliverable A and deliverable B.",
+  "scores": [
+    {
+      "variant": "beat",
+      "asset": "public/tracks/openscout/openscout-theme-range-beat.wav",
+      "why": "Beat-forward cut: window inside the locked groove, snapped to a measured downbeat so the film’s 144-frame bar grid and the music’s bars are the same grid.",
+      "generator": {
+        "script": "scripts/generate-theme-range-scores.ts",
+        "path": "Preframe’s configured MiniMax Music path (readMusicModelConfig + getMiniMaxApiKey)",
+        "endpoint": "https://api.minimax.io/v1/music_generation",
+        "model": "music-2.6",
+        "instrumental": true,
+        "credential": "Resolved from MINIMAX_API_KEY in the environment. Never written to disk or logged.",
+        "prompt_note": "BEAT and DRIFT are separate generations from separate prompts with no shared instrumentation, no shared rhythmic layer and different harmonic rates. Neither is an EQ or tempo variant of the other."
+      },
+      "raw_generation": {
+        "file": "public/tracks/generated/openscout-theme-range-beat-mstrn9f1.mp3",
+        "sha256": "95d9296e5ca466871a4e90a62f4d824825885ff794163a40cbda22dce03ff87b",
+        "duration_s": 128.19737
+      },
+      "tempo": {
+        "requested_bpm": 120,
+        "measured_bpm": 105.08,
+        "note": "MiniMax did not honour the requested tempo. The film was built on the delivered tempo, nudged to a round value.",
+        "mastered_bpm": 100,
+        "atempo": 0.951655881233346,
+        "consequence": "At 100 BPM one 4/4 bar is exactly 2.400 s = 144 frames at 60 fps, so every chapter boundary in the edit lands on a downbeat.",
+        "first_downbeat_raw_s": 44.15098058622002,
+        "downbeat_beat_index": 3
+      },
+      "mastering": {
+        "window_start_s": 46.434954701180054,
+        "window_snapped_to_downbeat": true,
+        "runtime_s": 31.2,
+        "chain": "atempo=0.951655881,atrim=0:31.200000,loudnorm=I=-16.5:TP=-1.5:LRA=7:linear=true:measured_I=-15.00:measured_LRA=2.80:measured_TP=1.38:measured_thresh=-25.00,afade=t=in:st=0:d=0.25,afade=t=out:st=28.800000:d=2.4,apad",
+        "format": "48 kHz, stereo, 24-bit PCM WAV",
+        "sha256": "9114df3a6a0b0b5449d3d8ff8243ddd3ad9a88c7aa8b35de622df9242a546640"
+      },
+      "measured": {
+        "duration_s": 31.2,
+        "integrated_lufs": "-16.8",
+        "lra_lu": "1.7",
+        "peak_dbfs": "-1.5"
+      }
+    },
+    {
+      "variant": "drift",
+      "asset": "public/tracks/openscout/openscout-theme-range-drift.wav",
+      "why": "Ambient cut: no pulse to align, so the window is chosen for arc — quiet open, bloom under the reveal, natural decay into the tail.",
+      "generator": {
+        "script": "scripts/generate-theme-range-scores.ts",
+        "path": "Preframe’s configured MiniMax Music path (readMusicModelConfig + getMiniMaxApiKey)",
+        "endpoint": "https://api.minimax.io/v1/music_generation",
+        "model": "music-2.6",
+        "instrumental": true,
+        "credential": "Resolved from MINIMAX_API_KEY in the environment. Never written to disk or logged.",
+        "prompt_note": "BEAT and DRIFT are separate generations from separate prompts with no shared instrumentation, no shared rhythmic layer and different harmonic rates. Neither is an EQ or tempo variant of the other."
+      },
+      "raw_generation": {
+        "file": "public/tracks/generated/openscout-theme-range-drift-mstrqlig.mp3",
+        "sha256": "76b0ee208aadf08bcd7316ccb8ccf04c33d633cbcd80870d1380a167eb0248bf",
+        "duration_s": 148.43356
+      },
+      "tempo": {
+        "note": "Ambient, no pulse. No tempo alignment applied or needed."
+      },
+      "mastering": {
+        "window_start_s": 84,
+        "window_snapped_to_downbeat": false,
+        "runtime_s": 31.2,
+        "chain": "atrim=0:31.200000,loudnorm=I=-19:TP=-1.5:LRA=11:linear=true:measured_I=-14.25:measured_LRA=2.80:measured_TP=0.81:measured_thresh=-24.47,afade=t=in:st=0:d=1.2,afade=t=out:st=27.200000:d=4,apad",
+        "format": "48 kHz, stereo, 24-bit PCM WAV",
+        "sha256": "67e8ec39ddb4d142a120319cfdade76e8cf8a7b2accb7d772e4e4fd068bb02d5"
+      },
+      "measured": {
+        "duration_s": 31.2,
+        "integrated_lufs": "-19.1",
+        "lra_lu": "3.0",
+        "peak_dbfs": "-3.9"
+      }
+    }
+  ]
+}

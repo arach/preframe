@@ -1,0 +1,67 @@
+{
+  "asset": "public/tracks/openscout/openscout-reimagined-score.wav",
+  "role": "Score for the OpenScout Reimagined flagship film (55.000 s). Eerie and spacious with a restrained, legible pulse, as briefed.",
+  "provenance_summary": "A NEW master of an EXISTING raw MiniMax generation owned by the operator. Not a fresh generation, and not a copy of an existing master.",
+  "generation_not_attempted": {
+    "reason": "MiniMax Music was not reachable in this environment. readMusicModelConfig() requires a keyed music slot or MINIMAX_API_KEY; .data/provider.json carries empty apiKey strings on both the llm and vlm slots and MINIMAX_API_KEY is unset.",
+    "consequence": "scripts/generate-montage-score-v3-beat.ts cannot run here, so no new cue could be generated for this era.",
+    "remedy": "Set MINIMAX_API_KEY and re-run the generator, then re-run this masterer against the new raw file. Picture is unaffected: only edit-reimagined.ts `score` and a re-render are needed."
+  },
+  "raw_source": {
+    "file": "public/tracks/generated/openscout-v3-beat-msqxiv1l.mp3",
+    "sha256": "8ec5563eb072b5892a57ebe2a06c9adfee58f7e72669484014683126bac803cf",
+    "duration_s": 133.886259,
+    "sidecar": "public/tracks/generated/openscout-v3-beat-msqxiv1l.json",
+    "model": "music-2.6",
+    "endpoint": "https://api.minimax.io/v1/music_generation",
+    "instrumental": true,
+    "origin": "Generated through the operator's own MiniMax account by scripts/generate-montage-score-v3-beat.ts on 2026-08-12 for the V3 work. Prompt asked for an eerie, spacious electronic instrumental with a real but restrained pulse, no vocals and no EDM gestures."
+  },
+  "overlap_with_v3_master": {
+    "v3_window_s": [
+      62.256,
+      107.28727
+    ],
+    "this_window_s": [
+      52.2491,
+      107.2873
+    ],
+    "note": "This window opens 10.007 s earlier and runs 10.083 s longer than the V3 Edit A master, but roughly 82% of its material is shared with it. The two films therefore share a musical identity. Recorded here rather than glossed over."
+  },
+  "window": {
+    "start_s": 52.2491,
+    "end_s": 107.2873,
+    "length_s": 55.0382,
+    "why_this_window": "The raw generation's first ~56 s is a 10-second phrase cycle decaying to near silence between phrases (troughs of -42 to -52 dBFS at 6-8, 16-18, 26-28, 36-38 and 46-48 s), which reads as dropouts under picture. 56-108 s is the sustained locked section. This window opens just inside the lift into it and ends where the arrangement thins naturally.",
+    "downbeat_alignment": "Six bars before the measured downbeat the V3 master was cut from (62.256 s), in the delivered 143.9 BPM timebase (bar = 1.66782 s).",
+    "no_crossfade": "A single continuous window. No splice, so the pulse stays phase-continuous for the whole film."
+  },
+  "tempo": {
+    "delivered_bpm": 143.9,
+    "mastered_bpm": 144,
+    "atempo": 1.0006949,
+    "consequence": "One bar is exactly 50 frames at 30 fps. The picture is 33 bars (29 content + 4 outro) = 1650 frames = 55.000 s, so every chapter boundary lands on a downbeat."
+  },
+  "mastering": {
+    "chain": "atempo=1.0006949 → loudnorm(I=-18:TP=-1.5:LRA=9) → aresample=48000 → afade in 0.35s → afade out 3s at 52.0s → apad → atrim to exactly 2640000 samples (55.000s)",
+    "format": "48 kHz, stereo, 24-bit PCM WAV",
+    "script": "scripts/master-openscout-reimagined-score.ts",
+    "sha256": "85cb5208fd611a596457a808d1eae4947721bf8bc6818213ab8a3612743d4e7a",
+    "bytes": 15840102
+  },
+  "measured": {
+    "duration_s": 55,
+    "integrated_lufs": -18,
+    "lra_lu": 6.7,
+    "true_peak_dbfs": -1.5
+  },
+  "in_composition": {
+    "edit": "src/projects/openscout-montage/edit-reimagined.ts",
+    "gain": 0.92,
+    "safety_ramps_frames": {
+      "in": 8,
+      "out": 18
+    }
+  },
+  "rights": "Original instrumental generated through the operator's own MiniMax account. No third-party recordings, samples or vocals."
+}
