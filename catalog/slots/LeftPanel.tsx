@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import {
   ArrowLeft,
   BookOpen,
+  Boxes,
   ChevronRight,
   Code2,
   FileCode2,
@@ -28,6 +29,7 @@ import { pathForView } from '../lib/routes';
 
 type NavId =
   | 'treatments'
+  | 'runs'
   | 'queue'
   | 'assets'
   | 'music'
@@ -127,7 +129,9 @@ export function CatalogLeftPanel() {
   }
 
   const active: NavId =
-    view === 'queue'
+    view === 'runs'
+      ? 'runs'
+      : view === 'queue'
       ? 'queue'
       : view === 'assets'
         ? 'assets'
@@ -205,6 +209,14 @@ export function CatalogLeftPanel() {
 
       <nav className="flex flex-col gap-4 px-2 flex-1 min-h-0 overflow-y-auto frame-scrollbar">
         <NavSection label="Library">
+          <NavItem
+            icon={<Boxes size={14} />}
+            label="Runs"
+            active={active === 'runs'}
+            href={pathForView('runs')}
+            onClick={() => setView('runs')}
+            hint="Creative exercises and their artifacts"
+          />
           <NavItem
             icon={<Film size={14} />}
             label="Treatments"

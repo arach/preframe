@@ -26,6 +26,8 @@ import {
   isCatalogPathname,
   parseCatalogRoute,
   pathForResource,
+  pathForRun,
+  pathForTrack,
   pathForView,
   stripLegacyDetailParams,
   withListQuery,
@@ -76,6 +78,17 @@ export interface CatalogContextValue {
   setSnippetCategory: (c: string) => void;
   sort: string;
   setSort: (s: string) => void;
+
+  // Runs — /runs, /runs/:slug, /runs/:slug/items/:itemId
+  runSlug: string | null;
+  runItemId: string | null;
+  openRun: (slug: string) => void;
+  openRunItem: (slug: string, itemId: string | null) => void;
+  closeRun: () => void;
+
+  // Music resource — /music/:trackId
+  musicId: string | null;
+  openTrack: (id: string) => void;
 
   // Project context — anchors left panel to a "project" video
   projectId: string | null;
@@ -172,6 +185,9 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
       ? Number(legacyFrame)
       : null);
   const reviewOpen = route.review || legacyReview;
+  const runSlug = route.runSlug;
+  const runItemId = route.runItemId;
+  const musicId = route.musicId;
 
   const setView = useCallback(
     (v: string | null) => {
@@ -337,6 +353,29 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
     if (!id) return;
     navigatePath(pathForResource({ collection: 'treatments', id }), 'replace');
   }, [navigatePath, projectId, videoId]);
+
+  // --- Runs ---
+  const openRun = useCallback(
+    (slug: string) => navigatePath(pathForRun(slug), 'push'),
+    [navigatePath],
+  );
+
+  /**
+   * Selecting a member rewrites the path in place (replace, not push) so the
+   * back button leaves the run rather than walking every artifact the user
+   * clicked — but the URL still deep-links to exactly what is on screen.
+   */
+  const openRunItem = useCallback(
+    (slug: string, itemId: string | null) => navigatePath(pathForRun(slug, itemId), 'replace'),
+    [navigatePath],
+  );
+
+  const closeRun = useCallback(() => navigatePath(pathForView('runs'), 'push'), [navigatePath]);
+
+  const openTrack = useCallback(
+    (id: string) => navigatePath(pathForTrack(id), 'replace'),
+    [navigatePath],
+  );
 
   const setSnippetCategory = useCallback(
     (c: string) => {
@@ -679,6 +718,13 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
       setSnippetCategory,
       sort,
       setSort,
+      runSlug,
+      runItemId,
+      openRun,
+      openRunItem,
+      closeRun,
+      musicId,
+      openTrack,
       projectId,
       projectVideo,
       openProjectInput,
@@ -729,6 +775,13 @@ export function CatalogProvider({ children, standalone }: CatalogProviderProps) 
       setSnippetCategory,
       sort,
       setSort,
+      runSlug,
+      runItemId,
+      openRun,
+      openRunItem,
+      closeRun,
+      musicId,
+      openTrack,
       projectId,
       projectVideo,
       openProjectInput,

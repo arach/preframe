@@ -1,0 +1,102 @@
+{
+  "title": "OpenScout Montage Score (45s)",
+  "purpose": "Original instrumental soundtrack for the OpenScout 45-second product montage",
+  "generator": {
+    "provider": "MiniMax",
+    "model": "music-2.6",
+    "endpoint": "https://api.minimax.io/v1/music_generation",
+    "path": "Preframe configured music slot (lib/provider.ts readMusicModelConfig + getMiniMaxApiKey); credential resolved from environment, never printed",
+    "traceId": "06cbd3332501d27e25b0391cfa12babb",
+    "generatedAt": "2026-08-12",
+    "instrumental": true,
+    "lyrics": false,
+    "request": {
+      "sample_rate": 44100,
+      "bitrate": 256000,
+      "format": "mp3",
+      "output_format": "hex",
+      "is_instrumental": true,
+      "stream": false
+    },
+    "returnedDurationSeconds": 199.053061,
+    "prompt": "A 45-second modern kinetic ambient electronic instrumental for a software product montage. Warm controlled low end: a round soft sub and gentle analog bass pulse that never booms. Crisp restrained percussion: light tactile clicks, brushed hats and soft rim ticks, precise and understated, no big drums. Motifs of signal, routing and connection: short pinging tones that hand off between left and right, quiet telemetry blips, granular air, subtle delay trails suggesting spatial movement across a wide stereo field. Premium and slightly mysterious mood, minor-leaning harmony, clean sustained pads and a few clear bell-like tones. Natural quiet intro over the first 8 seconds, patient build with added pulse and widening texture through the middle, a small lift near 30 seconds, then subtract and resolve into a warm settled ending with a clean natural tail. No vocals, no spoken words, no lyrics, no choir, no cheesy corporate uplift, no supersaw anthem, no lo-fi hip hop beat, no trailer risers, no impacts, no drops, no dense melody."
+  },
+  "edit": {
+    "rationale": "The 199s generation contains a natural quiet intro and build at its head and the composition's own resolved outro at its tail. Both were used so the 45s cut has a real intro, build and composed resolution instead of an arbitrary trim.",
+    "segments": [
+      { "role": "intro + build", "source": "00:00.000-00:35.500" },
+      { "role": "resolution + natural decay", "source": "03:06.000-03:18.600" }
+    ],
+    "processing": [
+      "resample 44.1 kHz to 48 kHz",
+      "0.350 s linear fade-in",
+      "3.100 s equal-power (qsin) crossfade joining the two segments in a low-energy passage",
+      "+3.0 dB gain",
+      "transparent peak limiter, ceiling -2.5 dBFS sample (attack 5 ms, release 60 ms) — engages only on isolated transients",
+      "0.650 s fade-out from 44.350 s to a silent tail",
+      "hard duration lock to 45.000 s",
+      "encode stereo 24-bit PCM WAV at 48 kHz, then MP3 320 kbps CBR and AAC 256 kbps"
+    ],
+    "command": "ffmpeg -ss 0 -t 35.5 -i <source.mp3> -ss 186.0 -t 12.6 -i <source.mp3> -filter_complex \"[0:a]aresample=48000,afade=t=in:st=0:d=0.35[a];[1:a]aresample=48000[b];[a][b]acrossfade=d=3.1:c1=qsin:c2=qsin,volume=3.0dB,alimiter=limit=-2.5dB:attack=5:release=60:level=disabled,afade=t=out:st=44.35:d=0.65,apad=pad_dur=2[m]\" -map \"[m]\" -t 45.0 -c:a pcm_s24le -map_metadata -1 openscout-montage-score-45s.wav"
+  },
+  "master": {
+    "durationSeconds": 45.0,
+    "sampleRate": 48000,
+    "channels": 2,
+    "integratedLoudnessLufs": -18.6,
+    "loudnessRangeLu": 9.1,
+    "truePeakDbtp": -1.58,
+    "headroomNote": "Conservative bed level with ~1.6 dB true-peak headroom; raise or duck at the edit rather than re-limiting."
+  },
+  "files": [
+    {
+      "path": "/private/tmp/openscout-montage-score/openscout-montage-score-45s.wav",
+      "role": "master",
+      "codec": "pcm_s24le",
+      "sampleRate": 48000,
+      "channels": 2,
+      "durationSeconds": 45.0,
+      "sha256": "5188b7326c04a757ea27dc013326913286f962c3ec0d150bb19ea1a0e81c9141"
+    },
+    {
+      "path": "/private/tmp/openscout-montage-score/openscout-montage-score-45s.mp3",
+      "role": "delivery",
+      "codec": "mp3",
+      "bitrate": "320 kbps CBR",
+      "sampleRate": 48000,
+      "channels": 2,
+      "durationSeconds": 45.0,
+      "sha256": "71773c430641be90107c79d6df6293eff9ccca262017e29b10681844bed8a562"
+    },
+    {
+      "path": "/private/tmp/openscout-montage-score/openscout-montage-score-45s.m4a",
+      "role": "delivery",
+      "codec": "aac",
+      "bitrate": "256 kbps",
+      "sampleRate": 48000,
+      "channels": 2,
+      "durationSeconds": 45.0,
+      "sha256": "3880b5474db7eb5710f3501e2b176ba8ea2af68588d0f96a8aed564d28ddca3e"
+    },
+    {
+      "path": "/private/tmp/openscout-montage-score/openscout-montage-source-minimax-music-2.6.mp3",
+      "role": "untouched generation source (best format returned by the API)",
+      "codec": "mp3",
+      "bitrate": "256 kbps",
+      "sampleRate": 44100,
+      "channels": 2,
+      "durationSeconds": 199.053061,
+      "sha256": "8691e0a3c335d29ac7623da024e6b494fab9a2676508520a1e01e0b32842c3bc"
+    },
+    {
+      "path": "/private/tmp/openscout-montage-score/openscout-montage-source-minimax-music-2.6.json",
+      "role": "raw generation metadata (request redacted, no secrets)"
+    }
+  ],
+  "provenance": {
+    "externalReferenceAudioSupplied": false,
+    "externalSamplesAddedDuringEdit": false,
+    "repoTouched": "none — /Users/art/dev/preframe was read-only for provider resolution; no files written inside either checkout",
+    "rightsNote": "Generated through the workspace owner's MiniMax account. No external reference audio or samples were supplied. Use remains subject to the owner's MiniMax service terms; copyright status and exclusivity were not independently audited."
+  }
+}

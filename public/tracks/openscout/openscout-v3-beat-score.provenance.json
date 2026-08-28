@@ -1,0 +1,50 @@
+{
+  "asset": "public/tracks/openscout/openscout-v3-beat-score.wav",
+  "role": "Beat-led score for OpenScout V3 Edit A (dark hero). The existing eerie/spacious openscout-montage-score.wav stays the bed for Edit B and was not regenerated.",
+  "why_generated": "The brief allows one fresh MiniMax track for the beat-led edit only if existing assets contain no appropriate rhythmic counterpart. They do not: public/tracks/openscout/openscout-montage-score.wav is the ambient bed being reused for Edit B, public/tracks/blink/blink-spatial-score.wav is a calm chamber-electronic cue written for a different product, and the remaining public/tracks entries are unrelated library music.",
+  "generator": {
+    "script": "scripts/generate-montage-score-v3-beat.ts",
+    "path": "Preframe's configured MiniMax Music path (readMusicModelConfig + getMiniMaxApiKey)",
+    "endpoint": "https://api.minimax.io/v1/music_generation",
+    "model": "music-2.6",
+    "instrumental": true,
+    "audio_setting": { "sample_rate": 44100, "bitrate": 256000, "format": "mp3" },
+    "credential": "Resolved from MINIMAX_API_KEY in the environment. Never written to disk or logged.",
+    "note": "The worktree had no .data/provider.json, so the music slot did not resolve until the main checkout's provider.json (both slots keyless) was copied in. .data/ is gitignored."
+  },
+  "raw_generation": {
+    "file": "public/tracks/generated/openscout-v3-beat-msqxiv1l.mp3",
+    "sha256": "8ec5563eb072b5892a57ebe2a06c9adfee58f7e72669484014683126bac803cf",
+    "duration_s": 133.886259,
+    "sidecar": "public/tracks/generated/openscout-v3-beat-msqxiv1l.json"
+  },
+  "tempo": {
+    "requested_bpm": 120,
+    "delivered_bpm": 143.9,
+    "note": "MiniMax did not honour the requested tempo. Rather than fight it, the film's grid was rebuilt on the delivered tempo and the master was nudged to a round value.",
+    "measurement": "Positive log-domain spectral-flux onset envelope at 8 kHz / 64-sample hop, autocorrelated over 4 lags across the 62–107 s window; 0.02 BPM search resolution.",
+    "mastered_bpm": 144.0,
+    "atempo": 1.0006949,
+    "consequence": "At 144 BPM one bar is exactly 50 frames at 30 fps, so Edit A's chapter grid is a whole number of bars (5+3+2+2+5+2+3+2 = 24) and every chapter boundary lands on a downbeat."
+  },
+  "mastering": {
+    "window": "62.2560 s → 107.28727 s of the raw generation, cut from a measured downbeat rather than an arbitrary point",
+    "why_this_window": "The generation's first ~56 s is a sparse 10-second phrase cycle that decays to near silence; 56–108 s is the sustained, locked section. The window opens on a 2-second lift into that section and runs to where it thins out.",
+    "chain": "atempo=1.0006949 → loudnorm(I=-18:TP=-1.5:LRA=9) → apad → afade in 0.35 s → afade out 3.0 s at 42.0 s",
+    "no_crossfade": "Deliberate: a single continuous window keeps the pulse unbroken for the whole film and avoids the beat-phase flam a splice would introduce.",
+    "format": "48 kHz, stereo, 24-bit PCM WAV",
+    "sha256": "6f6c04ae8689653a3d133bc38cbaea73dd6e40be2f82ad31dc73200ba9ff82cf"
+  },
+  "measured": {
+    "duration_s": 44.917208,
+    "integrated_lufs": -17.8,
+    "lra_lu": 6.8,
+    "true_peak_dbfs": -1.5,
+    "duration_note": "83 ms short of the 45.000 s composition. The shortfall sits entirely inside the 3.0 s fade-out, which has already reached silence, so it is inaudible and leaves the picture unaffected. Comparable to the first montage's score, which measured -18.6 LUFS / -1.58 dBTP."
+  },
+  "in_composition": {
+    "gain": 0.92,
+    "safety_ramps_frames": { "in": 8, "out": 18 }
+  },
+  "rights": "Original instrumental generated for this project through the operator's own MiniMax account. No third-party recordings, samples or vocals."
+}

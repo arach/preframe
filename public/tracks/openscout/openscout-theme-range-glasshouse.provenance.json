@@ -1,0 +1,92 @@
+{
+  "asset": "public/tracks/openscout/openscout-theme-range-glasshouse.wav",
+  "film": "OpenScout — theme range (locked 31.2 s picture)",
+  "role": "A fresh, contemporary instrumental score. Picture and outro unchanged.",
+  "runtime_frames": 1872,
+  "runtime_s": 31.2,
+  "fps": 60,
+  "generator": {
+    "script": "scripts/generate-theme-range-vibe-score.ts",
+    "path": "Preframe’s configured MiniMax Music path (readMusicModelConfig + getMiniMaxApiKey)",
+    "endpoint": "https://api.minimax.io/v1/music_generation",
+    "model": "music-2.6",
+    "instrumental": true,
+    "audio_setting": {
+      "sample_rate": 44100,
+      "bitrate": 256000,
+      "format": "mp3"
+    },
+    "credential": "Resolved from MINIMAX_API_KEY in the environment. Never written to disk or logged.",
+    "variant": "glasshouse",
+    "prompt": "A cinematic melodic-techno instrumental around 100 BPM in a dark minor key — sophisticated, hypnotic and cool. A tight dry kick with real weight, a deep sustained bass note pulsing underneath, crisp closed hats with a subtle sixteenth-note pattern, and a single dry clap on the backbeat, all mixed with air around them. The hook is a hypnotic arpeggiated synth figure — glassy, slightly detuned, drenched in a long dark reverb — that cycles every two bars and slowly opens its filter across the piece. Beneath it, low bowed strings hold long minor chords that shift roughly every four bars, giving the groove a serious, slightly mysterious weight. Elegant and restrained rather than aggressive: this should feel like a beautiful machine running, not a club track. Structure: bass pulse and air alone for eight seconds; the beat lands by twelve seconds; the arpeggio enters around eighteen seconds and takes over; fullest and most open between thirty-two and forty-eight seconds; a two-bar breakdown to strings and reverb near fifty-five seconds; the groove returns once, then decays cleanly. Instrumental only, no vocals. Modern and understated — no retro synthwave, no big EDM drop, no heroic uplift."
+  },
+  "selection": {
+    "candidates_generated": 3,
+    "candidates": [
+      "nightfall (organic downtempo house)",
+      "glasshouse (cinematic melodic techno)",
+      "signal (broken-beat future soul)"
+    ],
+    "selected": "glasshouse",
+    "why": "Measured against the brief with scripts/analyze-vibe-candidates.ts and scripts/transcribe-vibe-candidate.ts. Glasshouse has the strongest pulse (autocorrelation clarity 2.13-2.28 vs 1.27 and 1.14), the warmest and widest spectrum (centroid 2592 Hz and 30.5% of energy below 250 Hz, against 3.2-3.7 kHz and 22-26% for the others — the rejected circus pass was defined by a bright, thin, mid-forward spectrum, and this is the furthest from it), a lead that is genuinely centred and repeating rather than wandering (8 distinct pitches around a clear F#4 axis over a B minor bass movement, vs 10 scattered pitches with no centre), and an intact arrangement with no model dropouts — the signal candidate glitched to below -44 dBFS at seven points, which no window can hide."
+  },
+  "raw_generation": {
+    "file": "public/tracks/generated/openscout-vibe-glasshouse-mstvwgk6.mp3",
+    "sha256": "1f4eeb5656a0f883577a71c97b22b4ea92938906f5edd8b69b50394333e2fdba",
+    "duration_s": 134.083628,
+    "sidecar": "public/tracks/generated/openscout-vibe-glasshouse-mstvwgk6.json"
+  },
+  "tempo": {
+    "requested_bpm": 100,
+    "measured_bpm": 123.84,
+    "measurement": "Positive log-domain spectral-flux onset envelope at 8 kHz / 64-sample hop, autocorrelated over 4 lag multiples across the 96-126 s window at 0.005 BPM resolution.",
+    "note": "MiniMax did not honour the requested tempo — all three candidates in this pass landed near 124 BPM.",
+    "mastered_bpm": 125,
+    "atempo": 1.0093669250646429,
+    "why_not_100": "Conforming to the film’s 100 BPM grid would need an atempo of 0.8075, a 19% slowdown that smears transients and makes a confident groove draggy. 125.000 is a ~0.9% nudge, inaudible and artefact-free.",
+    "consequence": "At 125 BPM one 4/4 bar is 1.920 s, and five music bars are exactly four film bars (9.600 s). With the window snapped so music bar 1 lands on frame 0, a musical downbeat coincides with a film chapter head at the open, at POLAR, at the REVEAL, and inside the outro. The chapters between those float against the music.",
+    "downbeat_coincidences": [
+      {
+        "frame": 0,
+        "second": 0,
+        "music_bar": 1
+      },
+      {
+        "frame": 576,
+        "second": 9.6,
+        "music_bar": 6
+      },
+      {
+        "frame": 1152,
+        "second": 19.2,
+        "music_bar": 11
+      },
+      {
+        "frame": 1728,
+        "second": 28.8,
+        "music_bar": 16
+      }
+    ],
+    "first_downbeat_raw_s": 96.414,
+    "downbeat_beat_index": 0
+  },
+  "mastering": {
+    "window_start_s": 94.47601550387589,
+    "window_end_s": 126.96826356589274,
+    "window_snapped_to_downbeat": true,
+    "why_this_window": "Chosen for arc, then snapped. The generation sits in a breakdown around 94-97 s, the full groove returns at ~98 s and holds through ~117 s, then thins naturally from 118 s into a 14-second decay. Against the locked picture that reads as a quiet open under the opening type, the groove locking in as the theme range begins, full through the reveal, and thinning through the outro under the wire mark.",
+    "runtime_s": 31.2,
+    "chain": "atempo=1.009366925,atrim=0:31.200000,loudnorm=I=-18:TP=-1.5:LRA=9:linear=true:measured_I=-12.04:measured_LRA=4.60:measured_TP=0.96:measured_thresh=-22.04,afade=t=in:st=0:d=0.5,afade=t=out:st=28.200000:d=3,apad",
+    "fade_in_s": 0.5,
+    "fade_out_s": 3,
+    "format": "48 kHz, stereo, 24-bit PCM WAV",
+    "sha256": "1da0366954699f4f90c336a56a86ecea3cda1149c8b8da235232b4b13c375674"
+  },
+  "measured": {
+    "duration_s": 31.2,
+    "integrated_lufs": "-17.8",
+    "lra_lu": "3.6",
+    "peak_dbfs": "-5.0"
+  },
+  "rights": "Original instrumental generated for this project through the operator’s own MiniMax account. No third-party recordings, samples or vocals."
+}
