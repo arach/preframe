@@ -21,14 +21,19 @@ import { formatDuration, formatTime } from '../../lib/types';
 import type { ReviewNote, ReviewNoteKind } from '../../lib/types';
 import type { Composing } from '../hooks/useReview';
 import { MemoReelInspector, isMemoReel } from './MemoReelInspector';
+import { RunInspector } from './RunInspector';
 
 export function CatalogInspector() {
-  const { selectedVideo, filter, counts, filteredVideos, view } = useCatalog();
+  const { selectedVideo, filter, counts, filteredVideos, view, runSlug } = useCatalog();
   const review = useReviewContext();
   const [detailsOpen, setDetailsOpen] = useState(true);
 
   if (view === 'fx') {
     return <FxInspector />;
+  }
+
+  if (view === 'runs' && runSlug) {
+    return <RunInspector slug={runSlug} />;
   }
 
   if (!selectedVideo) {

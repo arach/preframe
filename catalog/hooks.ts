@@ -44,6 +44,9 @@ export function useCatalogStatus(): { label: string; color: StatusColor } {
   if (view === 'queue') {
     return { label: 'queue', color: 'emerald' };
   }
+  if (view === 'runs') {
+    return { label: 'runs', color: 'emerald' };
+  }
   const finals = filteredVideos.filter(v => v.stage === 'final');
   return { label: `${finals.length} treatments`, color: 'emerald' };
 }
@@ -64,6 +67,7 @@ export function useCatalogSearch(): SearchConfig {
 // useNavCenter — breadcrumb for view + detail
 // ---------------------------------------------------------------------------
 const VIEW_LABELS: Record<string, string> = {
+  runs: 'Runs',
   queue: 'Queue',
   assets: 'Assets',
   music: 'Music',
@@ -77,7 +81,37 @@ const VIEW_LABELS: Record<string, string> = {
 };
 
 export function useCatalogNavCenter(): ReactNode | null {
-  const { selectedVideo, closeVideo, view, setView } = useCatalog();
+  const { selectedVideo, closeVideo, view, setView, runSlug } = useCatalog();
+
+  if (view === 'runs' && runSlug) {
+    return createElement(
+      'div',
+      { className: 'flex items-center gap-1.5 min-w-0' },
+      createElement(
+        'a',
+        {
+          href: '/runs',
+          onClick: (e: MouseEvent) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            e.preventDefault();
+            setView('runs');
+          },
+          className:
+            'text-[10px] font-mono text-neutral-400 hover:text-neutral-200 tracking-wider uppercase transition-colors shrink-0',
+        },
+        'Runs',
+      ),
+      createElement('span', { className: 'text-neutral-600 text-[10px] font-mono' }, '/'),
+      createElement(
+        'span',
+        {
+          className: 'text-[10px] font-mono text-neutral-300 tracking-wide truncate max-w-[28vw]',
+          title: runSlug,
+        },
+        runSlug,
+      ),
+    );
+  }
 
   if (selectedVideo) {
     const parent = view === 'assets' ? 'Assets' : 'Treatments';

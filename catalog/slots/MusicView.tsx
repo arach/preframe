@@ -33,7 +33,7 @@ function formatGeneratedAt(value: string, compact = false): string {
 }
 
 export function MusicView() {
-  const { data, refreshCatalog, deleteAudio, setView, pendingMusicCount, notifyMusicSettled } = useCatalog();
+  const { data, refreshCatalog, deleteAudio, setView, pendingMusicCount, notifyMusicSettled, musicId, openTrack } = useCatalog();
   const { playTrack, track: currentTrack, playing, togglePlay, insertNext, addToQueue } = usePlayer();
   const audioAssets = useMemo(() => data?.audioAssets ?? [], [data]);
   const audioQueue = useMemo(
@@ -44,7 +44,9 @@ export function MusicView() {
     const idx = audioAssets.findIndex(a => a.id === asset.id);
     playTrack(asset, { queue: audioQueue, index: idx >= 0 ? idx : 0 });
   };
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The selected track is URL-backed (`/music/:trackId`) so a run — or an agent
+  // handing back "Score: …" — can link straight to it and have it survive reload.
+  const [selectedId, setSelectedId] = useState<string | null>(musicId);
   const [jsonModal, setJsonModal] = useState<JsonModalState | null>(null);
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const [reviseLyrics, setReviseLyrics] = useState<Record<string, boolean>>({});
@@ -52,6 +54,12 @@ export function MusicView() {
   const [revisingId, setRevisingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const prevCountRef = useRef(audioAssets.length);
+
+  // The path wins whenever it names a real track — that is what makes
+  // /music/:trackId a link you can hand to someone.
+  useEffect(() => {
+    if (musicId && audioAssets.some(a => a.id === musicId)) setSelectedId(musicId);
+  }, [musicId, audioAssets]);
 
   useEffect(() => {
     if (audioAssets.length === 0) {
@@ -188,7 +196,10 @@ export function MusicView() {
                 >
                   <button
                     type="button"
-                    onClick={() => setSelectedId(asset.id)}
+                    onClick={() => {
+                      setSelectedId(asset.id);
+                      openTrack(asset.id);
+                    }}
                     onDoubleClick={() => playFromList(asset)}
                     className="w-full text-left px-3 py-2.5 pr-8"
                   >

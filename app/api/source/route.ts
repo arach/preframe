@@ -3,7 +3,9 @@ import { join, relative } from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
 
 const ROOT = process.cwd();
-const ALLOWED_DIRS = ['src', 'lib', 'catalog', '.compositions'];
+// `scripts` is here because runs reference the render/score scripts that
+// produced their deliverables, and the code panel is how you read them.
+const ALLOWED_DIRS = ['src', 'lib', 'catalog', 'scripts', 'services', '.compositions'];
 
 function validatePath(filePath: string): { resolved: string; rel: string } | NextResponse {
   const resolved = join(ROOT, filePath);
