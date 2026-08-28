@@ -13,11 +13,14 @@ import { MusicView } from './MusicView';
 import { NewComposition } from './NewComposition';
 import { PromptLibrary } from './PromptLibrary';
 import { QueueView } from './QueueView';
+import { RunDetail } from './RunDetail';
+import { RunsView } from './RunsView';
 import { SettingsView } from './SettingsView';
 import { VideoDetail } from './VideoDetail';
 
 export function CatalogContent() {
-  const { loading, selectedVideo, frameIndex, viewingFile, view, serviceStatus } = useCatalog();
+  const { loading, selectedVideo, frameIndex, viewingFile, view, serviceStatus, runSlug } =
+    useCatalog();
 
   if (serviceStatus === 'offline') {
     return <CatalogOffline />;
@@ -37,6 +40,10 @@ export function CatalogContent() {
 
   if (view === 'queue') {
     return <QueueView />;
+  }
+
+  if (view === 'runs') {
+    return runSlug ? <RunDetail slug={runSlug} /> : <RunsView />;
   }
 
   if (view === 'assets') {
