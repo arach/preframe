@@ -24,7 +24,6 @@ import {
   AbsoluteFill,
   Audio,
   Easing,
-  Img,
   OffthreadVideo,
   Sequence,
   interpolate,
@@ -400,23 +399,14 @@ const SayBeat: React.FC = () => {
   )
 }
 
-const MarkBeat: React.FC = () => {
-  const f = useCurrentFrame()
-  const box = fade(f, 26, 52)
-  const W = 1040
-  const H = 660
-  return (
-    <Beat i={5} night>
-      <Shot w={W} h={H} keys={<>grab<Key>⌃⌥S</Key></>}>
-        <Img src={staticFile('fab-intro/grab-signin.png')} style={{ width: '100%', height: '100%' }} />
-        <svg style={{ position: 'absolute', inset: 0 }} width={W} height={H} viewBox="0 0 1040 660">
-          <rect x={330} y={488} width={380} height={112} rx={10} fill="none" stroke="#e8412c" strokeWidth={6}
-            pathLength={1} strokeDasharray="1" strokeDashoffset={1 - box} />
-        </svg>
-      </Shot>
-    </Beat>
-  )
-}
+// fab's markup editor, recorded drawing the box round the error (the `markdrag:` test verb).
+const MarkBeat: React.FC = () => (
+  <Beat i={5} night>
+    <Shot w={1040} h={1040 * 1312 / 1970} keys={<>grab<Key>⌃⌥S</Key></>}>
+      <OffthreadVideo src={staticFile('fab-intro/mark.mp4')} muted style={{ width: '100%', height: '100%' }} />
+    </Shot>
+  </Beat>
+)
 
 const RouteBeat: React.FC = () => (
   <Beat i={6} night>
