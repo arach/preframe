@@ -131,7 +131,9 @@ const Key: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 const Beat: React.FC<{ i: number; children: React.ReactNode; night?: boolean; caption?: boolean }> = ({ i, children, night, caption = true }) => {
   const f = useCurrentFrame()
   const dur = beatFrames[i]
-  const o = Math.min(fade(f, 0, XF), i === LAST ? 1 : fade(f, dur - 2, dur + XF - 2, 1, 0))
+  // Only the incoming beat fades: it's drawn over the outgoing one, which stays solid until it's
+  // covered. Fading both let the paper underneath show through, a grey flash between night beats.
+  const o = fade(f, 0, XF)
   const voAt = Math.round(LEAD * FPS)
   const capIn = fade(f, voAt - 4, voAt + 14)
   return (
@@ -424,13 +426,22 @@ const RouteBeat: React.FC = () => (
   </Beat>
 )
 
-const FollowBeat: React.FC = () => (
-  <Beat i={7} night>
-    <Shot w={600 * 1.9} h={230 * 1.9}>
-      <Img src={staticFile('fab-intro/notch.png')} style={{ width: '100%', height: '100%' }} />
-    </Shot>
-  </Beat>
-)
+// The clip's black is a hair off the band's and has no grain, so its edges melt away outside the notch.
+const NOTCH_EDGE = 'linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent), linear-gradient(transparent, #000 3%, #000 90%, transparent)'
+
+// Live: an agent's question drops from the notch, gets answered, and says it's sent. The take was
+// recorded on a night backdrop, so it sits straight on the band with no frame of its own.
+const FollowBeat: React.FC = () => {
+  const f = useCurrentFrame()
+  const rise = spring({ frame: f, fps: FPS, config: { damping: 200 }, durationInFrames: 28 })
+  return (
+    <Beat i={7} night>
+      <div style={{ position: 'absolute', left: '50%', top: 440, width: 548 * 2.1, height: 220 * 2.1, transform: 'translate(-50%, -50%)', opacity: rise, maskImage: NOTCH_EDGE, WebkitMaskImage: NOTCH_EDGE, maskComposite: 'intersect', WebkitMaskComposite: 'source-in' }}>
+        <OffthreadVideo src={staticFile('fab-intro/notch.mp4')} muted style={{ width: '100%', height: '100%' }} />
+      </div>
+    </Beat>
+  )
+}
 
 const ReviewBeat: React.FC = () => {
   const f = useCurrentFrame()
