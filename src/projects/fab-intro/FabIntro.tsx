@@ -438,7 +438,8 @@ const ReviewBeat: React.FC = () => {
   return (
     <Beat i={8} night>
       <Shot w={1040} h={660} push={0.03}>
-        <Img src={staticFile('fab-intro/history.png')} style={{ width: '100%', height: '100%' }} />
+        {/* live: "sign-in" typed into the search, narrowing 139 things to the three takes */}
+        <OffthreadVideo src={staticFile('fab-intro/history.mp4')} muted style={{ width: '100%', height: '100%' }} />
       </Shot>
       {/* the take's own demo video lifts out of its row and plays */}
       <div
